@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.10)
+project(wlang)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/heads/main.zip
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+add_subdirectory(src/lexer/src)
+add_subdirectory(src/lexer/tests)
+add_subdirectory(src/parser/src)
+add_subdirectory(src/parser/tests)
+add_subdirectory(src/utils/src)
+add_subdirectory(src/utils/tests)
+add_subdirectory(src/vm/src)
+add_subdirectory(src/vm/tests)
+add_subdirectory(src/tokens/)
+
+add_executable(wlang src/main.cpp)
+target_link_libraries(wlang PRIVATE lexer tokens)
