@@ -1,0 +1,94 @@
+psst: very useful thingy
+gig calculate_stuff (x, y) {
+    yeet 2 with 2 without 2...
+}
+
+psst: This is the start of the mess
+gig macho() {
+    stash number about 10...
+    stash isNumberTen about number looks_like 11...
+
+    perhaps (isNumberTen looks_like totally) {
+        scream "The number is is ten"...
+    }
+    or_whatever (isNumberTen looks_like nah) {
+        scream "The number is not ten"...
+    }
+    screw_it {
+        scream "How the fck did I get here"...
+    }
+
+    stash floatingNumber about 11.0...
+    perhaps (floatingNumber looks_like 10.0) {
+        scream "The floatingNumber is ten"...
+    }
+    or_whatever (floatingNumber kinda_sus 20.0) {
+        scream "The floatingNumber is not 20"...
+    }
+    or_whatever (floatingNumber tiny_ish 5.0) {
+        scream "The floatingNumber is smaller than 5"...
+    }
+    screw_it {
+        scream "This language is so weird"...
+    }
+
+    stash counter about 0...
+    do_until_bored {
+        scream counter...
+        counter might_be (pump_it counter)...
+
+        perhaps (counter bigger_ish > 3) {
+            rage_quit!!!
+        }
+    }
+
+    stash n about calculate_stuff(10, 20)...
+    spin_around (n) times {
+        scream "Spinnin"...
+    }
+
+    yeet ghosted...
+}
+
+rant_stop
+    Output:
+    THE NUMBER IS NOT TEN!!!
+    THE FLOATINGNUMBER IS NOT 20!!!
+    0!!!
+    1!!!
+    2!!!
+    3!!!
+    4!!!
+    SPINNIN!!!
+    SPINNIN!!!
+
+    Syntax:
+        Every statement must end with an ellipsis (...) to indicate hesitation.
+    Comments:
+        Single-line comments use 'psst:',
+        block comments are between 'rant_stop' and 'rant_start'.
+    Variables:
+        Declared using 'stash [name] about [value]' (dynamic typing).
+    Assignment:
+        Variable updates use 'might_be' instead of 'about'.
+    Types:
+        Booleans are 'totally' (true), 'nah' (false)
+        null is 'ghosted'.
+    Functions:
+        Defined using the 'gig' keyword and return values using 'yeet'.
+    Output:
+        'scream' prints arguments to console in UPPERCASE with appended '!!!'.
+    Conditionals:
+        Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).
+    Loops:
+        Iteration implemented via 'do_until_bored' (while) and 'spin_around' (for).
+    Flow Control:
+        Loops are terminated aggressively using the 'rage_quit!!!' command.
+    Equality:
+        Comparisons use 'looks_like' (==) and 'kinda_sus' (!=).
+    Relational:
+        Size comparisons use 'bigger_ish' (>) and 'tiny_ish' (<).
+    Math:
+        Arithmetic uses 'with' (+) and 'without' (-)
+        The 'pump_it' operator is used for incrementing values.
+rant_start
