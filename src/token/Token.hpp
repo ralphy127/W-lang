@@ -31,7 +31,7 @@ public:
         Else,
         Break,
         While,
-        For,
+        Repeat,
 
         Greater,
         Less,
@@ -41,6 +41,8 @@ public:
         Ident,
 
         Null,
+        True,
+        False,
         Int,
         Float,
         String,

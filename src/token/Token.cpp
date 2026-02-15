@@ -34,6 +34,6 @@ bool Token::isStatementStart() const {
            _type == Type::Elif or
            _type == Type::Else or
            _type == Type::While or
-           _type == Type::For or
+           _type == Type::Repeat or
            _type == Type::Return ;
 }

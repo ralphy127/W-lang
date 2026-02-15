@@ -61,13 +61,17 @@ Token Lexer::getNextTokenAndAdvance() {
         ; // TODO skip the rest? idk
     }
     // TODO check if variables such as e.g. gigSomething is split into two tokens
-    else if (matchAndAdvanceIfNeeded("...") or matchAndAdvanceIfNeeded("!!!")) {
+    else if (matchAndAdvanceIfNeeded("...")) {
         token.setType(Token::Type::Semi);
         std::cout << "Tokenized '...' to Token::Type::Semi" << std::endl;
     }
-    else if (matchAndAdvanceIfNeeded("about") or matchAndAdvanceIfNeeded("migh_be")) {
+    else if (matchAndAdvanceIfNeeded("about") or matchAndAdvanceIfNeeded("might_be")) {
         token.setType(Token::Type::Assign);
-        std::cout << "Tokenized 'about/migh_be' to Token::Type::Assign" << std::endl;
+        std::cout << "Tokenized 'about/might_be' to Token::Type::Assign" << std::endl;
+    }
+    else if (matchAndAdvanceIfNeeded("ghosted")) {
+        token.setType(Token::Type::Null);
+        std::cout << "Tokenized 'ghosted' to Token::Type::Null" << std::endl;
     }
 
     else if (matchAndAdvanceIfNeeded("gig")) {
@@ -99,8 +103,12 @@ Token Lexer::getNextTokenAndAdvance() {
         std::cout << "Tokenized 'screw_it' to Token::Type::Else" << std::endl;
     }
     else if (matchAndAdvanceIfNeeded("rage_quit")) {
+        token.setType(Token::Type::Break);
+        std::cout << "Tokenized 'rage_quit' to Token::Type::Break" << std::endl;
+    }
+    else if (matchAndAdvanceIfNeeded("!!!")) {
         token.setType(Token::Type::BrSemi);
-        std::cout << "Tokenized 'rage_quit' to Token::Type::BrSemi" << std::endl;
+        std::cout << "Tokenized '!!!' to Token::Type::BrSemi" << std::endl;
     }
 
     else if (matchAndAdvanceIfNeeded("bigger_ish")) {
@@ -120,6 +128,15 @@ Token Lexer::getNextTokenAndAdvance() {
         std::cout << "Tokenized 'kinda_sus' to Token::Type::NotEqual" << std::endl;
     }
 
+    else if (matchAndAdvanceIfNeeded("totally")) {
+        token.setType(Token::Type::True);
+        std::cout << "Tokenized 'totally' to Token::Type::True" << std::endl;
+    }
+    else if (matchAndAdvanceIfNeeded("nah")) {
+        token.setType(Token::Type::False);
+        std::cout << "Tokenized 'nah' to Token::Type::False" << std::endl;
+    }
+
     else if (matchAndAdvanceIfNeeded("pump_it")) {
         token.setType(Token::Type::Incr);
         std::cout << "Tokenized 'pump_it' to Token::Type::Incr" << std::endl;
@@ -135,11 +152,11 @@ Token Lexer::getNextTokenAndAdvance() {
 
     else if (matchAndAdvanceIfNeeded("do_until_bored")) {
         token.setType(Token::Type::While);
-        std::cout << "Tokenized 'with' to Token::Type::While" << std::endl;
+        std::cout << "Tokenized 'do_until_bored' to Token::Type::While" << std::endl;
     }
     else if (matchAndAdvanceIfNeeded("spin_around")) {
-        token.setType(Token::Type::For);
-        std::cout << "Tokenized 'with' to Token::Type::For" << std::endl;
+        token.setType(Token::Type::Repeat);
+        std::cout << "Tokenized 'spin_around' to Token::Type::Repeat" << std::endl;
     }
 
     // TODO check if minuses work properly
@@ -150,18 +167,19 @@ Token Lexer::getNextTokenAndAdvance() {
         char digit = getNextChar();
         do {
             buffer += digit;
-            std::cout << "adding " << digit << std::endl;
             advance(digit);
             digit = getNextChar();
         } while (std::isdigit(digit));
 
         if (digit == '.' and not tokenizedAll() and std::isdigit(_source[_pos+1])) {
+            advance(digit);
             isFloat = true;
             buffer += digit;
-            digit = getNextCharAndAdvance();
+            digit = getNextChar();
             while (std::isdigit(digit)) {
+                advance(digit);
                 buffer += digit;
-                digit = getNextCharAndAdvance();
+                digit = getNextChar();
             }
         }
 
@@ -178,9 +196,11 @@ Token Lexer::getNextTokenAndAdvance() {
     }
 
     else if (ch == '\"') {
+        advance(ch);
         std::string stringValue{};
         bool foundStringEnd{false};
-        while (!tokenizedAll()) {
+
+        while (not tokenizedAll()) {
             ch = getNextChar();
 
             if (ch == '"') {
@@ -201,6 +221,7 @@ Token Lexer::getNextTokenAndAdvance() {
             std::cerr << "string not terminated 2" << std::endl;
             throw 1;
         }
+        std::cout << "Tokenized string: " << stringValue << '\n';
         token.setType(Token::Type::String);
         token.setValue<std::string>(std::move(stringValue));
     }
@@ -230,8 +251,9 @@ Token Lexer::getNextTokenAndAdvance() {
     std::cout << "Returning token at line " << token.getLine() << ", column "
               << token.getColumn() << ": " << std::to_underlying(token.getType()) << std::endl;
 
-    // TODO is returning silently Token::Type::Unknown really ok?
-    // TODO + if unknown, there is no advance - infinite loop, so make sure it's handled
+    if (token.getType() == Token::Type::Unknown) {
+        std::cerr << "token type is unknown\n";
+    }
     return token;
 }
 
@@ -271,8 +293,9 @@ void Lexer::skipComments() {
     for (;;) {
         if (matchAndAdvanceIfNeeded("psst:")) {
             while (not tokenizedAll()) {
-                char ch = getNextCharAndAdvance();
-                if (ch == '\n') break;
+                if (getNextCharAndAdvance() == '\n') {
+                    break;
+                }
             }
             std::cout << "skipped one line comment" << std::endl;
             continue;
@@ -281,15 +304,14 @@ void Lexer::skipComments() {
             bool found = false;
 
             while (not tokenizedAll()) {
-                std::cout << _source[_pos] << ' ' <<  _source[_pos + 1] << ' ' <<  _source[_pos + 3] << ' ' << std::endl;
                 if (_col == 1 and matchAndAdvanceIfNeeded("rant_start")) {
                     found = true;
                     break;
                 }
 
-                char ch = getNextCharAndAdvance();
-                std::cout << "Skipping: " << ch << " col: " << _col << std::endl;
-                if (ch == '\0') break;
+                if (getNextCharAndAdvance() == '\0') {
+                    break;
+                }
             }
 
             if (not found) {
@@ -297,7 +319,7 @@ void Lexer::skipComments() {
                 throw 1;
             }
             std::cout << "skipped block comment" << std::endl;
-
+            skipWhitespaces();
             continue;
         }
 

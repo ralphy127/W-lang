@@ -87,7 +87,7 @@ TEST_F(LexerTests, LanguagePrototype) {
         "    stash counter about 0...\n"
         "    do_until_bored {\n"
         "        scream: counter...\n"
-        "        counter might_be (pump_it counter)...\n"
+        "        pump_it counter...\n"
         "\n"
         "        perhaps (counter bigger_ish 3) {\n" // line 40
         "            rage_quit!!!\n"
@@ -95,7 +95,7 @@ TEST_F(LexerTests, LanguagePrototype) {
         "    }\n"
         "\n"
         "    stash n about calculate_stuff(10, 20)...\n"
-        "    spin_around (n) times {\n"
+        "    spin_around (n) {\n"
         "        scream: \"Spinnin\"...\n"
         "    }\n"
         "\n"
@@ -148,4 +148,302 @@ TEST_F(LexerTests, LanguagePrototype) {
     );
 
     auto tokens = tokenizeAll();
+
+    // Line 1: psst: very useful thingy (comment - skipped)
+    // Line 2: gig calculate_stuff (x, y) {
+    size_t i = 0;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Func);      // gig
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // calculate_stuff
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // x
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Comma);     // ,
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // y
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 3: yeet 2 with 2 without 2...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Return);    // yeet
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 2
+    const auto idxInt2v1 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Plus);      // with
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 2
+    const auto idxInt2v2 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Minus);     // without
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 2
+    const auto idxInt2v3 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 4: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 6: psst: This is the start of the mess (comment - skipped)
+    // Line 7: gig macho() {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Func);      // gig
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // macho
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 8: stash number about 10...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // number
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 10
+    const auto idxInt10 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 9: stash isNumberTen about number looks_like 11...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // isNumberTen
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // number
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 11
+    const auto idxInt11 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 11: perhaps (isNumberTen looks_like totally) {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::If);        // perhaps
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // isNumberTen
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::True);     // totally
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 12: scream: "The number is is ten"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The number is is ten"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 13: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 14: or_whatever (isNumberTen looks_like nah) {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Elif);      // or_whatever
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // isNumberTen
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::False);     // nah
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 15: scream: "The number is not ten"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The number is not ten"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 16: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 17: screw_it {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Else);      // screw_it
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 18: scream: "How the fck did I get here"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "How the fck did I get here"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 19: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 21: stash floatingNumber about 11.0...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 11.0
+    const auto idxFloat11 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 22: perhaps (floatingNumber looks_like 10.0) {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::If);        // perhaps
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 10.0
+    const auto idxFloat10 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 23: scream: "The floatingNumber is ten"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is ten"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 24: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 25: or_whatever (floatingNumber kinda_sus 20.0) {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Elif);      // or_whatever
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::NotEqual);  // kinda_sus
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 20.0
+    const auto idxFloat20 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 26: scream: "The floatingNumber is not 20"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is not 20"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 27: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 28: or_whatever (floatingNumber tiny_ish 5.0) {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Elif);      // or_whatever
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Less);      // tiny_ish
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 5.0
+    const auto idxFloat5 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 29: scream: "The floatingNumber is smaller than 5"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is smaller than 5"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 30: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 31: screw_it {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Else);      // screw_it
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 32: scream: "This language is so weird"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "This language is so weird"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 33: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 35: stash counter about 0...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 0
+    const auto idxInt0 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 36: do_until_bored {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::While);     // do_until_bored
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 37: scream: counter...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 38: pump_it counter...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Incr);      // pump_it
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 40: perhaps (counter bigger_ish 3) {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::If);        // perhaps
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Greater);   // bigger_ish
+    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 3
+    const auto idxInt3 = i++;
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 41: rage_quit!!!
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Break);     // rage_quit
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::BrSemi);    // !!!
+    
+    // Line 42: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 43: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 45: stash n about calculate_stuff(10, 20)...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // n
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // calculate_stuff
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Int);       // 10
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Comma);     // ,
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Int);       // 20
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 46: spin_around (n) times {
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Repeat);    // spin_around
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // n
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
+    
+    // Line 47: scream: "Spinnin"...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "Spinnin"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 48: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    // Line 50: yeet ghosted...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Return);    // yeet
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Null);      // ghosted
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
+    
+    // Line 51: }
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
+    
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Eof);       // \0
+
+    // Block comment (rant_stop ... rant_start) - skipped
+    
+    EXPECT_EQ(i, tokens.size()) << "Expected " << i << " tokens, but got " << tokens.size();
+
+    EXPECT_TRUE(tokens[idxInt2v1].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt2v1].getValue<std::int32_t>(), 2);
+    
+    EXPECT_TRUE(tokens[idxInt2v2].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt2v2].getValue<std::int32_t>(), 2);
+    
+    EXPECT_TRUE(tokens[idxInt2v3].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt2v3].getValue<std::int32_t>(), 2);
+    
+    EXPECT_TRUE(tokens[idxInt10].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt10].getValue<std::int32_t>(), 10);
+    
+    EXPECT_TRUE(tokens[idxInt11].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt11].getValue<std::int32_t>(), 11);
+    
+    EXPECT_TRUE(tokens[idxFloat10].valueIs<double>());
+    EXPECT_EQ(tokens[idxFloat10].getValue<double>(), 10.0);
+    
+    EXPECT_TRUE(tokens[idxFloat11].valueIs<double>());
+    EXPECT_EQ(tokens[idxFloat11].getValue<double>(), 11.0);
+    
+    EXPECT_TRUE(tokens[idxFloat20].valueIs<double>());
+    EXPECT_EQ(tokens[idxFloat20].getValue<double>(), 20.0);
+    
+    EXPECT_TRUE(tokens[idxFloat5].valueIs<double>());
+    EXPECT_EQ(tokens[idxFloat5].getValue<double>(), 5.0);
+    
+    EXPECT_TRUE(tokens[idxInt0].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt0].getValue<std::int32_t>(), 0);
+    
+    EXPECT_TRUE(tokens[idxInt3].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[idxInt3].getValue<std::int32_t>(), 3);
 }
