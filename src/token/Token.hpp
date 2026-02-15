@@ -30,6 +30,8 @@ public:
         Elif,
         Else,
         Break,
+        While,
+        For,
 
         Greater,
         Less,
@@ -37,6 +39,8 @@ public:
         NotEqual,
 
         Ident,
+
+        Null,
         Int,
         Float,
         String,
@@ -78,9 +82,12 @@ public:
     template<VariantAlternative<Value> T>
     bool valueIs() const noexcept { return std::holds_alternative<T>(_value); }
 
+    bool isLiteral() const;
+    bool isOperator() const;
+    bool isStatementStart() const;
+
 private:
     Value _value;
-    std::string _text;
     Type _type;
     std::uint32_t _line;
     std::uint32_t _column;

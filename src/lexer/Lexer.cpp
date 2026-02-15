@@ -132,6 +132,16 @@ Token Lexer::getNextTokenAndAdvance() {
         token.setType(Token::Type::Plus);
         std::cout << "Tokenized 'with' to Token::Type::Plus" << std::endl;
     }
+
+    else if (matchAndAdvanceIfNeeded("do_until_bored")) {
+        token.setType(Token::Type::While);
+        std::cout << "Tokenized 'with' to Token::Type::While" << std::endl;
+    }
+    else if (matchAndAdvanceIfNeeded("spin_around")) {
+        token.setType(Token::Type::For);
+        std::cout << "Tokenized 'with' to Token::Type::For" << std::endl;
+    }
+
     // TODO check if minuses work properly
     else if (std::isdigit(ch) or ch == '-') {
         std::string buffer;
