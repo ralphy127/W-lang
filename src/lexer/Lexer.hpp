@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdint>
 #include <expected>
+#include <vector>
 #include <token/Token.hpp>
 
 enum class LexerErrorType {
@@ -16,14 +17,20 @@ struct LexerError {
     LexerErrorType type;
 };
 
+struct LexerResult {
+    std::vector<Token> tokens;
+    std::vector<LexerError> errors;
+};
+
 class Lexer {
 public:
     Lexer(std::string source);
 
-    std::expected<Token, LexerError> getTokenAndAdvance();
-    bool tokenizedAll() const { return _pos >= _source.size(); }
+    LexerResult tokenize();
 
 private:
+    std::expected<Token, LexerError> getTokenAndAdvance();
+    bool tokenizedAll() const { return _pos >= _source.size(); }
     char getChar() const;
     void advance(char ch);
     char getCharAndAdvance();

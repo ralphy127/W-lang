@@ -4,5 +4,4 @@ class Parser {
 public:
     Parser();
     ~Parser();
-    // ...methods...
 };

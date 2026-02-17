@@ -6,6 +6,31 @@ Lexer::Lexer(std::string source)
     : _source{std::move(source)}
 {}
 
+LexerResult Lexer::tokenize() {
+    std::vector<Token> tokens{};
+    std::vector<LexerError> errors{};
+
+    while (not tokenizedAll()) {
+        auto result = getTokenAndAdvance();
+
+        if (result.has_value()) {
+            Token token = std::move(result.value());
+            
+            if (token.getType() == Token::Type::Eof) {
+                tokens.push_back(std::move(token));
+                break;
+            }
+            
+            tokens.push_back(std::move(token));
+        }
+        else {
+            errors.push_back(result.error());
+        }
+    }
+
+    return {std::move(tokens), std::move(errors)};
+}
+
 std::expected<Token, LexerError> Lexer::getTokenAndAdvance() {
     // TODO check for safety of lookaheads
     // TODO refactor this sh

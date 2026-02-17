@@ -9,22 +9,6 @@ struct LexerTests : public ::testing::Test {
     std::unique_ptr<Lexer> makeSut(std::string source) {
         return std::make_unique<Lexer>(std::move(source));
     }
-
-    std::vector<Token> tokenizeAll() {
-        if (not sut) {
-            return std::vector<Token>();
-        }
-
-        std::vector<Token> tokens{};
-        while (not sut->tokenizedAll()) {
-            auto result = sut->getTokenAndAdvance();
-            if (not result) {
-                break;
-            }
-            tokens.push_back(result.value());
-        }
-        return tokens;
-    }
 };
 
 TEST_F(LexerTests, MainFunc) {
@@ -34,7 +18,11 @@ TEST_F(LexerTests, MainFunc) {
         "}"
     );
 
-    auto tokens = tokenizeAll();
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
 
     ASSERT_EQ(tokens.size(), 9);
 
@@ -151,7 +139,11 @@ TEST_F(LexerTests, LanguagePrototype) {
         "rant_start\n"
     );
 
-    auto tokens = tokenizeAll();
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
 
     // Line 1: psst: very useful thingy (comment - skipped)
     // Line 2: gig calculate_stuff (x, y) {
