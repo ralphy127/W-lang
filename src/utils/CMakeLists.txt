@@ -1,6 +1,6 @@
 add_library(utils
-    Utils.cpp
-    Utils.hpp
+    Logging.cpp
+    Logging.hpp
 )
 
 target_include_directories(utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

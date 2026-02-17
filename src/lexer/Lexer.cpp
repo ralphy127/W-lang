@@ -1,9 +1,8 @@
 #include "Lexer.hpp"
 #include <cctype>
-#include <iostream>
+#include <utils/Logging.hpp>
 
 Lexer::Lexer(std::string source)
-    // TODO make a logger ffs
     : _source{std::move(source)}
 {}
 
@@ -22,37 +21,37 @@ Token Lexer::getNextTokenAndAdvance() {
     switch (ch) {
         case '\0':
             token.setType(Token::Type::Eof);
-            std::cout << "Tokenized EOF to Token::Type::Eof" << std::endl;
+            LOG_DEBUG << "Tokenized EOF to Token::Type::Eof";
             break;
         case '(':
             advance(ch);
             token.setType(Token::Type::LParen);
-            std::cout << "Tokenized '(' to Token::Type::LParen" << std::endl;
+            LOG_DEBUG << "Tokenized '(' to Token::Type::LParen";
             break;
         case ')':
             advance(ch);
             token.setType(Token::Type::RParen);
-            std::cout << "Tokenized ')' to Token::Type::RParen" << std::endl;
+            LOG_DEBUG << "Tokenized ')' to Token::Type::RParen";
             break;
         case '{':
             advance(ch);
             token.setType(Token::Type::LBrace);
-            std::cout << "Tokenized '{' to Token::Type::LBrace" << std::endl;
+            LOG_DEBUG << "Tokenized '{' to Token::Type::LBrace";
             break;
         case '}':
             advance(ch);
             token.setType(Token::Type::RBrace);
-            std::cout << "Tokenized '}' to Token::Type::RBrace" << std::endl;
+            LOG_DEBUG << "Tokenized '}' to Token::Type::RBrace";
             break;
         case ':':
             advance(ch);
             token.setType(Token::Type::Colon);
-            std::cout << "Tokenized ':' to Token::Type::Colon" << std::endl;
+            LOG_DEBUG << "Tokenized ':' to Token::Type::Colon";
             break;
         case ',':
             advance(ch);
             token.setType(Token::Type::Comma);
-            std::cout << "Tokenized ',' to Token::Type::Comma" << std::endl;
+            LOG_DEBUG << "Tokenized ',' to Token::Type::Comma";
         default:
             simpleToken = false;
             break;
@@ -63,100 +62,100 @@ Token Lexer::getNextTokenAndAdvance() {
     // TODO check if variables such as e.g. gigSomething is split into two tokens
     else if (matchAndAdvanceIfNeeded("...")) {
         token.setType(Token::Type::Semi);
-        std::cout << "Tokenized '...' to Token::Type::Semi" << std::endl;
+        LOG_DEBUG << "Tokenized '...' to Token::Type::Semi";
     }
     else if (matchAndAdvanceIfNeeded("about") or matchAndAdvanceIfNeeded("might_be")) {
         token.setType(Token::Type::Assign);
-        std::cout << "Tokenized 'about/might_be' to Token::Type::Assign" << std::endl;
+        LOG_DEBUG << "Tokenized 'about/might_be' to Token::Type::Assign";
     }
     else if (matchAndAdvanceIfNeeded("ghosted")) {
         token.setType(Token::Type::Null);
-        std::cout << "Tokenized 'ghosted' to Token::Type::Null" << std::endl;
+        LOG_DEBUG << "Tokenized 'ghosted' to Token::Type::Null";
     }
 
     else if (matchAndAdvanceIfNeeded("gig")) {
         token.setType(Token::Type::Func);
-        std::cout << "Tokenized 'gig' to Token::Type::Func" << std::endl;
+        LOG_DEBUG << "Tokenized 'gig' to Token::Type::Func";
     }
     else if (matchAndAdvanceIfNeeded("stash")) {
         token.setType(Token::Type::Var);
-        std::cout << "Tokenized 'stash' to Token::Type::Var" << std::endl;
+        LOG_DEBUG << "Tokenized 'stash' to Token::Type::Var";
     }
     else if (matchAndAdvanceIfNeeded("scream")) {
         token.setType(Token::Type::Print);
-        std::cout << "Tokenized 'scream' to Token::Type::Print" << std::endl;
+        LOG_DEBUG << "Tokenized 'scream' to Token::Type::Print";
     }
     else if (matchAndAdvanceIfNeeded("yeet")) {
         token.setType(Token::Type::Return);
-        std::cout << "Tokenized 'yeet' to Token::Type::Return" << std::endl;
+        LOG_DEBUG << "Tokenized 'yeet' to Token::Type::Return";
     }
     else if (matchAndAdvanceIfNeeded("perhaps")) {
         token.setType(Token::Type::If);
-        std::cout << "Tokenized 'perhaps' to Token::Type::If" << std::endl;
+        LOG_DEBUG << "Tokenized 'perhaps' to Token::Type::If";
     }
     else if (matchAndAdvanceIfNeeded("or_whatever")) {
         token.setType(Token::Type::Elif);
-        std::cout << "Tokenized 'or_whatever' to Token::Type::Elif" << std::endl;
+        LOG_DEBUG << "Tokenized 'or_whatever' to Token::Type::Elif";
     }
     else if (matchAndAdvanceIfNeeded("screw_it")) {
         token.setType(Token::Type::Else);
-        std::cout << "Tokenized 'screw_it' to Token::Type::Else" << std::endl;
+        LOG_DEBUG << "Tokenized 'screw_it' to Token::Type::Else";
     }
     else if (matchAndAdvanceIfNeeded("rage_quit")) {
         token.setType(Token::Type::Break);
-        std::cout << "Tokenized 'rage_quit' to Token::Type::Break" << std::endl;
+        LOG_DEBUG << "Tokenized 'rage_quit' to Token::Type::Break";
     }
     else if (matchAndAdvanceIfNeeded("!!!")) {
         token.setType(Token::Type::BrSemi);
-        std::cout << "Tokenized '!!!' to Token::Type::BrSemi" << std::endl;
+        LOG_DEBUG << "Tokenized '!!!' to Token::Type::BrSemi";
     }
 
     else if (matchAndAdvanceIfNeeded("bigger_ish")) {
         token.setType(Token::Type::Greater);
-        std::cout << "Tokenized 'bigger_ish' to Token::Type::Greater" << std::endl;
+        LOG_DEBUG << "Tokenized 'bigger_ish' to Token::Type::Greater";
     }
     else if (matchAndAdvanceIfNeeded("tiny_ish")) {
         token.setType(Token::Type::Less);
-        std::cout << "Tokenized 'tiny_ish' to Token::Type::Less" << std::endl;
+        LOG_DEBUG << "Tokenized 'tiny_ish' to Token::Type::Less";
     }
     else if (matchAndAdvanceIfNeeded("looks_like")) {
         token.setType(Token::Type::Equal);
-        std::cout << "Tokenized 'looks_like' to Token::Type::Equal" << std::endl;
+        LOG_DEBUG << "Tokenized 'looks_like' to Token::Type::Equal";
     }
     else if (matchAndAdvanceIfNeeded("kinda_sus")) {
         token.setType(Token::Type::NotEqual);
-        std::cout << "Tokenized 'kinda_sus' to Token::Type::NotEqual" << std::endl;
+        LOG_DEBUG << "Tokenized 'kinda_sus' to Token::Type::NotEqual";
     }
 
     else if (matchAndAdvanceIfNeeded("totally")) {
         token.setType(Token::Type::True);
-        std::cout << "Tokenized 'totally' to Token::Type::True" << std::endl;
+        LOG_DEBUG << "Tokenized 'totally' to Token::Type::True";
     }
     else if (matchAndAdvanceIfNeeded("nah")) {
         token.setType(Token::Type::False);
-        std::cout << "Tokenized 'nah' to Token::Type::False" << std::endl;
+        LOG_DEBUG << "Tokenized 'nah' to Token::Type::False";
     }
 
     else if (matchAndAdvanceIfNeeded("pump_it")) {
         token.setType(Token::Type::Incr);
-        std::cout << "Tokenized 'pump_it' to Token::Type::Incr" << std::endl;
+        LOG_DEBUG << "Tokenized 'pump_it' to Token::Type::Incr";
     }
     else if (matchAndAdvanceIfNeeded("without")) {
         token.setType(Token::Type::Minus);
-        std::cout << "Tokenized 'without' to Token::Type::Minus" << std::endl;
+        LOG_DEBUG << "Tokenized 'without' to Token::Type::Minus";
     }
     else if (matchAndAdvanceIfNeeded("with")) {
         token.setType(Token::Type::Plus);
-        std::cout << "Tokenized 'with' to Token::Type::Plus" << std::endl;
+        LOG_DEBUG << "Tokenized 'with' to Token::Type::Plus";
     }
 
     else if (matchAndAdvanceIfNeeded("do_until_bored")) {
         token.setType(Token::Type::While);
-        std::cout << "Tokenized 'do_until_bored' to Token::Type::While" << std::endl;
+        LOG_DEBUG << "Tokenized 'do_until_bored' to Token::Type::While";
     }
     else if (matchAndAdvanceIfNeeded("spin_around")) {
         token.setType(Token::Type::Repeat);
-        std::cout << "Tokenized 'spin_around' to Token::Type::Repeat" << std::endl;
+        LOG_DEBUG << "Tokenized 'spin_around' to Token::Type::Repeat";
     }
 
     // TODO check if minuses work properly
@@ -186,12 +185,12 @@ Token Lexer::getNextTokenAndAdvance() {
         if (isFloat) {
             token.setType(Token::Type::Float);
             token.setValue<double>(std::stod(buffer));
-            std::cout << "Tokenized '" << buffer << "' to Token::Type::Float" << std::endl;
+            LOG_DEBUG << "Tokenized '" << buffer << "' to Token::Type::Float";
         }
         else {
             token.setType(Token::Type::Int);
             token.setValue(std::stoi(buffer));
-            std::cout << "Tokenized '" << buffer << "' to Token::Type::Int" << std::endl;
+            LOG_DEBUG << "Tokenized '" << buffer << "' to Token::Type::Int";
         }
     }
 
@@ -209,7 +208,7 @@ Token Lexer::getNextTokenAndAdvance() {
                 break;
             }
             else if (ch == '\n') {
-                std::cerr << "string not terminated 1" << std::endl;
+                LOG_ERROR << "string not terminated 1";
                 throw 1;
             }
             else {
@@ -218,10 +217,10 @@ Token Lexer::getNextTokenAndAdvance() {
             }
         }
         if (not foundStringEnd) {
-            std::cerr << "string not terminated 2" << std::endl;
+            LOG_ERROR << "string not terminated 2";
             throw 1;
         }
-        std::cout << "Tokenized string: " << stringValue << '\n';
+        LOG_DEBUG << "Tokenized string: " << stringValue;
         token.setType(Token::Type::String);
         token.setValue<std::string>(std::move(stringValue));
     }
@@ -242,17 +241,17 @@ Token Lexer::getNextTokenAndAdvance() {
             c = getNextChar();
         }
 
-        std::cout << "Tokenized ident: " << tokenVal << std::endl;
+        LOG_DEBUG << "Tokenized ident: " << tokenVal;
 
         token.setType(Token::Type::Ident);
         token.setValue<std::string>(std::move(tokenVal));
     }
 
-    std::cout << "Returning token at line " << token.getLine() << ", column "
-              << token.getColumn() << ": " << std::to_underlying(token.getType()) << std::endl;
+    LOG_DEBUG << "Returning token at line " << token.getLine() << ", column "
+              << token.getColumn() << ": " << std::to_underlying(token.getType());
 
     if (token.getType() == Token::Type::Unknown) {
-        std::cerr << "token type is unknown\n";
+        LOG_ERROR << "token type is unknown";
     }
     return token;
 }
@@ -297,7 +296,7 @@ void Lexer::skipComments() {
                     break;
                 }
             }
-            std::cout << "skipped one line comment" << std::endl;
+            LOG_DEBUG << "skipped one line comment";
             continue;
         }
         if (matchAndAdvanceIfNeeded("rant_stop")) {
@@ -315,10 +314,10 @@ void Lexer::skipComments() {
             }
 
             if (not found) {
-                std::cout << "unterminated block comment";
+                LOG_ERROR << "unterminated block comment";
                 throw 1;
             }
-            std::cout << "skipped block comment" << std::endl;
+            LOG_DEBUG << "skipped block comment";
             skipWhitespaces();
             continue;
         }
