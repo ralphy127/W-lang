@@ -17,7 +17,11 @@ struct LexerTests : public ::testing::Test {
 
         std::vector<Token> tokens{};
         while (not sut->tokenizedAll()) {
-            tokens.push_back(sut->getNextTokenAndAdvance());
+            auto result = sut->getTokenAndAdvance();
+            if (not result) {
+                break;
+            }
+            tokens.push_back(result.value());
         }
         return tokens;
     }

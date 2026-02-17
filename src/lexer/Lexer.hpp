@@ -2,21 +2,33 @@
 
 #include <string>
 #include <cstdint>
+#include <expected>
 #include <token/Token.hpp>
+
+enum class LexerErrorType {
+    UnterminatedString,
+    UnterminatedBlockComment,
+};
+
+struct LexerError {
+    std::uint32_t line;
+    std::uint32_t column;
+    LexerErrorType type;
+};
 
 class Lexer {
 public:
     Lexer(std::string source);
 
-    Token getNextTokenAndAdvance();
+    std::expected<Token, LexerError> getTokenAndAdvance();
     bool tokenizedAll() const { return _pos >= _source.size(); }
 
 private:
-    char getNextChar() const;
+    char getChar() const;
     void advance(char ch);
-    char getNextCharAndAdvance();
+    char getCharAndAdvance();
     void skipWhitespaces();
-    void skipComments();
+    std::expected<void, LexerError> skipComments();
     bool match(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);
 

@@ -6,15 +6,18 @@ Lexer::Lexer(std::string source)
     : _source{std::move(source)}
 {}
 
-Token Lexer::getNextTokenAndAdvance() {
+std::expected<Token, LexerError> Lexer::getTokenAndAdvance() {
     // TODO check for safety of lookaheads
     // TODO refactor this sh
     skipWhitespaces();
-    skipComments();
+    const auto skipResult = skipComments();
+    if (not skipResult.has_value()) {
+        return std::unexpected{skipResult.error()};
+    }
 
     Token token{Token::Type::Unknown, _line, _col};
 
-    auto ch = getNextChar();
+    auto ch = getChar();
 
     bool simpleToken{true};
 
@@ -163,22 +166,22 @@ Token Lexer::getNextTokenAndAdvance() {
         std::string buffer;
         bool isFloat{false};
         
-        char digit = getNextChar();
+        char digit = getChar();
         do {
             buffer += digit;
             advance(digit);
-            digit = getNextChar();
+            digit = getChar();
         } while (std::isdigit(digit));
 
         if (digit == '.' and not tokenizedAll() and std::isdigit(_source[_pos+1])) {
             advance(digit);
             isFloat = true;
             buffer += digit;
-            digit = getNextChar();
+            digit = getChar();
             while (std::isdigit(digit)) {
                 advance(digit);
                 buffer += digit;
-                digit = getNextChar();
+                digit = getChar();
             }
         }
 
@@ -200,7 +203,7 @@ Token Lexer::getNextTokenAndAdvance() {
         bool foundStringEnd{false};
 
         while (not tokenizedAll()) {
-            ch = getNextChar();
+            ch = getChar();
 
             if (ch == '"') {
                 advance(ch);
@@ -208,8 +211,9 @@ Token Lexer::getNextTokenAndAdvance() {
                 break;
             }
             else if (ch == '\n') {
-                LOG_ERROR << "string not terminated 1";
-                throw 1;
+                LOG_ERROR << "string not terminated before end of line";
+                return std::unexpected{
+                    LexerError{_line, _col, LexerErrorType::UnterminatedString}};
             }
             else {
                 stringValue.push_back(ch);
@@ -217,8 +221,9 @@ Token Lexer::getNextTokenAndAdvance() {
             }
         }
         if (not foundStringEnd) {
-            LOG_ERROR << "string not terminated 2";
-            throw 1;
+            LOG_ERROR << "string not terminated";
+            return std::unexpected{
+                LexerError{_line, _col, LexerErrorType::UnterminatedString}};
         }
         LOG_DEBUG << "Tokenized string: " << stringValue;
         token.setType(Token::Type::String);
@@ -230,7 +235,7 @@ Token Lexer::getNextTokenAndAdvance() {
         std::string tokenVal{};
         size_t bufferLen{128ul};
         tokenVal.resize(bufferLen);
-        char c = getNextChar();
+        char c = getChar();
         for (size_t i{0ul}; i < bufferLen; ++i) {
             if (not std::isalnum(c) and c != '_') {
                 break;
@@ -238,7 +243,7 @@ Token Lexer::getNextTokenAndAdvance() {
 
             tokenVal[i] = c;
             advance(c);
-            c = getNextChar();
+            c = getChar();
         }
 
         LOG_DEBUG << "Tokenized ident: " << tokenVal;
@@ -256,8 +261,7 @@ Token Lexer::getNextTokenAndAdvance() {
     return token;
 }
 
-// TODO getNext is kinda current
-char Lexer::getNextChar() const {
+char Lexer::getChar() const {
     return _source[_pos];
 }
 
@@ -272,15 +276,15 @@ void Lexer::advance(char ch) {
     }
 }
 
-char Lexer::getNextCharAndAdvance() {
-    auto ch = getNextChar();
+char Lexer::getCharAndAdvance() {
+    auto ch = getChar();
     advance(ch);
     return ch;
 }
 
 void Lexer::skipWhitespaces() {
     for (;;) {
-        char ch = getNextChar();
+        char ch = getChar();
         if (not std::isspace(static_cast<unsigned char>(ch))) {
             break;
         }
@@ -288,11 +292,11 @@ void Lexer::skipWhitespaces() {
     }
 }
 
-void Lexer::skipComments() {
+std::expected<void, LexerError> Lexer::skipComments() {
     for (;;) {
         if (matchAndAdvanceIfNeeded("psst:")) {
             while (not tokenizedAll()) {
-                if (getNextCharAndAdvance() == '\n') {
+                if (getCharAndAdvance() == '\n') {
                     break;
                 }
             }
@@ -308,14 +312,15 @@ void Lexer::skipComments() {
                     break;
                 }
 
-                if (getNextCharAndAdvance() == '\0') {
+                if (getCharAndAdvance() == '\0') {
                     break;
                 }
             }
 
             if (not found) {
                 LOG_ERROR << "unterminated block comment";
-                throw 1;
+                return std::unexpected{
+                    LexerError{_line, _col, LexerErrorType::UnterminatedBlockComment}};
             }
             LOG_DEBUG << "skipped block comment";
             skipWhitespaces();
@@ -324,6 +329,8 @@ void Lexer::skipComments() {
 
         break;
     }
+
+    return {};
 }
 
 
