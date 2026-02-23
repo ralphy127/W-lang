@@ -1,7 +1,62 @@
 #pragma once
 
+#include <vector>
+#include <memory>
+#include <expected>
+#include "token/Token.hpp"
+#include "ast/Statements.hpp"
+#include "ast/Expressions.hpp"
+
+struct ParserError {
+    std::uint32_t line;
+    std::uint32_t column;
+    std::string message;
+};
+
+struct ParserResult {
+    std::vector<std::unique_ptr<Stmt>> statements;
+    std::vector<ParserError> errors;
+};
+
 class Parser {
 public:
-    Parser();
-    ~Parser();
+    explicit Parser(std::vector<Token>);
+
+    ParserResult parse();
+
+private:
+    class ParserException : public std::runtime_error {
+    public:
+        std::uint32_t line;
+        std::uint32_t column;
+        explicit ParserException(std::uint32_t line, std::uint32_t column, const std::string msg);
+        ~ParserException() noexcept override = default;
+    };
+
+    bool parsedAll() const { return _current >= _tokens.size(); }
+
+    void advance() { _current++; }
+    const Token& getPreviousToken() const;
+    const Token& getToken() const;
+    const Token& getTokenAndAdvance();
+    
+    bool match(Token::Type type) const { return getToken().getType() == type; }
+    bool matchAndAdvanceIfNeeded(Token::Type);
+    bool matchAndAdvanceIfNeeded(const std::vector<Token::Type>&);
+
+    void throwParserException(const std::string& errorMessage);
+
+    const Token& consume(Token::Type, const std::string& errorMessage);
+
+    std::unique_ptr<Stmt> parseStatement();
+    std::unique_ptr<Stmt> parseDefinition();
+    std::unique_ptr<Stmt> parseFunctionDefinition();
+    std::unique_ptr<Stmt> parseBlock(const std::string& blockIdent);
+    std::unique_ptr<Stmt> parseReturnStatement();
+
+    std::unique_ptr<Expr> parseExpression();
+    std::unique_ptr<Expr> parsePrimary();
+
+    const std::vector<Token> _tokens;
+    std::uint32_t _current{0u};
 };

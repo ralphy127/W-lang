@@ -36,12 +36,13 @@ private:
 
 class BlockStmt : public Stmt {
 public:
+    BlockStmt() = default;
     explicit BlockStmt(std::vector<std::unique_ptr<Stmt>> statements);
 
     const std::vector<std::unique_ptr<Stmt>>& getStatements() const { return _statements; }
 
 private:
-    std::vector<std::unique_ptr<Stmt>> _statements;
+    std::vector<std::unique_ptr<Stmt>> _statements{};
 };
 
 struct ElseIfClause {

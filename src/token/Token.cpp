@@ -37,3 +37,44 @@ bool Token::isStatementStart() const {
            _type == Type::Repeat or
            _type == Type::Return ;
 }
+
+std::string toString(Token::Type type) {
+    switch (type) {
+        case Token::Type::Unknown: return "Unknown";
+        case Token::Type::Eof: return "Eof";
+        case Token::Type::Func: return "Func";
+        case Token::Type::Var: return "Var";
+        case Token::Type::Print: return "Print";
+        case Token::Type::Return: return "Return";
+        case Token::Type::If: return "If";
+        case Token::Type::Elif: return "Elif";
+        case Token::Type::Else: return "Else";
+        case Token::Type::Break: return "Break";
+        case Token::Type::While: return "While";
+        case Token::Type::Repeat: return "Repeat";
+        case Token::Type::Greater: return "Greater";
+        case Token::Type::Less: return "Less";
+        case Token::Type::Equal: return "Equal";
+        case Token::Type::NotEqual: return "NotEqual";
+        case Token::Type::Ident: return "Ident";
+        case Token::Type::Null: return "Null";
+        case Token::Type::True: return "True";
+        case Token::Type::False: return "False";
+        case Token::Type::Int: return "Int";
+        case Token::Type::Float: return "Float";
+        case Token::Type::String: return "String";
+        case Token::Type::LParen: return "LParen";
+        case Token::Type::RParen: return "RParen";
+        case Token::Type::LBrace: return "LBrace";
+        case Token::Type::RBrace: return "RBrace";
+        case Token::Type::Semi: return "Semi";
+        case Token::Type::BrSemi: return "BrSemi";
+        case Token::Type::Colon: return "Colon";
+        case Token::Type::Comma: return "Comma";
+        case Token::Type::Assign: return "Assign";
+        case Token::Type::Incr: return "Incr";
+        case Token::Type::Plus: return "Plus";
+        case Token::Type::Minus: return "Minus";
+        default: throw std::logic_error{"Not implemented token type in toString"};
+    }
+}

@@ -47,9 +47,8 @@ IfStmt::IfStmt(std::unique_ptr<Expr> condition,
     assert(_condition.get() && "IfStmt condition is null");
     assert(_thenBlock.get() && "IfStmt then block is null");
     for (const auto& elseIfClause : _elseIfs) {
-        assert(elseIfClause.condition.get() && "IfStmt else-if clause is null");
-        assert(elseIfClause->condition && "IfStmt else-if clause condition is null");
-        assert(elseIfClause->block && "IfStmt else-if clause block is null");
+        assert(elseIfClause.condition.get() && "IfStmt else-if clause condition is null");
+        assert(elseIfClause.body.get() && "IfStmt else-if clause body is null");
     }
 }
 
@@ -65,7 +64,7 @@ const Stmt& IfStmt::getThenBlock() const {
 
 const Stmt& IfStmt::getElseBlock() const {
     assert(_elseBlock.get() && "IfStmt else block is null");
-    return _elseBlock.get();
+    return *_elseBlock;
 }
 
 WhileStmt::WhileStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> body)

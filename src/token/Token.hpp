@@ -94,3 +94,5 @@ private:
     std::uint32_t _line;
     std::uint32_t _column;
 };
+
+std::string toString(Token::Type);

@@ -45,7 +45,13 @@ LogStream::LogStream(std::string_view level, std::source_location loc)
 LogStream::~LogStream() {
     const auto filepath = std::filesystem::path(_location.file_name()).string();
     
-    std::string prefix = (filepath.find("lexer") != std::string::npos) ? "[LEXER] " : "";
+    std::string prefix{"[UNKNOWN] "};
+    if (filepath.find("lexer") != std::string::npos) {
+        prefix = std::string{"[LEXER] "};
+    }
+    if (filepath.find("parser") != std::string::npos) {
+        prefix = std::string{"[PARSER] "};
+    }
 
     auto now = std::chrono::system_clock::now();
     auto time_t_now = std::chrono::system_clock::to_time_t(now);

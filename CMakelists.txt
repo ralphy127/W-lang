@@ -14,12 +14,13 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(src/token)
+add_subdirectory(src/utils)
+add_subdirectory(src/ast)
 add_subdirectory(src/lexer)
 add_subdirectory(src/parser)
-add_subdirectory(src/utils)
 add_subdirectory(src/vm)
 
 add_subdirectory(tests)
 
 add_executable(wlang src/main.cpp)
-target_link_libraries(wlang PRIVATE lexer token)
+target_link_libraries(wlang PRIVATE lexer parser token ast utils)

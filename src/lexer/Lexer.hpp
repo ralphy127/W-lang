@@ -39,7 +39,7 @@ private:
     bool match(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);
 
-    std::string _source;
+    const std::string _source;
     std::uint64_t _pos{0ull};
     std::uint32_t _line{1u};
     std::uint32_t _col{1u};

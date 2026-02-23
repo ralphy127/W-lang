@@ -27,5 +27,6 @@ private:
 }
 
 #define LOG_DEBUG logger::detail::LogStream("DEBUG", std::source_location::current())
-#define LOG_INFO logger::detail::LogStream("INFO", std::source_location.current())
+#define LOG_INFO logger::detail::LogStream("INFO", std::source_location::current())
+#define LOG_WARN logger::detail::LogStream("WARNING", std::source_location::current())
 #define LOG_ERROR logger::detail::LogStream("ERROR", std::source_location::current())
