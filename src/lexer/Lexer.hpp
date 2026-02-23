@@ -9,6 +9,7 @@
 enum class LexerErrorType {
     UnterminatedString,
     UnterminatedBlockComment,
+    UnknownToken,
 };
 
 struct LexerError {
@@ -29,6 +30,11 @@ public:
     LexerResult tokenize();
 
 private:
+    bool tryTokenizeSingleChar(Token& token, char ch);
+    bool tryTokenizeKeyword(Token& token);
+    bool tryTokenizeNumber(Token& token, char ch);
+    std::expected<void, LexerError> tryTokenizeString(Token& token);
+    void tokenizeIdentifier(Token& token);
     std::expected<Token, LexerError> getTokenAndAdvance();
     bool tokenizedAll() const { return _pos >= _source.size(); }
     char getChar() const;
@@ -38,6 +44,7 @@ private:
     std::expected<void, LexerError> skipComments();
     bool match(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);
+    LexerError createError(LexerErrorType type) { return {_line, _col, type}; };
 
     const std::string _source;
     std::uint64_t _pos{0ull};
