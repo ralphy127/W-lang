@@ -1,16 +1,15 @@
 #include "Statements.hpp"
 #include <cassert>
 
-VarDeclStmt::VarDeclStmt(Token name, std::unique_ptr<Expr> initializer)
+VarDefinitionStmt::VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer)
     : _name{std::move(name)}
     , _initializer{std::move(initializer)} {
     
-    assert(_name.valueIs<std::string>() && "VarDeclStmt must hold a string token for name");
-    assert(_initializer.get() && "VarDeclStmt initializer is null");
+    assert(_name.valueIs<std::string>() && "VarDefinitionStmt must hold a string token for name");
 }
 
-const Expr& VarDeclStmt::getInitializer() const {
-    assert(_initializer.get() && "VarDeclStmt initializer is null");
+const Expr& VarDefinitionStmt::getInitializer() const {
+    assert(_initializer.get() && "VardDefinitionStmt initializer is null");
     return *_initializer;
 }
 

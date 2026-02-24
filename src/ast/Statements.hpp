@@ -10,11 +10,12 @@
 class Stmt : public AstNode {
 };
 
-class VarDeclStmt : public Stmt {
+class VarDefinitionStmt : public Stmt {
 public:
-    explicit VarDeclStmt(Token name, std::unique_ptr<Expr> initializer);
+    explicit VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer);
 
     const Token& getName() const { return _name; }
+    bool hasInitializer() const { return _initializer != nullptr; }
     const Expr& getInitializer() const;
 
 private:

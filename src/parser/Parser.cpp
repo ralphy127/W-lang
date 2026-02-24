@@ -111,20 +111,23 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
 std::unique_ptr<Stmt> Parser::parseDefinition() {
     LOG_DEBUG << "parseDefinition() called at token index " << _current;
     if (matchAndAdvanceIfNeeded(Token::Type::Func)) {
-        LOG_INFO << "Parsing function definition";
         return parseFunctionDefinition();
+    }
+    if (matchAndAdvanceIfNeeded(Token::Type::Var)) {
+        return parseVarDefinition();
     }
     LOG_DEBUG << "No definition matched at current token index: " << _current;
     return nullptr;
 }
 
 std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
-    LOG_DEBUG << "Parsing function definition starting at token index" << _current;
+    LOG_DEBUG << "Parsing function definition starting at token index " << _current;
     const auto& nameToken = consume(Token::Type::Ident, "Expected function name after 'gig'");
     if (not nameToken.valueIs<std::string>()) {
         throwParserException("Expected string as a function name");
     }
-    LOG_INFO << "Function name: " << nameToken.getValue<std::string>();
+    const auto& name = nameToken.getValue<std::string>();
+    LOG_DEBUG << "Function name: " << name;
 
     consume(Token::Type::LParen, "Expected '(' after function name");
 
@@ -141,8 +144,32 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
     LOG_DEBUG << "Function has " << parameters.size() << " parameter(s)";
     consume(Token::Type::RParen, "Expected ')' after function parameters");
     auto body = parseBlock("function");
-    LOG_INFO << "Successfully parsed function definition for '" << nameToken.getValue<std::string>() << "'";
-    return std::make_unique<FunctionStmt>(std::move(nameToken), std::move(parameters), std::move(body));
+    LOG_DEBUG << "Successfully parsed function definition for '" << name << "'";
+    return std::make_unique<FunctionStmt>(nameToken, std::move(parameters), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::parseVarDefinition() {
+    LOG_DEBUG << "Parsing variable definition starting at token index " << _current;
+    const auto& nameToken = consume(Token::Type::Ident, "Expected variable name after 'stash'");
+    if (not nameToken.valueIs<std::string>()) {
+        throwParserException("Expected string as a function name");
+    }
+    
+    if (matchAndAdvanceIfNeeded(Token::Type::Assign)) {
+        const auto& valueToken = getToken();
+        if (not valueToken.isLiteral()) {
+            throwParserException("Expected a literal after 'about'");
+        }
+        return std::make_unique<VarDefinitionStmt>(
+            nameToken, std::make_unique<LiteralExpr>(valueToken));
+    }
+
+    if (matchAndAdvanceIfNeeded(Token::Type::Semi)) {
+        return std::make_unique<VarDefinitionStmt>(nameToken, nullptr);
+    }
+
+    throwParserException("Variable definition parsing error");
+    return nullptr;
 }
 
 std::unique_ptr<Stmt> Parser::parseBlock(const std::string& blockIdent) {
