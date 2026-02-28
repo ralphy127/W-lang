@@ -96,3 +96,4 @@ private:
 };
 
 std::string toString(Token::Type);
+std::string toSourceString(Token::Type);

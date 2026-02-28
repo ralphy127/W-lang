@@ -246,23 +246,73 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     return nullptr;
 }
 
+// TODO possible refactor of binary expressions parsing
 std::unique_ptr<Expr> Parser::parseEquality() {
-    auto left = parseTerm();
+    LOG_DEBUG << "parseEquality() called at token index" << _current;
+    auto left = parseComparison();
 
     if (not parsedAll()) {
         const auto& token = getToken();
-        const auto& tokenType = token.getType();
+        const auto tokenType = token.getType();
         if (tokenType == Token::Type::Equal or tokenType == Token::Type::NotEqual) {
             advance();
-            auto right = parseTerm();
+            auto right = parseComparison();
+            if (not right) {
+                throwParserException(
+                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            }
+            LOG_DEBUG << "Parsed equality binary expression successfully";
             return make_unique<BinaryExpr>(std::move(left), token, std::move(right));
         }
     }
 
+    LOG_DEBUG << "No equality operator matched, returning left operand";
+    return left;
+}
+
+std::unique_ptr<Expr> Parser::parseComparison() {
+    LOG_DEBUG << "parseComparison() called at token index" << _current;
+    auto left = parseTerm();
+
+    if (not parsedAll()) {
+        const auto& token = getToken();
+        const auto tokenType = token.getType();
+        if (tokenType == Token::Type::Greater or tokenType == Token::Type::Less) {
+            advance();
+            auto right = parseTerm();
+            if (not right) {
+                throwParserException(
+                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            }
+            LOG_DEBUG << "Parsed comparison binary expression successfully";
+            return std::make_unique<BinaryExpr>(std::move(left), token, std::move(right));
+        }
+    }
+
+    LOG_DEBUG << "No comparison operator matched, returning left operand";
     return left;
 }
 
 std::unique_ptr<Expr> Parser::parseTerm() {
-    // TODO make terms, for now just primary
-    return parsePrimary();
+    LOG_DEBUG << "parseTerm() called at token index" << _current;
+    auto left = parsePrimary();
+
+    if (not parsedAll()) {
+        const auto& token = getToken();
+        const auto tokenType = token.getType();
+        // TODO after adding * and /: add parseFactor() function to resolve priorities
+        if (tokenType == Token::Type::Plus or tokenType == Token::Type::Minus) {
+            advance();
+            auto right = parseTerm();
+            if (not right) {
+                throwParserException(
+                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            }
+            LOG_DEBUG << "Parsed term binary expression successfully";
+            return std::make_unique<BinaryExpr>(std::move(left), token, std::move(right));
+        }
+    }
+
+    LOG_DEBUG << "No term operator matched, returning left operand";
+    return left;
 }

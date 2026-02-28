@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <expected>
+#include <functional>
 #include "token/Token.hpp"
 #include "ast/Statements.hpp"
 #include "ast/Expressions.hpp"
@@ -58,6 +59,7 @@ private:
     std::unique_ptr<Expr> parseExpression();
     std::unique_ptr<Expr> parsePrimary();
     std::unique_ptr<Expr> parseEquality();
+    std::unique_ptr<Expr> parseComparison();
     std::unique_ptr<Expr> parseTerm();
 
     const std::vector<Token> _tokens;

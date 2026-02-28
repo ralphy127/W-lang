@@ -14,7 +14,7 @@ protected:
     }
 };
 
-TEST_F(ParserTestFixture, ParseFunctionWithReturnStatement) {
+TEST_F(ParserTestFixture, ParseFunctionWithReturnIntStatement) {
     auto parserResult = parseSource(
         "gig macho() {\n"
         "    yeet 0...\n"
@@ -37,7 +37,7 @@ TEST_F(ParserTestFixture, ParseFunctionWithReturnStatement) {
     EXPECT_EQ(returnToken.getValue<std::int32_t>(), 0);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinition) {
+TEST_F(ParserTestFixture, ParseVarDefinitionWithInt) {
     auto parserResult = parseSource(
         "stash integer about 1...");
     
@@ -53,7 +53,7 @@ TEST_F(ParserTestFixture, ParseVarDefinition) {
     EXPECT_EQ(literal.getValue<std::int32_t>(), 1);
 }
 
-TEST_F(ParserTestFixture, ParseFloatLiteral) {
+TEST_F(ParserTestFixture, ParseVarDefinitionWithFloat) {
     auto parserResult = parseSource("stash float about 1.0...");
     
     ASSERT_EQ(parserResult.statements.size(), 1);
@@ -93,4 +93,97 @@ TEST_F(ParserTestFixture, ParseVarDefinitionWithEqualityExpression) {
     const auto& rightToken = right.getLiteral();
     EXPECT_EQ(rightToken.getType(), Token::Type::Int);
     EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
+}
+
+TEST_F(ParserTestFixture, ParseVarDefinitionWithNotEqualExpression) {
+    auto parserResult = parseSource("stash comparison about 10 kinda_sus 5...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0);
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
+    
+    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
+    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::NotEqual);
+    
+    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
+    const auto& leftToken = left.getLiteral();
+    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
+    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 10);
+    
+    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
+    const auto& rightToken = right.getLiteral();
+    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
+    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 5);
+}
+
+TEST_F(ParserTestFixture, ParseVarDefinitionWithGreaterExpression) {
+    auto parserResult = parseSource("stash comparison about 20 bigger_ish 10...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0);
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
+    
+    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
+    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Greater);
+    
+    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
+    const auto& leftToken = left.getLiteral();
+    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
+    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 20);
+    
+    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
+    const auto& rightToken = right.getLiteral();
+    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
+    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
+}
+
+TEST_F(ParserTestFixture, ParseVarDefinitionWithLessExpression) {
+    auto parserResult = parseSource("stash comparison about 5 tiny_ish 10...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0);
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
+    
+    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
+    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Less);
+    
+    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
+    const auto& leftToken = left.getLiteral();
+    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
+    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 5);
+    
+    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
+    const auto& rightToken = right.getLiteral();
+    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
+    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
+}
+
+TEST_F(ParserTestFixture, ParsePrecedenceEqualityAndAddition) {
+    auto parserResult = parseSource("stash result about 2 with 2 looks_like 4...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0);
+    
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "result");
+    
+    const auto& equalityExpr = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
+    EXPECT_EQ(equalityExpr.getOperator().getType(), Token::Type::Equal); 
+    
+    const auto& additionExpr = dynamic_cast<const BinaryExpr&>(equalityExpr.getLeft());
+    EXPECT_EQ(additionExpr.getOperator().getType(), Token::Type::Plus);
+    
+    const auto& addLeft = dynamic_cast<const LiteralExpr&>(additionExpr.getLeft());
+    EXPECT_EQ(addLeft.getLiteral().getValue<std::int32_t>(), 2);
+    
+    const auto& addRight = dynamic_cast<const LiteralExpr&>(additionExpr.getRight());
+    EXPECT_EQ(addRight.getLiteral().getValue<std::int32_t>(), 2);
+    
+    const auto& equalityRight = dynamic_cast<const LiteralExpr&>(equalityExpr.getRight());
+    EXPECT_EQ(equalityRight.getLiteral().getValue<std::int32_t>(), 4);
 }

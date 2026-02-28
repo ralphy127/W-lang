@@ -40,7 +40,6 @@ bool Token::isStatementStart() const {
 
 std::string toString(Token::Type type) {
     switch (type) {
-        case Token::Type::Unknown: return "Unknown";
         case Token::Type::Eof: return "Eof";
         case Token::Type::Func: return "Func";
         case Token::Type::Var: return "Var";
@@ -76,5 +75,40 @@ std::string toString(Token::Type type) {
         case Token::Type::Plus: return "Plus";
         case Token::Type::Minus: return "Minus";
         default: throw std::logic_error{"Not implemented token type in toString"};
+    }
+}
+
+std::string toSourceString(Token::Type type) {
+    switch (type) {
+        case Token::Type::Func: return "gig";
+        case Token::Type::Var: return "stash";
+        case Token::Type::Print: return "scream";
+        case Token::Type::Return: return "yeet";
+        case Token::Type::If: return "perhaps";
+        case Token::Type::Elif: return "or_whatever";
+        case Token::Type::Else: return "screw_it";
+        case Token::Type::Break: return "rage_quit";
+        case Token::Type::While: return "do_until_bored";
+        case Token::Type::Repeat: return "spin_around";
+        case Token::Type::Greater: return "bigger_ish";
+        case Token::Type::Less: return "tiny_ish";
+        case Token::Type::Equal: return "looks_like";
+        case Token::Type::NotEqual: return "kinda_sus";
+        case Token::Type::Null: return "ghosted";
+        case Token::Type::True: return "totally";
+        case Token::Type::False: return "nah";
+        case Token::Type::LParen: return "(";
+        case Token::Type::RParen: return ")";
+        case Token::Type::LBrace: return "{";
+        case Token::Type::RBrace: return "}";
+        case Token::Type::Semi: return "...";
+        case Token::Type::BrSemi: return "!!!";
+        case Token::Type::Colon: return ":";
+        case Token::Type::Comma: return ",";
+        case Token::Type::Assign: return "about";
+        case Token::Type::Incr: return "pump_it;";
+        case Token::Type::Plus: return "with";
+        case Token::Type::Minus: return "without";
+        default: throw std::logic_error{"Not implemented token type in toSourceString"};
     }
 }
