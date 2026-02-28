@@ -57,6 +57,8 @@ private:
 
     std::unique_ptr<Expr> parseExpression();
     std::unique_ptr<Expr> parsePrimary();
+    std::unique_ptr<Expr> parseEquality();
+    std::unique_ptr<Expr> parseTerm();
 
     const std::vector<Token> _tokens;
     std::uint32_t _current{0u};

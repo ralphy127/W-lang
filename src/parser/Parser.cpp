@@ -154,22 +154,15 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     if (not nameToken.valueIs<std::string>()) {
         throwParserException("Expected string as a function name");
     }
+
+    std::unique_ptr<Expr> initializer{nullptr};
     
     if (matchAndAdvanceIfNeeded(Token::Type::Assign)) {
-        const auto& valueToken = getToken();
-        if (not valueToken.isLiteral()) {
-            throwParserException("Expected a literal after 'about'");
-        }
-        return std::make_unique<VarDefinitionStmt>(
-            nameToken, std::make_unique<LiteralExpr>(valueToken));
+        initializer = parseExpression();
     }
 
-    if (matchAndAdvanceIfNeeded(Token::Type::Semi)) {
-        return std::make_unique<VarDefinitionStmt>(nameToken, nullptr);
-    }
-
-    throwParserException("Variable definition parsing error");
-    return nullptr;
+    consume(Token::Type::Semi, "Expected '...' after variable definition");
+    return std::make_unique<VarDefinitionStmt>(nameToken, std::move(initializer));
 }
 
 std::unique_ptr<Stmt> Parser::parseBlock(const std::string& blockIdent) {
@@ -208,6 +201,10 @@ std::unique_ptr<Stmt> Parser::parseReturnStatement() {
 
 std::unique_ptr<Expr> Parser::parseExpression() {
     LOG_DEBUG << "parseExpression() called at token index" << _current;
+    if (auto expr = parseEquality()) {
+        LOG_DEBUG << "Expression parsed successfully";
+        return std::move(expr);
+    }
     if (auto expr = parsePrimary()) {
         LOG_DEBUG << "Expression parsed successfully";
         return std::move(expr);
@@ -247,4 +244,25 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
     LOG_DEBUG << "No primary expression matched at current token";
     return nullptr;
+}
+
+std::unique_ptr<Expr> Parser::parseEquality() {
+    auto left = parseTerm();
+
+    if (not parsedAll()) {
+        const auto& token = getToken();
+        const auto& tokenType = token.getType();
+        if (tokenType == Token::Type::Equal or tokenType == Token::Type::NotEqual) {
+            advance();
+            auto right = parseTerm();
+            return make_unique<BinaryExpr>(std::move(left), token, std::move(right));
+        }
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expr> Parser::parseTerm() {
+    // TODO make terms, for now just primary
+    return parsePrimary();
 }
