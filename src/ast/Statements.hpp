@@ -71,15 +71,13 @@ private:
     std::unique_ptr<Stmt> _elseBlock;
 };
 
-class WhileStmt : public Stmt {
+class LoopStmt : public Stmt {
 public:
-    explicit WhileStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> body);
+    explicit LoopStmt(std::unique_ptr<Stmt> body);
 
-    const Expr& getCondition() const;
     const Stmt& getBody() const;
 
 private:
-    std::unique_ptr<Expr> _condition;
     std::unique_ptr<Stmt> _body;
 };
 

@@ -334,7 +334,7 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 36: do_until_bored {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::While);     // do_until_bored
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Loop);      // do_until_bored
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
     // Line 37: scream: counter...

@@ -99,25 +99,48 @@ const Token& Parser::consume(
 
 std::unique_ptr<Stmt> Parser::parseStatement() {
     LOG_DEBUG << "parseStatement() called at token index " << _current;
-    if (match(Token::Type::Return)) {
-        LOG_DEBUG << "Detected Return statement";
-        return parseReturnStatement();
+
+    if (parsedAll()) {
+        LOG_DEBUG << "No more tokens to parse";
+        return nullptr;
     }
 
-    LOG_DEBUG << "No statement matched in parseStatement()";
+    if (matchAndAdvanceIfNeeded(Token::Type::If)) { 
+        LOG_DEBUG << "Detected If statement";
+        return parseIf();
+    }
+    if (matchAndAdvanceIfNeeded(Token::Type::Loop)) {
+        LOG_DEBUG << "Detected loop statement";
+        return parseLoop();
+    }
+    if (matchAndAdvanceIfNeeded(Token::Type::Repeat)) {
+        LOG_DEBUG << "Detected repeat statement";
+        return parseRepeat();
+    }
+    if (match(Token::Type::Return)) {
+        LOG_DEBUG << "Detected Return statement";
+        return parseReturn();
+    }
+
+    LOG_WARN << "No statement matched in parseStatement()";
     return nullptr;
 }
 
 std::unique_ptr<Stmt> Parser::parseDefinition() {
     LOG_DEBUG << "parseDefinition() called at token index " << _current;
+    if (parsedAll()) {
+        LOG_DEBUG << "No more tokens to parse";
+        return nullptr;
+    }
+
     if (matchAndAdvanceIfNeeded(Token::Type::Func)) {
         return parseFunctionDefinition();
     }
     if (matchAndAdvanceIfNeeded(Token::Type::Var)) {
         return parseVarDefinition();
     }
-    LOG_DEBUG << "No definition matched at current token index: " << _current;
-    return nullptr;
+
+    return parseStatement();
 }
 
 std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
@@ -170,16 +193,14 @@ std::unique_ptr<Stmt> Parser::parseBlock(const std::string& blockIdent) {
     consume(Token::Type::LBrace, "Expected '{' opening block");
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
-        if (match(Token::Type::Return)) {
-            statements.emplace_back(parseReturnStatement());
-        }
+        statements.push_back(parseDefinition());
     }
     consume(Token::Type::RBrace, "Expected '}' closing block");
     LOG_DEBUG << "Block parsed with " << statements.size() << " statement(s)";
     return std::make_unique<BlockStmt>(std::move(statements));
 }
 
-std::unique_ptr<Stmt> Parser::parseReturnStatement() {
+std::unique_ptr<Stmt> Parser::parseReturn() {
     consume(Token::Type::Return, "Expected return token");
     LOG_DEBUG << "Parsing return statement at token index" << _current;
     if (match(Token::Type::Semi)) {
@@ -199,6 +220,57 @@ std::unique_ptr<Stmt> Parser::parseReturnStatement() {
     return std::make_unique<ReturnStmt>(std::move(value));
 }
 
+std::unique_ptr<Stmt> Parser::parseIf() {
+    LOG_DEBUG << "Parsing 'perhaps' statement";
+
+    consume(Token::Type::LParen, "Expected '(' after 'perhaps'");
+    auto ifCondition = parseExpression();
+    consume(Token::Type::RParen, "Expected ')' after condition");
+    auto ifBody = parseBlock("perhaps");
+
+    std::vector<ElseIfClause> elIfClauses{};
+    while (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Elif)) {
+        consume(Token::Type::LParen, "Expected '(' after 'or_whatever'");
+        auto elifCondition = parseExpression();
+        consume(Token::Type::RParen, "Expected ')' after condition");
+        auto elifBody = parseBlock("or_whatever");
+
+        elIfClauses.emplace_back(std::move(elifCondition), std::move(elifBody));
+    }
+
+    std::unique_ptr<Stmt> elseClause{nullptr};
+    if (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Else)) {
+        elseClause = parseBlock("screw_it");
+    }
+
+    return std::make_unique<IfStmt>(
+        std::move(ifCondition),
+        std::move(ifBody),
+        std::move(elIfClauses),
+        std::move(elseClause)
+    );
+}
+
+std::unique_ptr<Stmt> Parser::parseLoop() {
+    LOG_DEBUG << "Parsing 'do_until_bored' statement";
+    return std::make_unique<LoopStmt>(parseBlock("do_until_bored"));
+}
+
+std::unique_ptr<Stmt> Parser::parseRepeat() {
+    LOG_DEBUG << "Parsing 'repeat' statement";
+    consume(Token::Type::LParen, "Expected '(' after 'repeat'");
+    auto countExpr = parseExpression();
+    if (not countExpr) {
+        throwParserException("Expected loop count expression inside '()'");
+    }
+
+    consume(Token::Type::RParen, "Expected ')' after loop count expression");
+    auto body = parseBlock("spin_around");
+
+    LOG_DEBUG << "Successfully parsed 'repeat' statement";
+    return std::make_unique<RepeatStmt>(std::move(countExpr), std::move(body));
+}
+
 std::unique_ptr<Expr> Parser::parseExpression() {
     LOG_DEBUG << "parseExpression() called at token index" << _current;
     if (auto expr = parseEquality()) {
@@ -216,14 +288,14 @@ std::unique_ptr<Expr> Parser::parseExpression() {
 
 std::unique_ptr<Expr> Parser::parsePrimary() {
     LOG_DEBUG << "parsePrimary() called at token index" << _current;
-    const bool isLiteralOrLanguageConstant =
+    const bool isLiteral =
         match(Token::Type::Int) or
         match(Token::Type::Float) or
         match(Token::Type::String) or
         match(Token::Type::True) or
         match(Token::Type::False) or
         match(Token::Type::Null);
-    if (isLiteralOrLanguageConstant) {
+    if (isLiteral) {
         const auto& token = getToken();
         LOG_DEBUG << "Parsed literal expression: " << toString(token.getType());
         return std::make_unique<LiteralExpr>(getTokenAndAdvance());

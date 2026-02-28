@@ -184,8 +184,8 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
     }
 
     if (matchAndAdvanceIfNeeded("do_until_bored")) {
-        token.setType(Token::Type::While);
-        LOG_DEBUG << "Tokenized 'do_until_bored' to Token::Type::While";
+        token.setType(Token::Type::Loop);
+        LOG_DEBUG << "Tokenized 'do_until_bored' to Token::Type::Loop";
         return true;
     }
     if (matchAndAdvanceIfNeeded("spin_around")) {

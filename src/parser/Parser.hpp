@@ -54,7 +54,10 @@ private:
     std::unique_ptr<Stmt> parseFunctionDefinition();
     std::unique_ptr<Stmt> parseVarDefinition();
     std::unique_ptr<Stmt> parseBlock(const std::string& blockIdent);
-    std::unique_ptr<Stmt> parseReturnStatement();
+    std::unique_ptr<Stmt> parseReturn();
+    std::unique_ptr<Stmt> parseIf();
+    std::unique_ptr<Stmt> parseLoop();
+    std::unique_ptr<Stmt> parseRepeat();
 
     std::unique_ptr<Expr> parseExpression();
     std::unique_ptr<Expr> parsePrimary();

@@ -30,7 +30,7 @@ public:
         Elif,
         Else,
         Break,
-        While,
+        Loop,
         Repeat,
 
         Greater,

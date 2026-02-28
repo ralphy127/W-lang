@@ -2,8 +2,7 @@
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 
-class ParserTestFixture : public ::testing::Test {
-protected:
+struct ParserTestFixture : public ::testing::Test {
     ParserResult parseSource(const std::string& source) {
         Lexer lexer{source};
         auto lexerResult = lexer.tokenize();
@@ -67,6 +66,36 @@ TEST_F(ParserTestFixture, ParseVarDefinitionWithFloat) {
     
     EXPECT_EQ(literal.getType(), Token::Type::Float);
     EXPECT_FLOAT_EQ(literal.getValue<double>(), 1.0);
+}
+
+TEST_F(ParserTestFixture, ParseVarDefinitionWithTrue) {
+    auto parserResult = parseSource("stash truth about totally...");
+    
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
+    
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "truth");
+    
+    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
+    const auto& literal = initializer.getLiteral();
+    
+    EXPECT_EQ(literal.getType(), Token::Type::True);
+}
+
+TEST_F(ParserTestFixture, ParseVarDefinitionWithFalse) {
+    auto parserResult = parseSource("stash truth about nah...");
+    
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
+    
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "truth");
+    
+    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
+    const auto& literal = initializer.getLiteral();
+    
+    EXPECT_EQ(literal.getType(), Token::Type::False);
 }
 
 TEST_F(ParserTestFixture, ParseVarDefinitionWithEqualityExpression) {
@@ -186,4 +215,122 @@ TEST_F(ParserTestFixture, ParsePrecedenceEqualityAndAddition) {
     
     const auto& equalityRight = dynamic_cast<const LiteralExpr&>(equalityExpr.getRight());
     EXPECT_EQ(equalityRight.getLiteral().getValue<std::int32_t>(), 4);
+}
+
+TEST_F(ParserTestFixture, ParseSimpleIfStatement) {
+    auto parserResult = parseSource("perhaps (totally) { yeet 1... }");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
+    
+    const auto& conditionExpr = dynamic_cast<const LiteralExpr&>(ifStmt->getCondition());
+    EXPECT_EQ(conditionExpr.getLiteral().getType(), Token::Type::True);
+    
+    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
+    const auto& thenStatements = thenBlock.getStatements();
+    ASSERT_EQ(thenStatements.size(), 1) << "Then block should have exactly one statement";
+    
+    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(thenStatements[0].get());
+    
+    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
+    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
+    
+    EXPECT_TRUE(ifStmt->getElseIfClauses().empty()) << "Elif list should be empty";
+}
+
+TEST_F(ParserTestFixture, ParseFullIfElseChain) {
+    auto source = R"(
+        perhaps (1) {
+            yeet 1...
+        }
+        or_whatever (2) {
+            yeet 2...
+        }
+        or_whatever (3) {
+            yeet 3...
+        }
+        screw_it {
+            yeet 4...
+        }
+    )";
+    auto parserResult = parseSource(source);
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
+    
+    const auto& mainCond = dynamic_cast<const LiteralExpr&>(ifStmt->getCondition());
+    EXPECT_EQ(mainCond.getLiteral().getValue<std::int32_t>(), 1);
+    
+    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
+    ASSERT_EQ(thenBlock.getStatements().size(), 1);
+    
+    const auto& elifs = ifStmt->getElseIfClauses();
+    ASSERT_EQ(elifs.size(), 2) << "Should have parsed exactly two or_whatever branches";
+    
+    const auto& elif1Cond = dynamic_cast<const LiteralExpr&>(*elifs[0].condition);
+    EXPECT_EQ(elif1Cond.getLiteral().getValue<std::int32_t>(), 2);
+    
+    const auto* elif1Body = dynamic_cast<const BlockStmt*>(elifs[0].body.get());
+    ASSERT_EQ(elif1Body->getStatements().size(), 1);
+    
+    const auto& elif2Cond = dynamic_cast<const LiteralExpr&>(*elifs[1].condition);
+    EXPECT_EQ(elif2Cond.getLiteral().getValue<std::int32_t>(), 3);
+    
+    const auto* elif2Body = dynamic_cast<const BlockStmt*>(elifs[1].body.get());
+    ASSERT_EQ(elif2Body->getStatements().size(), 1);
+    
+    const auto& elseBlock = dynamic_cast<const BlockStmt&>(ifStmt->getElseBlock());
+    ASSERT_EQ(elseBlock.getStatements().size(), 1);
+    
+    const auto* elseReturnStmt = dynamic_cast<const ReturnStmt*>(elseBlock.getStatements()[0].get());
+    
+    const auto& elseReturnValue = dynamic_cast<const LiteralExpr&>(elseReturnStmt->getValue());
+    EXPECT_EQ(elseReturnValue.getLiteral().getValue<std::int32_t>(), 4);
+}
+
+TEST_F(ParserTestFixture, ParseDoUntilBoredStatement) {
+    auto parserResult = parseSource("do_until_bored { yeet 1... }");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* loopStmt = dynamic_cast<const LoopStmt*>(parserResult.statements[0].get());
+    
+    const auto& bodyBlock = dynamic_cast<const BlockStmt&>(loopStmt->getBody());
+    const auto& bodyStatements = bodyBlock.getStatements();
+    ASSERT_EQ(bodyStatements.size(), 1) << "Loop body should have exactly one statement";
+    
+    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(bodyStatements[0].get());
+    
+    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
+    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
+}
+
+TEST_F(ParserTestFixture, ParseSpinAroundStatement) {
+    auto parserResult = parseSource("spin_around (5) { yeet 1... }");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* repeatStmt = dynamic_cast<const RepeatStmt*>(parserResult.statements[0].get());
+    
+    const auto& countExpr = dynamic_cast<const LiteralExpr&>(repeatStmt->getCount());
+    EXPECT_EQ(countExpr.getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(countExpr.getLiteral().getValue<std::int32_t>(), 5);
+    
+    const auto& bodyBlock = dynamic_cast<const BlockStmt&>(repeatStmt->getBody());
+    const auto& bodyStatements = bodyBlock.getStatements();
+    ASSERT_EQ(bodyStatements.size(), 1) << "Loop body should have exactly one statement";
+    
+    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(bodyStatements[0].get());
+    
+    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
+    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
 }

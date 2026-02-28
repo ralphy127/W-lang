@@ -14,7 +14,9 @@ bool Token::isLiteral() const {
     return _type == Type::Null or
            _type == Type::Int or
            _type == Type::Float or
-           _type == Type::String;
+           _type == Type::String or
+           _type == Type::True or
+           _type == Type::False;
 }
 
 bool Token::isOperator() const {
@@ -33,7 +35,7 @@ bool Token::isStatementStart() const {
            _type == Type::If or
            _type == Type::Elif or
            _type == Type::Else or
-           _type == Type::While or
+           _type == Type::Loop or
            _type == Type::Repeat or
            _type == Type::Return ;
 }
@@ -49,7 +51,7 @@ std::string toString(Token::Type type) {
         case Token::Type::Elif: return "Elif";
         case Token::Type::Else: return "Else";
         case Token::Type::Break: return "Break";
-        case Token::Type::While: return "While";
+        case Token::Type::Loop: return "While";
         case Token::Type::Repeat: return "Repeat";
         case Token::Type::Greater: return "Greater";
         case Token::Type::Less: return "Less";
@@ -88,7 +90,7 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Elif: return "or_whatever";
         case Token::Type::Else: return "screw_it";
         case Token::Type::Break: return "rage_quit";
-        case Token::Type::While: return "do_until_bored";
+        case Token::Type::Loop: return "do_until_bored";
         case Token::Type::Repeat: return "spin_around";
         case Token::Type::Greater: return "bigger_ish";
         case Token::Type::Less: return "tiny_ish";

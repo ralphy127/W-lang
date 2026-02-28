@@ -66,21 +66,14 @@ const Stmt& IfStmt::getElseBlock() const {
     return *_elseBlock;
 }
 
-WhileStmt::WhileStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> body)
-    : _condition{std::move(condition)}
-    , _body{std::move(body)} {
+LoopStmt::LoopStmt(std::unique_ptr<Stmt> body)
+    : _body{std::move(body)} {
     
-    assert(_condition.get() && "WhileStmt condition is null");
-    assert(_body.get() && "WhileStmt body is null");
+    assert(_body.get() && "LoopStmt body is null");
 }
 
-const Expr& WhileStmt::getCondition() const {
-    assert(_condition.get() && "WhileStmt condition is null");
-    return *_condition;
-}
-
-const Stmt& WhileStmt::getBody() const {
-    assert(_body.get() && "WhileStmt body is null");
+const Stmt& LoopStmt::getBody() const {
+    assert(_body.get() && "LoopStmt body is null");
     return *_body;
 }
 

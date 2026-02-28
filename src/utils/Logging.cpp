@@ -68,6 +68,7 @@ LogStream::~LogStream() {
              << prefix 
              << "[" << filepath << ":" << _location.line() << "] " 
              << _stream.str() << "\n";
+        file.flush();
     }
 }
 
