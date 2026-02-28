@@ -128,3 +128,9 @@ const Stmt& FunctionStmt::getBody() const {
     assert(_body.get() && "FunctionStmt body is null");
     return *_body;
 }
+
+ExpressionStmt::ExpressionStmt(std::unique_ptr<Expr> expression)
+    : _expression{std::move(expression)} {
+
+    assert(_expression.get() && "ExpressionStmt expression is null");
+}

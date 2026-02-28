@@ -130,9 +130,25 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected Return statement";
         return parseReturn();
     }
+    if (match(Token::Type::Ident)) {
+        const auto& nameToken = getTokenAndAdvance();
+        
+        if (matchAndAdvanceIfNeeded(Token::Type::Reassign)) {
+            auto value = parseExpression();
+            consume(Token::Type::Semi, "Expected '...' after rassignment");
+            return std::make_unique<AssignStmt>(nameToken, std::move(value));
+        }
+        
+        throwParserException("Expected 'might_be' after variable name");
+    }
 
-    LOG_WARN << "No statement matched in parseStatement()";
-    return nullptr;
+    auto expr = parseExpression();
+    if (not expr) {
+        LOG_WARN << "Returning nullptr in parseStatement()";
+        return nullptr;
+    }
+    consume(Token::Type::Semi, "Expected '...' after expression");
+    return std::make_unique<ExpressionStmt>(std::move(expr));
 }
 
 std::unique_ptr<Stmt> Parser::parseDefinition() {
@@ -397,21 +413,23 @@ std::unique_ptr<Expr> Parser::parseComparison() {
 
 std::unique_ptr<Expr> Parser::parseTerm() {
     LOG_DEBUG << "parseTerm() called at token index" << _current;
-    auto left = parsePrimary();
+    auto left = parseUnary();
 
-    if (not parsedAll()) {
+    while (not parsedAll()) {
         const auto& token = getToken();
         const auto tokenType = token.getType();
         // TODO after adding * and /: add parseFactor() function to resolve priorities
         if (tokenType == Token::Type::Plus or tokenType == Token::Type::Minus) {
             advance();
-            auto right = parseTerm();
+            auto right = parseUnary();
             if (not right) {
                 throwParserException(
                     std::format("Expected right operand after '{}'", toSourceString(tokenType)));
             }
-            LOG_DEBUG << "Parsed term binary expression successfully";
-            return std::make_unique<BinaryExpr>(std::move(left), token, std::move(right));
+            left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right));
+        }
+        else {
+            break;
         }
     }
 
@@ -434,4 +452,14 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(const Token& nameToken) {
     LOG_DEBUG << std::format(
         "Parsed function call for '{}' with {} arguments", name, arguments.size());
     return std::make_unique<CallExpr>(nameToken, std::move(arguments));
+}
+
+std::unique_ptr<Expr> Parser::parseUnary() {
+    if (matchAndAdvanceIfNeeded(Token::Type::Incr)) {
+        const auto& opToken = getPreviousToken();
+        auto right = parseUnary();
+        return std::make_unique<UnaryExpr>(opToken, std::move(right));
+    }
+
+    return parsePrimary();
 }

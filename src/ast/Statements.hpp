@@ -131,3 +131,13 @@ private:
     std::vector<Token> _parameters;
     std::unique_ptr<Stmt> _body;
 };
+
+class ExpressionStmt : public Stmt {
+public:
+    explicit ExpressionStmt(std::unique_ptr<Expr>);
+
+    const Expr& getExpression() const { return *_expression; }
+
+private:
+    std::unique_ptr<Expr> _expression;
+};

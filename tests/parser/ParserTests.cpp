@@ -441,3 +441,229 @@ TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
     const auto& ghostedValue = dynamic_cast<const LiteralExpr&>(returnGhosted->getValue());
     EXPECT_EQ(ghostedValue.getLiteral().getType(), Token::Type::Null);
 }
+
+TEST_F(ParserTestFixture, ParseAssignStatement) {
+    auto parserResult = parseSource("counter might_be 42...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* assignStmt = dynamic_cast<const AssignStmt*>(parserResult.statements[0].get());
+    
+    EXPECT_EQ(assignStmt->getName().getValue<std::string>(), "counter");
+
+    const auto& expr = dynamic_cast<const LiteralExpr&>(assignStmt->getValue());
+    EXPECT_EQ(expr.getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(expr.getLiteral().getValue<std::int32_t>(), 42);
+}
+
+TEST_F(ParserTestFixture, ParseIncAsUnaryExpressionStatement) {
+    auto parserResult = parseSource("pump_it counter...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
+    
+    const auto& unaryExpr = dynamic_cast<const UnaryExpr&>(exprStmt->getExpression());
+    
+    EXPECT_EQ(unaryExpr.getOperator().getType(), Token::Type::Incr);
+    
+    const auto& operand = dynamic_cast<const VariableExpr&>(unaryExpr.getRight());
+    
+    EXPECT_EQ(operand.getName().getValue<std::string>(), "counter");
+}
+
+TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
+    auto parserResult = parseSource(
+        "psst: very useful thingy\n"
+        "gig calculate_stuff (x, y) {\n"
+        "    yeet 2 with 2 without 2...\n"
+        "}\n"
+        "\n"
+        "psst: This is the start of the mess\n"
+        "gig macho() {\n"
+        "    stash number about 10...\n"
+        "    stash isNumberTen about number looks_like 11...\n"
+        "\n" // line 10
+        "    perhaps (isNumberTen looks_like totally) {\n"
+        "        scream: \"The number is is ten\"...\n"
+        "    }\n"
+        "    or_whatever (isNumberTen looks_like nah) {\n"
+        "        scream: \"The number is not ten\"...\n"
+        "    }\n"
+        "    screw_it {\n"
+        "        scream: \"How the fck did I get here\"...\n"
+        "    }\n"
+        "\n" // line 20
+        "    stash floatingNumber about 11.0...\n"
+        "    perhaps (floatingNumber looks_like 10.0) {\n"
+        "        scream: \"The floatingNumber is ten\"...\n"
+        "    }\n"
+        "    or_whatever (floatingNumber kinda_sus 20.0) {\n"
+        "        scream: \"The floatingNumber is not 20\"...\n"
+        "    }\n"
+        "    or_whatever (floatingNumber tiny_ish 5.0) {\n"
+        "        scream: \"The floatingNumber is smaller than 5\"...\n"
+        "    }\n" // line 30
+        "    screw_it {\n"
+        "        scream: \"This language is so weird\"...\n"
+        "    }\n"
+        "\n"
+        "    stash counter about 0...\n"
+        "    do_until_bored {\n"
+        "        scream: counter...\n"
+        "        pump_it counter...\n"
+        "\n"
+        "        perhaps (counter bigger_ish 3) {\n" // line 40
+        "            rage_quit!!!\n"
+        "        }\n"
+        "    }\n"
+        "\n"
+        "    stash n about calculate_stuff(10, 20)...\n"
+        "    spin_around (n) {\n"
+        "        scream: \"Spinnin\"...\n"
+        "    }\n"
+        "\n"
+        "    yeet ghosted...\n" // line 50
+        "}\n"
+        "\n"
+        "rant_stop\n"
+        "    Output:\n"
+        "    \n"
+        "    THE NUMBER IS NOT TEN!!!\n"
+        "    THE FLOATINGNUMBER IS NOT 20!!!\n"
+        "    0!!!\n"
+        "    1!!!\n"
+        "    2!!!\n" // line 60
+        "    3!!!\n"
+        "    4!!!\n"
+        "    SPINNIN!!!\n"
+        "    SPINNIN!!!\n"
+        "\n"
+        "    Syntax:\n"
+        "        Every statement must end with an ellipsis (...) to indicate hesitation.\n"
+        "    Comments:\n"
+        "        Single-line comments use 'psst:',\n"
+        "        block comments are between 'rant_stop' and 'rant_start'.\n" // line 70
+        "    Variables:\n"
+        "        Declared using 'stash [name] about [value]' (dynamic typing).\n"
+        "    Assignment:\n"
+        "        Variable updates use 'might_be' instead of 'about'.\n"
+        "    Types:\n"
+        "        Booleans are 'totally' (true), 'nah' (false)\n"
+        "        null is 'ghosted'.\n"
+        "    Functions:\n"
+        "        Defined using the 'gig' keyword and return values using 'yeet'.\n"
+        "    Output:\n"
+        "        'scream' prints arguments to console in UPPERCASE with appended '!!!'.\n"
+        "    Conditionals:\n"
+        "        Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).\n"
+        "    Loops:\n"
+        "        Iteration implemented via 'do_until_bored' (while) and 'spin_around' (for).\n"
+        "    Flow Control:\n"
+        "        Loops are terminated aggressively using the 'rage_quit!!!' command.\n"
+        "    Equality:\n"
+        "        Comparisons use 'looks_like' (==) and 'kinda_sus' (!=).\n"
+        "    Relational:\n"
+        "        Size comparisons use 'bigger_ish' (>) and 'tiny_ish' (<).\n"
+        "    Math:\n"
+        "        Arithmetic uses 'with' (+) and 'without' (-)\n"
+        "        The 'pump_it' operator is used for incrementing values.\n"
+        "rant_start\n"
+    );
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser errors found in the prototype!";
+    ASSERT_EQ(parserResult.statements.size(), 2) << "Expected exactly 2 global statements (functions)";
+
+    // Line 2: gig calculate_stuff (x, y) { ... }
+    const auto& calcFunc = dynamic_cast<const FunctionStmt&>(*parserResult.statements[0]);
+    const auto& calcBody = dynamic_cast<const BlockStmt&>(calcFunc.getBody());
+    const auto& yeetMath = dynamic_cast<const ReturnStmt&>(*calcBody.getStatements()[0]);
+    const auto& mathExpr = dynamic_cast<const BinaryExpr&>(yeetMath.getValue());
+    EXPECT_EQ(mathExpr.getOperator().getType(), Token::Type::Minus);
+
+    const auto& leftMath = dynamic_cast<const BinaryExpr&>(mathExpr.getLeft());
+    EXPECT_EQ(leftMath.getOperator().getType(), Token::Type::Plus);
+
+    // Line 7: gig macho() { ... }
+    const auto& machoFunc = dynamic_cast<const FunctionStmt&>(*parserResult.statements[1]);
+    const auto& machoStatements = dynamic_cast<const BlockStmt&>(machoFunc.getBody()).getStatements();
+    
+    ASSERT_EQ(machoStatements.size(), 10);
+
+    // Line 8: stash number about 10...
+    const auto& stmt0 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[0]);
+    EXPECT_EQ(stmt0.getName().getValue<std::string>(), "number");
+
+    // Line 9: stash isNumberTen about number looks_like 11...
+    const auto& stmt1 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[1]);
+    const auto& looksLikeExpr = dynamic_cast<const BinaryExpr&>(stmt1.getInitializer());
+    EXPECT_EQ(looksLikeExpr.getOperator().getType(), Token::Type::Equal);
+
+    // Line 11: perhaps (isNumberTen looks_like totally) { ... }
+    const auto& stmt2 = dynamic_cast<const IfStmt&>(*machoStatements[2]);
+    const auto& ifCond = dynamic_cast<const BinaryExpr&>(stmt2.getCondition());
+    const auto& trueToken = dynamic_cast<const LiteralExpr&>(ifCond.getRight());
+    EXPECT_EQ(trueToken.getLiteral().getType(), Token::Type::True);
+    
+    // Line 14: or_whatever (isNumberTen looks_like nah) { ... }
+    EXPECT_EQ(stmt2.getElseIfClauses().size(), 1);
+    
+    // Line 17: screw_it { ... }
+    const auto& elseBlock = dynamic_cast<const BlockStmt&>(stmt2.getElseBlock());
+    EXPECT_EQ(elseBlock.getStatements().size(), 1);
+
+    // Line 21: stash floatingNumber about 11.0...
+    const auto& stmt3 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[3]);
+    EXPECT_EQ(stmt3.getName().getValue<std::string>(), "floatingNumber");
+
+    // Line 22: perhaps (floatingNumber looks_like 10.0) { ... }
+    const auto& stmt4 = dynamic_cast<const IfStmt&>(*machoStatements[4]);
+    // Line 25 & 28: 2x or_whatever
+    EXPECT_EQ(stmt4.getElseIfClauses().size(), 2);
+    // Line 31: screw_it
+    EXPECT_EQ(dynamic_cast<const BlockStmt&>(stmt4.getElseBlock()).getStatements().size(), 1);
+
+    // Line 35: stash counter about 0...
+    const auto& stmt5 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[5]);
+    EXPECT_EQ(stmt5.getName().getValue<std::string>(), "counter");
+
+    // Line 36: do_until_bored { ... }
+    const auto& stmt6 = dynamic_cast<const LoopStmt&>(*machoStatements[6]);
+    const auto& doUntilBody = dynamic_cast<const BlockStmt&>(stmt6.getBody()).getStatements();
+    ASSERT_EQ(doUntilBody.size(), 3);
+    
+    // Line 37: scream: counter...
+    const auto& loopPrint = dynamic_cast<const PrintStmt&>(*doUntilBody[0]);
+    
+    // Line 38: pump_it counter...
+    const auto& loopPumpIt = dynamic_cast<const ExpressionStmt&>(*doUntilBody[1]);
+    const auto& pumpItUnary = dynamic_cast<const UnaryExpr&>(loopPumpIt.getExpression());
+    EXPECT_EQ(pumpItUnary.getOperator().getType(), Token::Type::Incr);
+    
+    // Line 40: perhaps (counter bigger_ish 3) { rage_quit!!! }
+    const auto& loopIf = dynamic_cast<const IfStmt&>(*doUntilBody[2]);
+    const auto& loopIfBody = dynamic_cast<const BlockStmt&>(loopIf.getThenBlock()).getStatements();
+    const auto& rageQuit = dynamic_cast<const BreakStmt&>(*loopIfBody[0]);
+
+    // Line 45: stash n about calculate_stuff(10, 20)...
+    const auto& stmt7 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[7]);
+    const auto& callExpr = dynamic_cast<const CallExpr&>(stmt7.getInitializer());
+    EXPECT_EQ(callExpr.getName().getValue<std::string>(), "calculate_stuff");
+    EXPECT_EQ(callExpr.getArgs().size(), 2);
+
+    // Line 46: spin_around (n) { ... }
+    const auto& stmt8 = dynamic_cast<const RepeatStmt&>(*machoStatements[8]);
+    const auto& repeatCount = dynamic_cast<const VariableExpr&>(stmt8.getCount());
+    EXPECT_EQ(repeatCount.getName().getValue<std::string>(), "n");
+    
+    // Line 47: scream: "Spinnin"...
+    const auto& repeatBody = dynamic_cast<const BlockStmt&>(stmt8.getBody()).getStatements();
+    const auto& spinninPrint = dynamic_cast<const PrintStmt&>(*repeatBody[0]);
+
+    // Line 50: yeet ghosted...
+    const auto& stmt9 = dynamic_cast<const ReturnStmt&>(*machoStatements[9]);
+    const auto& yeetValue = dynamic_cast<const LiteralExpr&>(stmt9.getValue());
+    EXPECT_EQ(yeetValue.getLiteral().getType(), Token::Type::Null);
+}

@@ -56,6 +56,7 @@ public:
         Colon,
         Comma,
         Assign,
+        Reassign,
 
         Incr,
         Plus,

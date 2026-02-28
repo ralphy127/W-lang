@@ -78,9 +78,14 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized '...' to Token::Type::Semi";
         return true;
     }
-    if (matchAndAdvanceIfNeeded("about") or matchAndAdvanceIfNeeded("might_be")) {
+    if (matchAndAdvanceIfNeeded("about")) {
         token.setType(Token::Type::Assign);
-        LOG_DEBUG << "Tokenized 'about/might_be' to Token::Type::Assign";
+        LOG_DEBUG << "Tokenized 'about' to Token::Type::Assign";
+        return true;
+    }
+    if (matchAndAdvanceIfNeeded("might_be")) {
+        token.setType(Token::Type::Reassign);
+        LOG_DEBUG << "Tokenized 'might_be' to Token::Type::Reassign";
         return true;
     }
     if (matchAndAdvanceIfNeeded("ghosted")) {
