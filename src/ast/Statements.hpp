@@ -114,10 +114,7 @@ private:
     std::unique_ptr<Expr> _value;
 };
 
-class BreakStmt : public Stmt {
-public:
-    explicit BreakStmt() = default;
-};
+struct BreakStmt : public Stmt {};
 
 class FunctionStmt : public Stmt {
 public:

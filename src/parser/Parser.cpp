@@ -105,6 +105,10 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         return nullptr;
     }
 
+    if (matchAndAdvanceIfNeeded(Token::Type::Print)) {
+        LOG_DEBUG << "Detected print statement";
+        return parsePrint();
+    }
     if (matchAndAdvanceIfNeeded(Token::Type::If)) { 
         LOG_DEBUG << "Detected If statement";
         return parseIf();
@@ -116,6 +120,11 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
     if (matchAndAdvanceIfNeeded(Token::Type::Repeat)) {
         LOG_DEBUG << "Detected repeat statement";
         return parseRepeat();
+    }
+    if (matchAndAdvanceIfNeeded(Token::Type::Break)) {
+        LOG_DEBUG << "Detected break statement";
+        consume(Token::Type::BrSemi, "Expected '!!!' after 'rage_quit'");
+        return std::make_unique<BreakStmt>();
     }
     if (match(Token::Type::Return)) {
         LOG_DEBUG << "Detected Return statement";
@@ -269,6 +278,19 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
 
     LOG_DEBUG << "Successfully parsed 'repeat' statement";
     return std::make_unique<RepeatStmt>(std::move(countExpr), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::parsePrint() {
+    LOG_DEBUG << "Parsing 'scream' statement";
+    consume(Token::Type::Colon, "Expected ':' afted 'scream");
+    
+    auto printExpr = parseExpression();
+    if (not printExpr) {
+        throwParserException("Expected an expression to scream");
+    }
+
+    consume(Token::Type::Semi, "Expected '...' after scream statement");
+    return std::make_unique<PrintStmt>(std::move(printExpr));
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {

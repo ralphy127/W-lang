@@ -334,3 +334,65 @@ TEST_F(ParserTestFixture, ParseSpinAroundStatement) {
     EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
     EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
 }
+
+TEST_F(ParserTestFixture, ParseLoopWithRageQuit) {
+    auto parserResult = parseSource("do_until_bored { rage_quit!!! }");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* loopStmt = dynamic_cast<const LoopStmt*>(parserResult.statements[0].get());
+    
+    const auto& bodyBlock = dynamic_cast<const BlockStmt&>(loopStmt->getBody());
+    const auto& bodyStatements = bodyBlock.getStatements();
+    ASSERT_EQ(bodyStatements.size(), 1) << "Loop body should have exactly one statement";
+    
+    const auto* breakStmt = dynamic_cast<const BreakStmt*>(bodyStatements[0].get());
+}
+
+TEST_F(ParserTestFixture, ParsePrintStringLiteral) {
+    auto parserResult = parseSource("scream: \"Hello\"...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[0].get());
+    
+    const auto& expr = dynamic_cast<const LiteralExpr&>(printStmt->getExpression());
+    
+    EXPECT_EQ(expr.getLiteral().getType(), Token::Type::String);
+    EXPECT_EQ(expr.getLiteral().getValue<std::string>(), "Hello");
+}
+
+TEST_F(ParserTestFixture, ParsePrintIntLiteral) {
+    auto parserResult = parseSource("scream: 42...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[0].get());
+    
+    const auto& expr = dynamic_cast<const LiteralExpr&>(printStmt->getExpression());
+    
+    EXPECT_EQ(expr.getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(expr.getLiteral().getValue<std::int32_t>(), 42);
+}
+
+TEST_F(ParserTestFixture, ParsePrintVariable) {
+    auto source = R"(
+        stash x about 10...
+        scream: x...
+    )";
+    auto parserResult = parseSource(source);
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    
+    ASSERT_EQ(parserResult.statements.size(), 2);
+    
+    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[1].get());
+    ASSERT_NE(printStmt, nullptr) << "Second statement is not a PrintStmt";
+    
+    const auto& varExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
+    
+    EXPECT_EQ(varExpr.getName().getValue<std::string>(), "x");
+}
