@@ -278,15 +278,13 @@ std::expected<void, LexerError> Lexer::tryTokenizeString(Token& token) {
 
 void Lexer::tokenizeIdentifier(Token& token) {
     std::string tokenVal{};
-    size_t bufferLen{128ul};
-    tokenVal.resize(bufferLen);
     char c = getChar();
     
-    for (size_t i{0ul}; i < bufferLen; ++i) {
+    while(not tokenizedAll()) {
         if (not std::isalnum(c) and c != '_') {
             break;
         }
-        tokenVal[i] = c;
+        tokenVal.push_back(c);
         advance(c);
         c = getChar();
     }

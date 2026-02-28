@@ -24,9 +24,7 @@ TEST_F(ParserTestFixture, ParseFunctionWithReturnStatement) {
     
     auto* funcStmt = dynamic_cast<FunctionStmt*>(parserResult.statements[0].get());
     
-    auto name = funcStmt->getName().getValue<std::string>();
-    // TODO fix \0s at the end, const&
-    EXPECT_EQ(name.erase(name.find_first_of('\0')), "macho");
+    EXPECT_EQ(funcStmt->getName().getValue<std::string>(), "macho");
     EXPECT_EQ(funcStmt->getParameters().size(), 0);
     
     const auto& blockStmt = dynamic_cast<const BlockStmt&>(funcStmt->getBody());
@@ -47,9 +45,7 @@ TEST_F(ParserTestFixture, ParseVarDefinition) {
 
     auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
 
-    auto varName = varStmt->getName().getValue<std::string>();
-    // TODO fix \0s at the end, const&
-    EXPECT_EQ(varName.erase(varName.find_first_of('\0')), "integer");
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "integer");
 
     const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
     const auto& literal = initializer.getLiteral();
@@ -63,10 +59,8 @@ TEST_F(ParserTestFixture, ParseFloatLiteral) {
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
-    ASSERT_NE(varStmt, nullptr);
     
-    auto varName = varStmt->getName().getValue<std::string>();
-    EXPECT_EQ(varName.erase(varName.find_first_of('\0')), "float");
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "float");
     
     const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
     const auto& literal = initializer.getLiteral();
@@ -83,9 +77,7 @@ TEST_F(ParserTestFixture, ParseVarDefinitionWithEqualityExpression) {
     
     const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
     
-    auto varName = varStmt->getName().getValue<std::string>();
-    // TODO fix \0s at the end, const&
-    EXPECT_EQ(varName.erase(varName.find_first_of('\0')), "comparison");
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
     
     const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
     EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Equal);
