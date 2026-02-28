@@ -390,9 +390,54 @@ TEST_F(ParserTestFixture, ParsePrintVariable) {
     ASSERT_EQ(parserResult.statements.size(), 2);
     
     const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[1].get());
-    ASSERT_NE(printStmt, nullptr) << "Second statement is not a PrintStmt";
     
     const auto& varExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
     
     EXPECT_EQ(varExpr.getName().getValue<std::string>(), "x");
+}
+
+TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
+    auto source = R"(
+        gig add(x, y) {
+            yeet x with y...
+        }
+
+        gig macho() {
+            stash number about add(2, 3)...
+            yeet ghosted...
+        }
+    )";
+    auto parserResult = parseSource(source);
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 2);
+    
+    const auto* addFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
+
+    const auto& addBody = dynamic_cast<const BlockStmt&>(addFunc->getBody());
+    ASSERT_EQ(addBody.getStatements().size(), 1);
+    
+    const auto* returnAdd = dynamic_cast<const ReturnStmt*>(addBody.getStatements()[0].get());
+    const auto& addition = dynamic_cast<const BinaryExpr&>(returnAdd->getValue());
+    EXPECT_EQ(addition.getOperator().getType(), Token::Type::Plus); 
+
+    const auto* machoFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[1].get());
+    EXPECT_EQ(machoFunc->getName().getValue<std::string>(), "macho");
+    
+    const auto& machoBody = dynamic_cast<const BlockStmt&>(machoFunc->getBody());
+    ASSERT_EQ(machoBody.getStatements().size(), 2);
+    
+    const auto* stashStmt = dynamic_cast<const VarDefinitionStmt*>(machoBody.getStatements()[0].get());
+
+    const auto& callExpr = dynamic_cast<const CallExpr&>(stashStmt->getInitializer());
+    EXPECT_EQ(callExpr.getName().getValue<std::string>(), "add");
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 2);
+    
+    const auto& arg1 = dynamic_cast<const LiteralExpr&>(*(args[0]));
+    EXPECT_EQ(arg1.getLiteral().getValue<std::int32_t>(), 2);
+    
+    const auto* returnGhosted = dynamic_cast<const ReturnStmt*>(machoBody.getStatements()[1].get());
+    const auto& ghostedValue = dynamic_cast<const LiteralExpr&>(returnGhosted->getValue());
+    EXPECT_EQ(ghostedValue.getLiteral().getType(), Token::Type::Null);
 }

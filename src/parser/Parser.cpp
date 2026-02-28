@@ -324,9 +324,17 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     }
 
     if (match(Token::Type::Ident)) {
-        const auto& token = getToken();
-        LOG_DEBUG << "Parsed variable expression: " << token.getValue<std::string>();
-        return std::make_unique<VariableExpr>(getTokenAndAdvance());
+        const auto& nameToken = getTokenAndAdvance();
+        if (not nameToken.valueIs<std::string>()) {
+            throwParserException("Ident should have a proper name");
+        }
+
+        if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
+            return parseFunctionCall(nameToken);
+        }
+
+        LOG_DEBUG << "Parsed variable expression: " << nameToken.getValue<std::string>();
+        return std::make_unique<VariableExpr>(nameToken);
     }
 
     if (match(Token::Type::LParen)) {
@@ -409,4 +417,21 @@ std::unique_ptr<Expr> Parser::parseTerm() {
 
     LOG_DEBUG << "No term operator matched, returning left operand";
     return left;
+}
+
+std::unique_ptr<Expr> Parser::parseFunctionCall(const Token& nameToken) {
+    const auto& name = nameToken.getValue<std::string>();
+    LOG_DEBUG << "Parsing function call for: " << name;
+    std::vector<std::unique_ptr<Expr>> arguments;
+                
+    if (not match(Token::Type::RParen)) {
+        do {
+            arguments.push_back(parseExpression());
+        } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
+    }
+    consume(Token::Type::RParen, "Expected ')' after arguments");
+                
+    LOG_DEBUG << std::format(
+        "Parsed function call for '{}' with {} arguments", name, arguments.size());
+    return std::make_unique<CallExpr>(nameToken, std::move(arguments));
 }

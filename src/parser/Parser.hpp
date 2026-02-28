@@ -65,6 +65,7 @@ private:
     std::unique_ptr<Expr> parseEquality();
     std::unique_ptr<Expr> parseComparison();
     std::unique_ptr<Expr> parseTerm();
+    std::unique_ptr<Expr> parseFunctionCall(const Token&);
 
     const std::vector<Token> _tokens;
     std::uint32_t _current{0u};
