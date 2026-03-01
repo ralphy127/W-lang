@@ -6,8 +6,11 @@
 #include "AstNode.hpp"
 #include "Expressions.hpp"
 #include "token/Token.hpp"
+#include "Visitor.hpp"
 
 class Stmt : public AstNode {
+public:
+    virtual RuntimeValue accept(Visitor&) const = 0;
 };
 
 class VarDefinitionStmt : public Stmt {
@@ -17,6 +20,7 @@ public:
     const Token& getName() const { return _name; }
     bool hasInitializer() const { return _initializer != nullptr; }
     const Expr& getInitializer() const;
+    RuntimeValue accept(Visitor& v) const override { return v.visitVarDefinitionStmt(*this); }
 
 private:
     Token _name;
@@ -29,6 +33,7 @@ public:
 
     const Token& getName() const { return _name; }
     const Expr& getValue() const;
+    RuntimeValue accept(Visitor& v) const override { return v.visitAssignStmt(*this); }
 
 private:
     Token _name;
@@ -41,6 +46,8 @@ public:
     explicit BlockStmt(std::vector<std::unique_ptr<Stmt>> statements);
 
     const std::vector<std::unique_ptr<Stmt>>& getStatements() const { return _statements; }
+
+    RuntimeValue accept(Visitor& v) const override { return v.visitBlockStmt(*this); }
 
 private:
     std::vector<std::unique_ptr<Stmt>> _statements{};
@@ -63,6 +70,7 @@ public:
     const std::vector<ElseIfClause>& getElseIfClauses() const { return _elseIfs; }
     const Stmt& getElseBlock() const;
     bool hasElseBlock() const { return _elseBlock != nullptr; }
+    RuntimeValue accept(Visitor& v) const override { return v.visitIfStmt(*this); }
 
 private:
     std::unique_ptr<Expr> _condition;
@@ -76,6 +84,7 @@ public:
     explicit LoopStmt(std::unique_ptr<Stmt> body);
 
     const Stmt& getBody() const;
+    RuntimeValue accept(Visitor& v) const override { return v.visitLoopStmt(*this); }
 
 private:
     std::unique_ptr<Stmt> _body;
@@ -87,6 +96,7 @@ public:
 
     const Expr& getCount() const;
     const Stmt& getBody() const;
+    RuntimeValue accept(Visitor& v) const override { return v.visitRepeatStmt(*this); }
 
 private:
     std::unique_ptr<Expr> _count;
@@ -98,6 +108,7 @@ public:
     explicit PrintStmt(std::unique_ptr<Expr> expression);
 
     const Expr& getExpression() const;
+    RuntimeValue accept(Visitor& v) const override { return v.visitPrintStmt(*this); }
 
 private:
     std::unique_ptr<Expr> _expression;
@@ -109,12 +120,16 @@ public:
 
     const Expr& getValue() const;
     bool hasValue() const { return _value != nullptr; }
+    RuntimeValue accept(Visitor& v) const override { return v.visitReturnStmt(*this); }
 
 private:
     std::unique_ptr<Expr> _value;
 };
 
-struct BreakStmt : public Stmt {};
+class BreakStmt : public Stmt {
+public:
+    RuntimeValue accept(Visitor& v) const override { return v.visitBreakStmt(*this); }
+};
 
 class FunctionStmt : public Stmt {
 public:
@@ -125,6 +140,7 @@ public:
     const Token& getName() const { return _name; }
     const std::vector<Token>& getParameters() const { return _parameters; }
     const Stmt& getBody() const;
+    RuntimeValue accept(Visitor& v) const override { return v.visitFunctionStmt(*this); }
 
 private:
     Token _name;
@@ -137,6 +153,7 @@ public:
     explicit ExpressionStmt(std::unique_ptr<Expr>);
 
     const Expr& getExpression() const { return *_expression; }
+    RuntimeValue accept(Visitor& v) const override { return v.visitExpressionStmt(*this); }
 
 private:
     std::unique_ptr<Expr> _expression;

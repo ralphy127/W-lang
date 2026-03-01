@@ -52,6 +52,9 @@ LogStream::~LogStream() {
     if (filepath.find("parser") != std::string::npos) {
         prefix = std::string{"[PARSER] "};
     }
+    if (filepath.find("interpreter") != std::string::npos) {
+        prefix = std::string{"[INTERPRETER] "};
+    }
 
     auto now = std::chrono::system_clock::now();
     auto time_t_now = std::chrono::system_clock::to_time_t(now);
