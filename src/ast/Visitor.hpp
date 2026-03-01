@@ -22,6 +22,8 @@ class CallExpr;
 
 class Visitor {
 public:
+    virtual ~Visitor() = default;
+    
     virtual RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) = 0;
     virtual RuntimeValue visitAssignStmt(const AssignStmt&) = 0;
     virtual RuntimeValue visitBlockStmt(const BlockStmt&) = 0;
