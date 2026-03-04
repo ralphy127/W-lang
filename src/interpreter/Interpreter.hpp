@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include "ast/Visitor.hpp"
 #include "ast/Statements.hpp"
+#include "runtime/Environment.hpp"
 
 class Interpreter : public Visitor {
 public:
@@ -11,7 +12,7 @@ public:
     void interpret();
 
     RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) override;
-    RuntimeValue visitAssignStmt(const AssignStmt&) override;
+    RuntimeValue visitReassignStmt(const ReassignStmt&) override;
     RuntimeValue visitBlockStmt(const BlockStmt&) override;
     RuntimeValue visitIfStmt(const IfStmt&) override;
     RuntimeValue visitLoopStmt(const LoopStmt&) override;
@@ -31,4 +32,7 @@ public:
 private:
     const std::vector<std::unique_ptr<Stmt>> _statements;
     std::unordered_map<std::string, const FunctionStmt&> _functions;
+    std::shared_ptr<Environment> _globalEnvironment{std::make_shared<Environment>()};
+    std::shared_ptr<Environment> _currentEnvironment{_globalEnvironment};
+    std::uint32_t _scopeDepth{1u};
 };

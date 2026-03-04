@@ -26,7 +26,24 @@ private:
 
 }
 
-#define LOG_DEBUG logger::detail::LogStream("DEBUG", std::source_location::current())
-#define LOG_INFO logger::detail::LogStream("INFO", std::source_location::current())
-#define LOG_WARN logger::detail::LogStream("WARNING", std::source_location::current())
-#define LOG_ERROR logger::detail::LogStream("ERROR", std::source_location::current())
+constexpr std::uint16_t logLevelDebug{0u};
+constexpr std::uint16_t logLevelInfo{1u};
+constexpr std::uint16_t logLevelWarn{2u};
+constexpr std::uint16_t logLevelError{3u};
+extern std::uint8_t logLevel;
+
+#define LOG_DEBUG \
+    if (logLevel > logLevelDebug) {} \
+    else logger::detail::LogStream("DEBUG", std::source_location::current())
+
+#define LOG_INFO \
+    if (logLevel > logLevelInfo) {} \
+    else logger::detail::LogStream("INFO", std::source_location::current())
+
+#define LOG_WARN \
+    if (logLevel > logLevelWarn) {} \
+    else logger::detail::LogStream("WARN", std::source_location::current())
+
+#define LOG_ERROR \
+    if (logLevel > logLevelError) {} \
+    else logger::detail::LogStream("ERROR", std::source_location::current())

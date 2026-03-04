@@ -25,4 +25,4 @@ enable_testing()
 add_subdirectory(tests)
 
 add_executable(wlang src/main.cpp)
-target_link_libraries(wlang PRIVATE lexer parser interpreter token ast utils)
+target_link_libraries(wlang PRIVATE lexer parser interpreter token ast utils runtime)

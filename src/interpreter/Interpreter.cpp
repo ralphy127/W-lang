@@ -28,19 +28,49 @@ void Interpreter::interpret() {
 
 RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) {
     LOG_DEBUG << "Visiting VarDefinitionStmt";
+
+    const auto& name = stmt.getName().getValue<std::string>();
+    auto value = stmt.getInitializer().accept(*this);
+    LOG_DEBUG << std::format("Defining variable {} with {} at scope depth {}",
+        name, stringify(value), _scopeDepth);
+    _currentEnvironment->defineVar(name, std::move(value));
+
     return std::monostate{};
 }
 
-RuntimeValue Interpreter::visitAssignStmt(const AssignStmt& stmt) {
-    LOG_DEBUG << "Visiting AssignStmt";
+RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
+    LOG_DEBUG << "Visiting ReassignStmt";
+
+    const auto& name = stmt.getName().getValue<std::string>();
+    auto newValue = stmt.getValue().accept(*this);
+    _currentEnvironment->reassignVar(name, std::move(newValue));
+
+    LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
+        name, stringify(newValue), _scopeDepth);
+
     return std::monostate{};
 }
 
 RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
     LOG_DEBUG << "Visiting BlockStmt with " << stmt.getStatements().size() << " statements";
-    for (const auto& innerStmt : stmt.getStatements()) {
-        innerStmt->accept(*this);
+    
+    auto previousEnvironment = _currentEnvironment;
+    _currentEnvironment = std::make_shared<Environment>(previousEnvironment);
+    ++_scopeDepth;
+
+    try {
+        for (const auto& innerStmt : stmt.getStatements()) {
+            innerStmt->accept(*this);
+        }
     }
+    catch (const std::exception& e) {
+        _currentEnvironment = previousEnvironment;
+        --_scopeDepth;
+        throw e;
+    }
+    
+    _currentEnvironment = previousEnvironment;
+    --_scopeDepth;
     return std::monostate{};
 }
 
@@ -63,10 +93,9 @@ RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
     LOG_DEBUG << "Visiting PrintStmt";
     const auto value = stmt.getExpression().accept(*this);
 
-    auto str = std::holds_alternative<std::monostate>(value) ?
-        std::string("ghosted") : std::get<std::string>(value);
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    auto str = stringify(value);
     LOG_DEBUG << "Printing: " << str;
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
     std::cout << str << "!!!" << std::endl;
     
     return std::monostate{};
@@ -99,17 +128,29 @@ RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
     LOG_DEBUG << "Visiting LiteralExpr";
-    if (expr.getLiteral().getType() == Token::Type::String) {
-        auto value = expr.getLiteral().getValue<std::string>();
-        LOG_DEBUG << "String literal: " << value;
-        return value;
+    switch (expr.getLiteral().getType()) {
+        case Token::Type::String: {
+            auto value = expr.getLiteral().getValue<std::string>();
+            LOG_DEBUG << "String literal: " << value;
+            return value;
+        }
+        case Token::Type::Int: {
+            auto value = expr.getLiteral().getValue<std::int32_t>();
+            LOG_DEBUG << "Int literal: " << value;
+            return value;
+        }
+        default:
+            return std::monostate{};
     }
-    return std::monostate{};
 }
 
 RuntimeValue Interpreter::visitVariableExpr(const VariableExpr& expr) {
     LOG_DEBUG << "Visiting VariableExpr";
-    return std::monostate{};
+    const auto& name = expr.getName().getValue<std::string>();
+    LOG_DEBUG << std::format("Accessing variable {} at scope depth {}", name, _scopeDepth);
+    auto value = _currentEnvironment->getVar(name);
+    LOG_DEBUG << std::format("Retrieved value: {}", stringify(value));
+    return value;
 }
 
 RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {

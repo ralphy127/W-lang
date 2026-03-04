@@ -34,3 +34,25 @@ TEST_F(InterpreterTests, MvpExecutesMachoFunction) {
     
     EXPECT_EQ(buffer.str(), "F*CK ME IT WORKS!!!\n");
 }
+
+TEST_F(InterpreterTests, MvpExecutesVariableStashAndScream) {
+    auto source = R"(
+        gig macho() {
+            stash number about 10...
+            scream: number...
+            yeet ghosted...
+        }
+    )";
+    
+    auto statements = parseSource(source).statements;
+    
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
+    
+    Interpreter interpreter{std::move(statements)};
+    interpreter.interpret();
+    
+    std::cout.rdbuf(oldCout);
+    
+    EXPECT_EQ(buffer.str(), "10!!!\n");
+}

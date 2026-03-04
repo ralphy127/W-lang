@@ -7,6 +7,7 @@
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
+#include "utils/Logging.hpp"
 
 static std::string readFile(const std::string& filepath) {
     const std::ifstream file(filepath);
@@ -43,9 +44,14 @@ static void run(std::string sourceCode) {
 }
 
 int main(int argc, const char* argv[]) {
+    ::logLevel = logLevelInfo;
+
     if (argc < 2) {
         std::cerr << "Usage: ./wlang <filepath>\n";
         return -1;
+    }
+    if (argc == 3 and strcmp(argv[2], "debug") == 0) {
+        ::logLevel = logLevelDebug;
     }
 
     const auto filepath = argv[1];

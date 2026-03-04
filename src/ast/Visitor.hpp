@@ -3,7 +3,7 @@
 #include "runtime/RuntimeValue.hpp"
 
 class VarDefinitionStmt;
-class AssignStmt;
+class ReassignStmt;
 class BlockStmt;
 class IfStmt;
 class LoopStmt;
@@ -25,7 +25,7 @@ public:
     virtual ~Visitor() = default;
     
     virtual RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) = 0;
-    virtual RuntimeValue visitAssignStmt(const AssignStmt&) = 0;
+    virtual RuntimeValue visitReassignStmt(const ReassignStmt&) = 0;
     virtual RuntimeValue visitBlockStmt(const BlockStmt&) = 0;
     virtual RuntimeValue visitIfStmt(const IfStmt&) = 0;
     virtual RuntimeValue visitLoopStmt(const LoopStmt&) = 0;

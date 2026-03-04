@@ -27,13 +27,13 @@ private:
     std::unique_ptr<Expr> _initializer;
 };
 
-class AssignStmt : public Stmt {
+class ReassignStmt : public Stmt {
 public:
-    explicit AssignStmt(Token name, std::unique_ptr<Expr> value);
+    explicit ReassignStmt(Token name, std::unique_ptr<Expr> value);
 
     const Token& getName() const { return _name; }
     const Expr& getValue() const;
-    RuntimeValue accept(Visitor& v) const override { return v.visitAssignStmt(*this); }
+    RuntimeValue accept(Visitor& v) const override { return v.visitReassignStmt(*this); }
 
 private:
     Token _name;

@@ -13,16 +13,16 @@ const Expr& VarDefinitionStmt::getInitializer() const {
     return *_initializer;
 }
 
-AssignStmt::AssignStmt(Token name, std::unique_ptr<Expr> value)
+ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value)
     : _name{std::move(name)}
     , _value{std::move(value)} {
     
-    assert(_name.valueIs<std::string>() && "AssignStmt must hold a string token for name");
-    assert(_value.get() && "AssignStmt value is null");
+    assert(_name.valueIs<std::string>() && "ReassignStmt must hold a string token for name");
+    assert(_value.get() && "ReassignStmt value is null");
 }
 
-const Expr& AssignStmt::getValue() const {
-    assert(_value.get() && "AssignStmt value is null");
+const Expr& ReassignStmt::getValue() const {
+    assert(_value.get() && "ReassignStmt value is null");
     return *_value;
 }
 

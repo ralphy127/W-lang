@@ -136,7 +136,7 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         if (matchAndAdvanceIfNeeded(Token::Type::Reassign)) {
             auto value = parseExpression();
             consume(Token::Type::Semi, "Expected '...' after rassignment");
-            return std::make_unique<AssignStmt>(nameToken, std::move(value));
+            return std::make_unique<ReassignStmt>(nameToken, std::move(value));
         }
         
         throwParserException("Expected 'might_be' after variable name");

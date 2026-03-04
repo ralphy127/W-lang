@@ -448,11 +448,11 @@ TEST_F(ParserTestFixture, ParseAssignStatement) {
     ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
     ASSERT_EQ(parserResult.statements.size(), 1);
     
-    const auto* assignStmt = dynamic_cast<const AssignStmt*>(parserResult.statements[0].get());
+    const auto* reassignStmt = dynamic_cast<const ReassignStmt*>(parserResult.statements[0].get());
     
-    EXPECT_EQ(assignStmt->getName().getValue<std::string>(), "counter");
+    EXPECT_EQ(reassignStmt->getName().getValue<std::string>(), "counter");
 
-    const auto& expr = dynamic_cast<const LiteralExpr&>(assignStmt->getValue());
+    const auto& expr = dynamic_cast<const LiteralExpr&>(reassignStmt->getValue());
     EXPECT_EQ(expr.getLiteral().getType(), Token::Type::Int);
     EXPECT_EQ(expr.getLiteral().getValue<std::int32_t>(), 42);
 }
