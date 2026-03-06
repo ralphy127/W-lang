@@ -124,6 +124,38 @@ TEST_F(ParserTestFixture, ParseVarDefinitionWithEqualityExpression) {
     EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
 }
 
+TEST_F(ParserTestFixture, ParseVarDefinitionWithPlainTrue) {
+    auto parserResult = parseSource("stash true about totally...");
+    
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
+    
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "true");
+    
+    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
+    const auto& literal = initializer.getLiteral();
+    
+    EXPECT_EQ(literal.getType(), Token::Type::True);
+}
+
+TEST_F(ParserTestFixture, PrintBoolVariable) {
+    auto parserResult = parseSource(
+        "stash true about totally...\n"
+        "scream: true...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 2);
+    
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "true");
+    
+    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[1].get());
+    
+    const auto& varExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
+    EXPECT_EQ(varExpr.getName().getValue<std::string>(), "true");
+}
+
 TEST_F(ParserTestFixture, ParseVarDefinitionWithNotEqualExpression) {
     auto parserResult = parseSource("stash comparison about 10 kinda_sus 5...");
     

@@ -139,6 +139,16 @@ RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
             LOG_DEBUG << "Int literal: " << value;
             return value;
         }
+        case Token::Type::True: {
+            bool value{true};
+            LOG_DEBUG << "Bool literal: true";
+            return value;
+        }
+        case Token::Type::False: {
+            bool value{false};
+            LOG_DEBUG << "Bool literal: false";
+            return value;
+        }
         default:
             return std::monostate{};
     }
@@ -155,7 +165,26 @@ RuntimeValue Interpreter::visitVariableExpr(const VariableExpr& expr) {
 
 RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
     LOG_DEBUG << "Visiting BinaryExpr";
-    return std::monostate{};
+    const auto& left = expr.getLeft().accept(*this);
+    const auto& op = expr.getOperator().getType();
+    const auto& right = expr.getRight().accept(*this);
+
+    switch (op) {
+        case Token::Type::Equal:
+            LOG_DEBUG << "Found equal operator";
+            return left == right;
+        case Token::Type::NotEqual:
+            LOG_DEBUG << "Found not equal operator";
+            return left != right;
+        case Token::Type::Less:
+            LOG_DEBUG << "Found less operator";
+            return left < right;
+        case Token::Type::Greater:
+            LOG_DEBUG << "Found greater operator";
+            return left > right;
+        default:
+            throw std::runtime_error{"Unknown operator in binary expression"};
+    }
 }
 
 RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
