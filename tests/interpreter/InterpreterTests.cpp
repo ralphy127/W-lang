@@ -254,3 +254,296 @@ TEST_F(InterpreterTests, CompleteIfStatementTest) {
         "TEST 4 ELSE BRANCH!!!\nTEST 5 - VALUE IS EXACTLY 15!!!\n");
 }
 
+TEST_F(InterpreterTests, SpinAroundLoop) {
+    auto source = R"(
+        gig macho() {
+            stash n about 5...
+            spin_around (n) {
+                scream: "Spinnin"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "SPINNIN!!!\nSPINNIN!!!\nSPINNIN!!!\nSPINNIN!!!\nSPINNIN!!!\n");
+}
+
+TEST_F(InterpreterTests, DoUntilBoredWithRageQuit) {
+    auto source = R"(
+        gig macho() {
+            do_until_bored {
+                scream: "Doing until bored"...
+                rage_quit!!!
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "DOING UNTIL BORED!!!\n");
+}
+
+TEST_F(InterpreterTests, LoopWithVariableReassignmentAndBreak) {
+    auto source = R"(
+        gig macho() {
+            stash counter about 0...
+            stash number about 0...
+            do_until_bored {
+                scream: counter...
+                scream: number...
+                counter might_be counter with 1...
+                number might_be number without 1...
+                perhaps (counter bigger_ish 9) {
+                    rage_quit!!!
+                }
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, 
+        "0!!!\n0!!!\n"
+        "1!!!\n-1!!!\n"
+        "2!!!\n-2!!!\n"
+        "3!!!\n-3!!!\n"
+        "4!!!\n-4!!!\n"
+        "5!!!\n-5!!!\n"
+        "6!!!\n-6!!!\n"
+        "7!!!\n-7!!!\n"
+        "8!!!\n-8!!!\n"
+        "9!!!\n-9!!!\n");
+}
+
+TEST_F(InterpreterTests, SpinAroundWithVariable) {
+    auto source = R"(
+        gig macho() {
+            stash n about 5...
+            spin_around (n) {
+                scream: "Spinnin"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "SPINNIN!!!\nSPINNIN!!!\nSPINNIN!!!\nSPINNIN!!!\nSPINNIN!!!\n");
+}
+
+TEST_F(InterpreterTests, EndlessLoopWithImmediateBreak) {
+    auto source = R"(
+        gig macho() {
+            do_until_bored {
+                scream: "Doing until bored"...
+                rage_quit!!!
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "DOING UNTIL BORED!!!\n");
+}
+
+TEST_F(InterpreterTests, SpinAroundWithZeroIterations) {
+    auto source = R"(
+        gig macho() {
+            stash n about 0...
+            spin_around (n) {
+                scream: "should not print"...
+            }
+            scream: "after loop"...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "AFTER LOOP!!!\n");
+}
+
+TEST_F(InterpreterTests, SpinAroundWithLiteralCount) {
+    auto source = R"(
+        gig macho() {
+            spin_around (3) {
+                scream: "iteration"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "ITERATION!!!\nITERATION!!!\nITERATION!!!\n");
+}
+
+TEST_F(InterpreterTests, NestedLoops) {
+    auto source = R"(
+        gig macho() {
+            spin_around (2) {
+                spin_around (3) {
+                    scream: "nested"...
+                }
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "NESTED!!!\nNESTED!!!\nNESTED!!!\nNESTED!!!\nNESTED!!!\nNESTED!!!\n");
+}
+
+TEST_F(InterpreterTests, DoUntilBoredWithConditionalBreak) {
+    auto source = R"(
+        gig macho() {
+            stash count about 0...
+            do_until_bored {
+                scream: count...
+                count might_be count with 1...
+                perhaps (count bigger_ish 4) {
+                    rage_quit!!!
+                }
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "0!!!\n1!!!\n2!!!\n3!!!\n4!!!\n");
+}
+
+TEST_F(InterpreterTests, IfElseIfMultipleConditions) {
+    auto source = R"(
+        gig macho() {
+            stash score about 85...
+            perhaps (score bigger_ish 90) {
+                scream: "A"...
+            }
+            or_whatever (score bigger_ish 80) {
+                scream: "B"...
+            }
+            or_whatever (score bigger_ish 70) {
+                scream: "C"...
+            }
+            screw_it {
+                scream: "F"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "B!!!\n");
+}
+
+TEST_F(InterpreterTests, IfElseIfFallsThrough) {
+    auto source = R"(
+        gig macho() {
+            stash value about 5...
+            perhaps (value bigger_ish 10) {
+                scream: "greater than 10"...
+            }
+            or_whatever (value bigger_ish 8) {
+                scream: "greater than 8"...
+            }
+            screw_it {
+                scream: "other"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "OTHER!!!\n");
+}
+
+TEST_F(InterpreterTests, NestedIfInLoop) {
+    auto source = R"(
+        gig macho() {
+            stash i about 0...
+            spin_around (3) {
+                perhaps (i looks_like 1) {
+                    scream: "found one"...
+                }
+                i might_be i with 1...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "FOUND ONE!!!\n");
+}
+
+TEST_F(InterpreterTests, LoopWithMultipleBreaks) {
+    auto source = R"(
+        gig macho() {
+            stash x about 0...
+            do_until_bored {
+                x might_be x with 1...
+                perhaps (x looks_like 3) {
+                    rage_quit!!!
+                }
+                scream: x...
+                perhaps (x bigger_ish 5) {
+                    rage_quit!!!
+                }
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "1!!!\n2!!!\n");
+}
+
+TEST_F(InterpreterTests, VariableReassignmentWithArithmetic) {
+    auto source = R"(
+        gig macho() {
+            stash value about 10...
+            scream: value...
+            value might_be value with 5...
+            scream: value...
+            value might_be value without 3...
+            scream: value...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "10!!!\n15!!!\n12!!!\n");
+}
+
+TEST_F(InterpreterTests, ComparisonWithNegativeNumbers) {
+    auto source = R"(
+        gig macho() {
+            stash negative about 0 without 5...
+            scream: negative...
+            perhaps (negative tiny_ish 0) {
+                scream: "negative is less than zero"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "-5!!!\nNEGATIVE IS LESS THAN ZERO!!!\n");
+}
+
+TEST_F(InterpreterTests, BooleanVariableInCondition) {
+    auto source = R"(
+        gig macho() {
+            stash isReady about totally...
+            perhaps (isReady looks_like totally) {
+                scream: "ready"...
+            }
+            isReady might_be nah...
+            perhaps (isReady looks_like nah) {
+                scream: "not ready"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "READY!!!\nNOT READY!!!\n");
+}
+
+TEST_F(InterpreterTests, SpinAroundWithVariableModification) {
+    auto source = R"(
+        gig macho() {
+            stash counter about 0...
+            spin_around (4) {
+                counter might_be counter with 2...
+                scream: counter...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "2!!!\n4!!!\n6!!!\n8!!!\n");
+}
+

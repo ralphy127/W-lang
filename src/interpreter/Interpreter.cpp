@@ -3,6 +3,29 @@
 #include <iostream>
 #include "utils/Logging.hpp"
 
+namespace {
+
+class BreakStatementException {};
+
+template <typename Operation>
+RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Operation&& operation) {
+    return std::visit(overloaded{
+        [&operation](std::int32_t l, std::int32_t r) -> RuntimeValue {
+            return operation(l, r); },
+        [&operation](double l, double r) -> RuntimeValue {
+            return operation(l, r); },
+        [&operation](std::int32_t l, double r) -> RuntimeValue {
+            return operation(static_cast<double>(l), r); },
+        [&operation](double l, std::int32_t r) -> RuntimeValue {
+            return operation(l, static_cast<double>(r)); },
+        [](auto&&, auto&&) -> RuntimeValue { 
+            throw std::runtime_error("Matematyka dziala tylko na liczbach!"); 
+        }
+    }, left, right);
+}
+
+}
+
 Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements)
     : _statements{std::move(statements)} {
 }
@@ -102,11 +125,33 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
 
 RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
     LOG_DEBUG << "Visiting LoopStmt";
+    const auto& body = stmt.getBody();
+    while (true) {
+        try {
+            body.accept(*this);
+        }
+        catch (BreakStatementException) {
+            LOG_DEBUG << "Caught break exception";
+            break;
+        }
+    }
     return {};
 }
 
 RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
     LOG_DEBUG << "Visiting RepeatStmt";
+    // TODO casting to int / error handling
+    const auto count = std::get<std::int32_t>(stmt.getCount().accept(*this));
+    const auto& body = stmt.getBody();
+    for (std::int32_t i{0}; i < count; ++i) {
+        try {
+            body.accept(*this);
+        }
+        catch (BreakStatementException) {
+            LOG_DEBUG << "Caught break exception";
+            break;
+        }
+    }
     return {};
 }
 
@@ -130,6 +175,7 @@ RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
 
 RuntimeValue Interpreter::visitBreakStmt(const BreakStmt& stmt) {
     LOG_DEBUG << "Visiting BreakStmt";
+    throw BreakStatementException{};
     return {};
 }
 
@@ -203,6 +249,14 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
         case Token::Type::Greater:
             LOG_DEBUG << "Found greater operator";
             return left > right;
+        case Token::Type::Plus: {
+            LOG_DEBUG << "Found plus operator";
+            return applyMath(left, right, [](auto&& a, auto&& b) { return a + b; });
+        }
+        case Token::Type::Minus: {
+            LOG_DEBUG << "Found minus operator";
+            return applyMath(left, right, [](auto&& a, auto&& b) { return a - b; });
+        }
         default:
             throw std::runtime_error{"Unknown operator in binary expression"};
     }
