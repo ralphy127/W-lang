@@ -375,6 +375,7 @@ void Lexer::skipWhitespaces() {
 
 std::expected<void, LexerError> Lexer::skipComments() {
     for (;;) {
+        skipWhitespaces();
         if (matchAndAdvanceIfNeeded("psst:")) {
             while (not tokenizedAll()) {
                 if (getCharAndAdvance() == '\n') {

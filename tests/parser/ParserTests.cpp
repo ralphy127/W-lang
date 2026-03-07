@@ -506,6 +506,26 @@ TEST_F(ParserTestFixture, ParseIncAsUnaryExpressionStatement) {
     EXPECT_EQ(operand.getName().getValue<std::string>(), "counter");
 }
 
+TEST_F(ParserTestFixture, ParseIfWithBoolLiteral) {
+    auto parserResult = parseSource("perhaps (totally) { yeet ghosted... }");
+
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
+
+    const auto& conditionExpr = dynamic_cast<const LiteralExpr&>(ifStmt->getCondition());
+    EXPECT_EQ(conditionExpr.getLiteral().getType(), Token::Type::True);
+
+    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
+    const auto& thenStatements = thenBlock.getStatements();
+    ASSERT_EQ(thenStatements.size(), 1);
+
+    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(thenStatements[0].get());
+    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
+    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Null);
+}
+
 TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     auto parserResult = parseSource(
         "psst: very useful thingy\n"

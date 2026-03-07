@@ -26,6 +26,9 @@ static void run(std::string sourceCode) {
 
     if (not lexerResult.errors.empty()) {
         // TODO handle lexer errors
+        for (const auto& error : lexerResult.errors) {
+            std::cerr << error.line << ' ' << error.column << ' ' << std::to_underlying(error.type) << '\n';
+        }
         std::cerr << "Found lexing errors";
         return;
     }

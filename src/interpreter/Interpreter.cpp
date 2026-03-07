@@ -35,7 +35,7 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
         name, stringify(value), _scopeDepth);
     _currentEnvironment->defineVar(name, std::move(value));
 
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
@@ -48,7 +48,7 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
     LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
         name, stringify(newValue), _scopeDepth);
 
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
@@ -71,22 +71,43 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
     
     _currentEnvironment = previousEnvironment;
     --_scopeDepth;
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     LOG_DEBUG << "Visiting IfStmt";
-    return std::monostate{};
+    const auto condition = stmt.getCondition().accept(*this);
+    if (not std::holds_alternative<bool>(condition)) {
+        throw std::runtime_error{"If statement's condition should be a boolean"};
+    }
+    if (std::get<bool>(condition)) {
+        stmt.getThenBlock().accept(*this);
+        return {};
+    }
+    for (const auto& elseIfClause : stmt.getElseIfClauses()) {
+        const auto elseIfCondition = elseIfClause.condition->accept(*this);
+        if (not std::holds_alternative<bool>(elseIfCondition)) {
+            throw std::runtime_error{"Else if statement's condition should be a boolean"};
+        }
+        if (std::get<bool>(elseIfCondition)) {
+            elseIfClause.body->accept(*this);
+            return{};
+        }
+    }
+    if (stmt.hasElseBlock()) {
+        stmt.getElseBlock().accept(*this);
+    }
+    return {};
 }
 
 RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
     LOG_DEBUG << "Visiting LoopStmt";
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
     LOG_DEBUG << "Visiting RepeatStmt";
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
@@ -98,18 +119,18 @@ RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
     std::cout << str << "!!!" << std::endl;
     
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     LOG_DEBUG << "Visiting ReturnStmt";
     //TODO for now - just null
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitBreakStmt(const BreakStmt& stmt) {
     LOG_DEBUG << "Visiting BreakStmt";
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
@@ -117,12 +138,12 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
     auto funcName = stmt.getName().getValue<std::string>();
     LOG_DEBUG << "Registering function: " << funcName;
     _functions.emplace(funcName, stmt);
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
     LOG_DEBUG << "Visiting ExpressionStmt";
-    return std::monostate{};
+    return {};
 }
 
     
@@ -150,7 +171,7 @@ RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
             return value;
         }
         default:
-            return std::monostate{};
+            return {};
     }
 }
 
@@ -189,10 +210,10 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
 
 RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     LOG_DEBUG << "Visiting UnaryExpr";
-    return std::monostate{};
+    return {};
 }
 
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Visiting CallExpr";
-    return std::monostate{};
+    return {};
 }
