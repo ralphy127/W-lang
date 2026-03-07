@@ -6,6 +6,9 @@
 namespace {
 
 class BreakStatementException {};
+struct ReturnStatementException {
+    RuntimeValue value;
+};
 
 template <typename Operation>
 RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Operation&& operation) {
@@ -19,7 +22,7 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Oper
         [&operation](double l, std::int32_t r) -> RuntimeValue {
             return operation(l, static_cast<double>(r)); },
         [](auto&&, auto&&) -> RuntimeValue { 
-            throw std::runtime_error("Matematyka dziala tylko na liczbach!"); 
+            throw std::runtime_error("Math works only on numbers!"); 
         }
     }, left, right);
 }
@@ -37,14 +40,20 @@ void Interpreter::interpret() {
     }
 
     LOG_DEBUG << "Looking for entry point 'macho'";
-    auto it = _functions.find("macho");
-    if (it != _functions.end()) {
-        LOG_DEBUG << "Executing 'macho' function";
-        it->second.getBody().accept(*this);
-    }
-    else {
+    const auto it = _functions.find("macho");
+    if (it == _functions.end()) {
         LOG_ERROR << "Missing entry point 'gig macho()'";
         throw std::runtime_error("Missing entry point 'gig macho()'");
+    }
+
+    LOG_DEBUG << "Executing 'macho' function";
+    try {
+        it->second.get().getBody().accept(*this);
+    }
+    catch (ReturnStatementException) {}
+    catch (const std::exception& e) {
+        // TODO error handling
+        LOG_ERROR << "[FATAL] Caught unexpected error:" << e.what();
     }
     LOG_DEBUG << "Interpretation completed";
 }
@@ -169,7 +178,12 @@ RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
 
 RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     LOG_DEBUG << "Visiting ReturnStmt";
-    //TODO for now - just null
+    if (stmt.hasValue()) {
+        LOG_DEBUG << "Returning a value";
+        throw ReturnStatementException{stmt.getValue().accept(*this)};
+    }
+    
+    LOG_DEBUG << "Returning default value";
     return {};
 }
 
@@ -269,5 +283,50 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
 
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Visiting CallExpr";
+    const auto& name = expr.getName().getValue<std::string>();
+    if (not _functions.contains(name)) {
+        // TODO better error handling, but it requires some bigger decisions
+        throw std::runtime_error{"Function does not exist"};
+    }
+
+    const auto& callArgs = expr.getArgs();
+    const auto& funcStmt = _functions.at(name).get();
+    const auto& parameters = funcStmt.getParameters();
+    const auto parametersCount = parameters.size();
+    if (callArgs.size() != parametersCount) {
+        // TODO error handling again
+        throw std::runtime_error{"Argument counts do not match"};
+    }
+
+    LOG_DEBUG << "Evaluating arguments";
+    std::vector<RuntimeValue> evaluatedParameters(parametersCount);
+    for (size_t i{0ull}; i < parametersCount; ++i) {
+        evaluatedParameters[i] = callArgs[i]->accept(*this);
+    }
+
+    LOG_DEBUG << "Creating arguments' environment";
+    auto callEnv = std::make_shared<Environment>(_globalEnvironment);
+    for (size_t i{0ull}; i < parametersCount; ++i) {
+        callEnv->defineVar(parameters[i].getValue<std::string>(), std::move(evaluatedParameters[i]));
+    }
+
+    LOG_DEBUG << "Jumping into arguments' environemnt";
+    auto previousEnv = _currentEnvironment;
+    _currentEnvironment = callEnv;
+    try {
+        funcStmt.getBody().accept(*this);
+    }
+    catch (ReturnStatementException ret) {
+        LOG_DEBUG << "Caught return value";
+        _currentEnvironment = previousEnv;
+        return ret.value;
+    }
+    catch (...) {
+        _currentEnvironment = previousEnv;
+        throw;
+    }
+
+    // TODO make sure default (null) return works
+    _currentEnvironment = _currentEnvironment = previousEnv;
     return {};
 }

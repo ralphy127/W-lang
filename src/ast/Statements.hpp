@@ -118,6 +118,7 @@ class ReturnStmt : public Stmt {
 public:
     explicit ReturnStmt(std::unique_ptr<Expr> value);
 
+    // TODO consider std::optional to avoid hasValue/getValue boilerplate, look at other examples
     const Expr& getValue() const;
     bool hasValue() const { return _value != nullptr; }
     RuntimeValue accept(Visitor& v) const override { return v.visitReturnStmt(*this); }

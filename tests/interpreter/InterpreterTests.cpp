@@ -547,3 +547,128 @@ TEST_F(InterpreterTests, SpinAroundWithVariableModification) {
     expectOutput(source, "2!!!\n4!!!\n6!!!\n8!!!\n");
 }
 
+TEST_F(InterpreterTests, FunctionCallWithReturnValue) {
+    auto source = R"(
+        gig add(x, y) {
+            yeet x with y...
+        }
+
+        gig macho() {
+            stash number about add(2, 3)...
+            scream: number...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "5!!!\n");
+}
+
+TEST_F(InterpreterTests, MultipleFunctionCalls) {
+    auto source = R"(
+        gig multiply(a, b) {
+            yeet a with a with b...
+        }
+
+        gig macho() {
+            stash result1 about multiply(3, 2)...
+            scream: result1...
+            stash result2 about multiply(4, 5)...
+            scream: result2...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "8!!!\n13!!!\n");
+}
+
+TEST_F(InterpreterTests, FunctionWithSubtraction) {
+    auto source = R"(
+        gig subtract(x, y) {
+            yeet x without y...
+        }
+
+        gig macho() {
+            stash result about subtract(10, 3)...
+            scream: result...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "7!!!\n");
+}
+
+TEST_F(InterpreterTests, NestedFunctionCalls) {
+    auto source = R"(
+        gig add(x, y) {
+            yeet x with y...
+        }
+
+        gig macho() {
+            stash result about add(add(1, 2), add(3, 4))...
+            scream: result...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "10!!!\n");
+}
+
+TEST_F(InterpreterTests, FunctionCallInLoop) {
+    auto source = R"(
+        gig double(x) {
+            yeet x with x...
+        }
+
+        gig macho() {
+            stash i about 1...
+            spin_around (3) {
+                stash doubled about double(i)...
+                scream: doubled...
+                i might_be i with 1...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "2!!!\n4!!!\n6!!!\n");
+}
+
+TEST_F(InterpreterTests, FunctionReturningBoolean) {
+    auto source = R"(
+        gig isGreater(x, y) {
+            yeet x bigger_ish y...
+        }
+
+        gig macho() {
+            stash result about isGreater(5, 3)...
+            scream: result...
+            stash result2 about isGreater(2, 8)...
+            scream: result2...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "TOTALLY!!!\nNAH!!!\n");
+}
+
+TEST_F(InterpreterTests, FunctionCallInCondition) {
+    auto source = R"(
+        gig sum(a, b) {
+            yeet a with b...
+        }
+
+        gig macho() {
+            stash total about sum(2, 3)...
+            perhaps (total looks_like 5) {
+                scream: "correct sum"...
+            }
+            screw_it {
+                scream: "wrong sum"...
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "CORRECT SUM!!!\n");
+}
+
