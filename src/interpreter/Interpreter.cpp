@@ -207,15 +207,21 @@ RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
     LOG_DEBUG << "Visiting LiteralExpr";
-    switch (expr.getLiteral().getType()) {
+    const auto& literal = expr.getLiteral();
+    switch (literal.getType()) {
         case Token::Type::String: {
-            auto value = expr.getLiteral().getValue<std::string>();
+            auto value = literal.getValue<std::string>();
             LOG_DEBUG << "String literal: " << value;
             return value;
         }
         case Token::Type::Int: {
-            auto value = expr.getLiteral().getValue<std::int32_t>();
+            auto value = literal.getValue<std::int32_t>();
             LOG_DEBUG << "Int literal: " << value;
+            return value;
+        }
+        case Token::Type::Float: {
+            auto value = literal.getValue<double>();
+            LOG_DEBUG << "Float literal: " << value;
             return value;
         }
         case Token::Type::True: {
