@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <sstream>
 
-std::uint8_t logLevel{logLevelInfo};
+std::uint8_t logLevel{logLevelDebug};
 
 namespace logger::detail {
 

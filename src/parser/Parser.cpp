@@ -130,14 +130,14 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected Return statement";
         return parseReturn();
     }
-    if (match(Token::Type::Ident)) {
+    if (match(Token::Type::Ident) and _current + 1 < _tokens.size() and
+        _tokens[_current + 1].getType() == Token::Type::Reassign) {        
         const auto& nameToken = getTokenAndAdvance();
+        advance();
         
-        if (matchAndAdvanceIfNeeded(Token::Type::Reassign)) {
-            auto value = parseExpression();
-            consume(Token::Type::Semi, "Expected '...' after rassignment");
-            return std::make_unique<ReassignStmt>(nameToken, std::move(value));
-        }
+        auto value = parseExpression();
+        consume(Token::Type::Semi, "Expected '...' after reassignment");
+        return std::make_unique<ReassignStmt>(nameToken, std::move(value));
         
         throwParserException("Expected 'might_be' after variable name");
     }
@@ -191,7 +191,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
 
     LOG_DEBUG << "Function has " << parameters.size() << " parameter(s)";
     consume(Token::Type::RParen, "Expected ')' after function parameters");
-    auto body = parseBlock("function");
+    auto body = parseBlock("gig");
     LOG_DEBUG << "Successfully parsed function definition for '" << name << "'";
     return std::make_unique<FunctionStmt>(nameToken, std::move(parameters), std::move(body));
 }
@@ -213,8 +213,8 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     return std::make_unique<VarDefinitionStmt>(nameToken, std::move(initializer));
 }
 
-std::unique_ptr<Stmt> Parser::parseBlock(const std::string& blockIdent) {
-    LOG_DEBUG << std::format("Parsing block ({}) starting at token index", blockIdent, _current);
+std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
+    LOG_DEBUG << std::format("Parsing block ({}) starting at token index ", blockIdent, _current);
     consume(Token::Type::LBrace, "Expected '{' opening block");
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
@@ -227,7 +227,7 @@ std::unique_ptr<Stmt> Parser::parseBlock(const std::string& blockIdent) {
 
 std::unique_ptr<Stmt> Parser::parseReturn() {
     consume(Token::Type::Return, "Expected return token");
-    LOG_DEBUG << "Parsing return statement at token index" << _current;
+    LOG_DEBUG << "Parsing return statement at token index " << _current;
     if (match(Token::Type::Semi)) {
         const auto& nextToken = getToken();
         LOG_DEBUG << "Return statement with no value (implicit null)";
@@ -310,7 +310,7 @@ std::unique_ptr<Stmt> Parser::parsePrint() {
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {
-    LOG_DEBUG << "parseExpression() called at token index" << _current;
+    LOG_DEBUG << "parseExpression() called at token index " << _current;
     if (auto expr = parseEquality()) {
         LOG_DEBUG << "Expression parsed successfully";
         return std::move(expr);
@@ -320,12 +320,12 @@ std::unique_ptr<Expr> Parser::parseExpression() {
         return std::move(expr);
     }
 
-    LOG_WARN << "Expected an expression at token index" << _current << " - returning null";
+    LOG_WARN << "Expected an expression at token index " << _current << " - returning null";
     return nullptr;
 }
 
 std::unique_ptr<Expr> Parser::parsePrimary() {
-    LOG_DEBUG << "parsePrimary() called at token index" << _current;
+    LOG_DEBUG << "parsePrimary() called at token index " << _current;
     const bool isLiteral =
         match(Token::Type::Int) or
         match(Token::Type::Float) or
@@ -366,7 +366,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
 // TODO possible refactor of binary expressions parsing
 std::unique_ptr<Expr> Parser::parseEquality() {
-    LOG_DEBUG << "parseEquality() called at token index" << _current;
+    LOG_DEBUG << "parseEquality() called at token index " << _current;
     auto left = parseComparison();
 
     if (not parsedAll()) {
@@ -389,7 +389,7 @@ std::unique_ptr<Expr> Parser::parseEquality() {
 }
 
 std::unique_ptr<Expr> Parser::parseComparison() {
-    LOG_DEBUG << "parseComparison() called at token index" << _current;
+    LOG_DEBUG << "parseComparison() called at token index " << _current;
     auto left = parseTerm();
 
     if (not parsedAll()) {

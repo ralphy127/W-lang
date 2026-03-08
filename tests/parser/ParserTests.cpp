@@ -526,6 +526,74 @@ TEST_F(ParserTestFixture, ParseIfWithBoolLiteral) {
     EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Null);
 }
 
+TEST_F(ParserTestFixture, ParseVoidFunction) {
+    auto source = R"(
+        gig print(x) {
+            scream: x...
+        })";
+    
+    auto parserResult = parseSource(source);
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* funcStmt = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(funcStmt->getName().getValue<std::string>(), "print");
+    
+    const auto& params = funcStmt->getParameters();
+    ASSERT_EQ(params.size(), 1);
+    EXPECT_EQ(params[0].getValue<std::string>(), "x");
+    
+    const auto& body = dynamic_cast<const BlockStmt&>(funcStmt->getBody());
+    const auto& statements = body.getStatements();
+    ASSERT_EQ(statements.size(), 1);
+    
+    const auto* printStmt = dynamic_cast<const PrintStmt*>(statements[0].get());
+    const auto& printExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
+    EXPECT_EQ(printExpr.getName().getValue<std::string>(), "x");
+}
+
+TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
+    auto source = R"(
+        gig print(x) {
+            scream: x...
+        }
+
+        gig macho() {
+            stash string about "hello"...
+            print(string)...
+        }
+    )";
+    
+    auto parserResult = parseSource(source);
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 2);
+    
+    const auto* printFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(printFunc->getName().getValue<std::string>(), "print");
+    
+    const auto* machoFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[1].get());
+    EXPECT_EQ(machoFunc->getName().getValue<std::string>(), "macho");
+    
+    const auto& machoBody = dynamic_cast<const BlockStmt&>(machoFunc->getBody());
+    const auto& machoStatements = machoBody.getStatements();
+    ASSERT_EQ(machoStatements.size(), 2);
+    
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(machoStatements[0].get());
+    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "string");
+    
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(machoStatements[1].get());
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    EXPECT_EQ(callExpr.getName().getValue<std::string>(), "print");
+    
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+    
+    const auto& arg = dynamic_cast<const VariableExpr&>(*args[0]);
+    EXPECT_EQ(arg.getName().getValue<std::string>(), "string");
+}
+
 TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     auto parserResult = parseSource(
         "psst: very useful thingy\n"

@@ -704,3 +704,20 @@ TEST_F(InterpreterTests, DoUntilBoredLoopWithPumpItAndRageQuit) {
     expectOutput(source, "0!!!\n1!!!\n2!!!\n3!!!\n4!!!\n5!!!\n6!!!\n7!!!\n8!!!\n9!!!\n");
 }
 
+TEST_F(InterpreterTests, VoidFunctionCall) {
+    auto source = R"(
+        gig print(x) {
+            scream: x...
+        }
+
+        gig macho() {
+            stash string about "hello"...
+            print(string)...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "HELLO!!!\n");
+}
+
+
