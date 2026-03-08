@@ -10,8 +10,8 @@ struct ReturnStatementException {
     RuntimeValue value;
 };
 
-template <typename Operation>
-RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Operation&& operation) {
+template <typename Op>
+RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&& operation) {
     return std::visit(overloaded{
         [&operation](std::int32_t l, std::int32_t r) -> RuntimeValue {
             return operation(l, r); },
@@ -22,7 +22,7 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Oper
         [&operation](double l, std::int32_t r) -> RuntimeValue {
             return operation(l, static_cast<double>(r)); },
         [](auto&&, auto&&) -> RuntimeValue { 
-            throw std::runtime_error("Math works only on numbers!"); 
+            throw std::runtime_error("Math works only on numbers"); 
         }
     }, left, right);
 }
@@ -30,8 +30,7 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Oper
 }
 
 Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements)
-    : _statements{std::move(statements)} {
-}
+    : _statements{std::move(statements)} {}
 
 void Interpreter::interpret() {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());
@@ -190,7 +189,6 @@ RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
 RuntimeValue Interpreter::visitBreakStmt(const BreakStmt& stmt) {
     LOG_DEBUG << "Visiting BreakStmt";
     throw BreakStatementException{};
-    return {};
 }
 
 RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
@@ -203,7 +201,7 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
 
 RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
     LOG_DEBUG << "Visiting ExpressionStmt";
-    return {};
+    return stmt.getExpression().accept(*this);
 }
 
     
@@ -278,6 +276,21 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
 
 RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     LOG_DEBUG << "Visiting UnaryExpr";
+    if (expr.getOperator().getType() == Token::Type::Incr) {
+        // TODO might make some problems with other types / block to int only
+        if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getRight())) {
+            const auto& name = varExpr->getName().getValue<std::string>();
+            auto oldValue = std::get<std::int32_t>(varExpr->accept(*this));
+            LOG_DEBUG << std::format("Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
+            _currentEnvironment->reassignVar(name, oldValue + 1);
+            return {};
+        }
+        else {
+            // TODO error handling
+            throw std::runtime_error{"Right side of 'pump_it' operator must be a variable"};
+        }
+    }
+    LOG_WARN << "Unknown unary operator";
     return {};
 }
 
@@ -307,7 +320,9 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Creating arguments' environment";
     auto callEnv = std::make_shared<Environment>(_globalEnvironment);
     for (size_t i{0ull}; i < parametersCount; ++i) {
-        callEnv->defineVar(parameters[i].getValue<std::string>(), std::move(evaluatedParameters[i]));
+        callEnv->defineVar(
+            parameters[i].getValue<std::string>(),
+            std::move(evaluatedParameters[i]));
     }
 
     LOG_DEBUG << "Jumping into arguments' environemnt";

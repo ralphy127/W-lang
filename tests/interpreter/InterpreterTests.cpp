@@ -672,3 +672,35 @@ TEST_F(InterpreterTests, FunctionCallInCondition) {
     expectOutput(source, "CORRECT SUM!!!\n");
 }
 
+TEST_F(InterpreterTests, PumpItIncrementOperator) {
+    auto source = R"(
+        gig macho() {
+            stash number about 0...
+            scream: number...
+            pump_it number...
+            scream: number...
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "0!!!\n1!!!\n");
+}
+
+TEST_F(InterpreterTests, DoUntilBoredLoopWithPumpItAndRageQuit) {
+    auto source = R"(
+        gig macho() {
+            stash count about 0...
+            do_until_bored {
+                scream: count...
+                pump_it count...
+                perhaps (count bigger_ish 9) {
+                    rage_quit!!!
+                }
+            }
+            yeet ghosted...
+        }
+    )";
+    
+    expectOutput(source, "0!!!\n1!!!\n2!!!\n3!!!\n4!!!\n5!!!\n6!!!\n7!!!\n8!!!\n9!!!\n");
+}
+
