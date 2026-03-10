@@ -13,14 +13,14 @@ struct ReturnStatementException {
 template <typename Op>
 RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&& operation) {
     return std::visit(overloaded{
-        [&operation](std::int32_t l, std::int32_t r) -> RuntimeValue {
-            return operation(l, r); },
-        [&operation](double l, double r) -> RuntimeValue {
-            return operation(l, r); },
-        [&operation](std::int32_t l, double r) -> RuntimeValue {
-            return operation(static_cast<double>(l), r); },
-        [&operation](double l, std::int32_t r) -> RuntimeValue {
-            return operation(l, static_cast<double>(r)); },
+        [&operation](Int l, Int r) -> RuntimeValue {
+            return Int{operation(l, r)}; },
+        [&operation](Float l, Float r) -> RuntimeValue {
+            return Float{operation(l, r)}; },
+        [&operation](Int l, Float r) -> RuntimeValue {
+            return Float{operation(static_cast<Float>(l), r)}; },
+        [&operation](Float l, Int r) -> RuntimeValue {
+            return Float{operation(l, static_cast<Float>(r))}; },
         [](auto&&, auto&&) -> RuntimeValue { 
             throw std::runtime_error("Math works only on numbers"); 
         }
@@ -66,7 +66,7 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
         name, stringify(value), _scopeDepth);
     _currentEnvironment->defineVar(name, std::move(value));
 
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
@@ -79,7 +79,7 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
     LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
         name, stringify(newValue), _scopeDepth);
 
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
@@ -102,7 +102,7 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
     
     _currentEnvironment = previousEnvironment;
     --_scopeDepth;
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
@@ -113,7 +113,7 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     }
     if (std::get<bool>(condition)) {
         stmt.getThenBlock().accept(*this);
-        return {};
+        return Null{};
     }
     for (const auto& elseIfClause : stmt.getElseIfClauses()) {
         const auto elseIfCondition = elseIfClause.condition->accept(*this);
@@ -122,13 +122,13 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
         }
         if (std::get<bool>(elseIfCondition)) {
             elseIfClause.body->accept(*this);
-            return{};
+            return Null{};
         }
     }
     if (stmt.hasElseBlock()) {
         stmt.getElseBlock().accept(*this);
     }
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
@@ -143,7 +143,7 @@ RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
             break;
         }
     }
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
@@ -160,7 +160,7 @@ RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
             break;
         }
     }
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
@@ -172,7 +172,7 @@ RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
     std::cout << str << "!!!" << std::endl;
     
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
@@ -183,7 +183,7 @@ RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     }
     
     LOG_DEBUG << "Returning default value";
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitBreakStmt(const BreakStmt& stmt) {
@@ -196,7 +196,7 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
     auto funcName = stmt.getName().getValue<std::string>();
     LOG_DEBUG << "Registering function: " << funcName;
     _functions.emplace(funcName, stmt);
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
@@ -212,30 +212,30 @@ RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
         case Token::Type::String: {
             auto value = literal.getValue<std::string>();
             LOG_DEBUG << "String literal: " << value;
-            return value;
+            return String{std::move(value)};
         }
         case Token::Type::Int: {
             auto value = literal.getValue<std::int32_t>();
             LOG_DEBUG << "Int literal: " << value;
-            return value;
+            return Int{value};
         }
         case Token::Type::Float: {
             auto value = literal.getValue<double>();
             LOG_DEBUG << "Float literal: " << value;
-            return value;
+            return Float{value};
         }
         case Token::Type::True: {
             bool value{true};
             LOG_DEBUG << "Bool literal: true";
-            return value;
+            return Bool{value};
         }
         case Token::Type::False: {
             bool value{false};
             LOG_DEBUG << "Bool literal: false";
-            return value;
+            return Bool{value};
         }
         default:
-            return {};
+            return Null{};
     }
 }
 
@@ -257,16 +257,16 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
     switch (op) {
         case Token::Type::Equal:
             LOG_DEBUG << "Found equal operator";
-            return left == right;
+            return Bool{left == right};
         case Token::Type::NotEqual:
             LOG_DEBUG << "Found not equal operator";
-            return left != right;
+            return Bool{left != right};
         case Token::Type::Less:
             LOG_DEBUG << "Found less operator";
-            return left < right;
+            return Bool{left < right};
         case Token::Type::Greater:
             LOG_DEBUG << "Found greater operator";
-            return left > right;
+            return Bool{left > right};
         case Token::Type::Plus: {
             LOG_DEBUG << "Found plus operator";
             return applyMath(left, right, [](auto&& a, auto&& b) { return a + b; });
@@ -289,7 +289,7 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
             auto oldValue = std::get<std::int32_t>(varExpr->accept(*this));
             LOG_DEBUG << std::format("Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
             _currentEnvironment->reassignVar(name, oldValue + 1);
-            return {};
+            return Null{};
         }
         else {
             // TODO error handling
@@ -297,7 +297,7 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
         }
     }
     LOG_WARN << "Unknown unary operator";
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
@@ -352,10 +352,10 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     }
 
     _currentEnvironment = previousEnv;
-    return {};
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitDotExpr(const DotExpr&) {
     LOG_DEBUG << "Visiting DotExpr";
-    return {};
+    return Null{};
 }
