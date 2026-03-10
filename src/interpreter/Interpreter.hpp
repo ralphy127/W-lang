@@ -29,6 +29,7 @@ public:
     RuntimeValue visitBinaryExpr(const BinaryExpr&) override;
     RuntimeValue visitUnaryExpr(const UnaryExpr&) override;
     RuntimeValue visitCallExpr(const CallExpr&) override;
+    RuntimeValue visitDotExpr(const DotExpr&) override;
 
 private:
     const std::vector<std::unique_ptr<Stmt>> _statements;

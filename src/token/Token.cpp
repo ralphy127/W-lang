@@ -72,6 +72,7 @@ std::string toString(Token::Type type) {
         case Token::Type::BrSemi: return "BrSemi";
         case Token::Type::Colon: return "Colon";
         case Token::Type::Comma: return "Comma";
+        case Token::Type::Dot: return "Dot";
         case Token::Type::Assign: return "Assign";
         case Token::Type::Reassign: return "Reassign";
         case Token::Type::Incr: return "Incr";
@@ -108,6 +109,7 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::BrSemi: return "!!!";
         case Token::Type::Colon: return ":";
         case Token::Type::Comma: return ",";
+        case Token::Type::Dot: return ".";
         case Token::Type::Assign: return "about";
         case Token::Type::Reassign: return "might_be";
         case Token::Type::Incr: return "pump_it;";

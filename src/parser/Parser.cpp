@@ -59,6 +59,11 @@ const Token& Parser::getTokenAndAdvance() {
     return getPreviousToken();
 }
 
+bool Parser::matchLookahead(Token::Type curr, Token::Type next) {
+    return match(curr) and
+        _current + 1 < _tokens.size() and next == _tokens[_current + 1].getType();
+}
+
 bool Parser::matchAndAdvanceIfNeeded(Token::Type type) {
     if (match(type)) {
         advance();
@@ -130,16 +135,9 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected Return statement";
         return parseReturn();
     }
-    if (match(Token::Type::Ident) and _current + 1 < _tokens.size() and
-        _tokens[_current + 1].getType() == Token::Type::Reassign) {        
-        const auto& nameToken = getTokenAndAdvance();
-        advance();
-        
-        auto value = parseExpression();
-        consume(Token::Type::Semi, "Expected '...' after reassignment");
-        return std::make_unique<ReassignStmt>(nameToken, std::move(value));
-        
-        throwParserException("Expected 'might_be' after variable name");
+    // TODO refactor ident + lookahead
+    if (matchLookahead(Token::Type::Ident, Token::Type::Reassign)) {        
+        return parseReassign();
     }
 
     auto expr = parseExpression();
@@ -309,15 +307,27 @@ std::unique_ptr<Stmt> Parser::parsePrint() {
     return std::make_unique<PrintStmt>(std::move(printExpr));
 }
 
+std::unique_ptr<Stmt> Parser::parseReassign() {
+    LOG_DEBUG << "parseReassign() called at token index " << _current;
+    const auto& nameToken = getTokenAndAdvance();
+    advance();
+            
+    auto value = parseExpression();
+    consume(Token::Type::Semi, "Expected '...' after reassignment");
+    return std::make_unique<ReassignStmt>(nameToken, std::move(value));
+            
+    throwParserException("Expected 'might_be' after variable name");
+}
+
 std::unique_ptr<Expr> Parser::parseExpression() {
     LOG_DEBUG << "parseExpression() called at token index " << _current;
     if (auto expr = parseEquality()) {
         LOG_DEBUG << "Expression parsed successfully";
-        return std::move(expr);
+        return expr;
     }
     if (auto expr = parsePrimary()) {
         LOG_DEBUG << "Expression parsed successfully";
-        return std::move(expr);
+        return expr;
     }
 
     LOG_WARN << "Expected an expression at token index " << _current << " - returning null";
@@ -345,12 +355,23 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
             throwParserException("Ident should have a proper name");
         }
 
-        if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
-            return parseFunctionCall(nameToken);
+        std::unique_ptr<Expr> expr = std::make_unique<VariableExpr>(nameToken);
+
+        while (not parsedAll()) {
+            if (matchAndAdvanceIfNeeded(Token::Type::Dot)) {
+                const auto& propertyToken = consume(Token::Type::Ident, "Expected property name after '.'");
+                expr = std::make_unique<DotExpr>(std::move(expr), propertyToken);
+            }
+            else if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
+                expr = parseFunctionCall(std::move(expr)); 
+            }
+            else {
+                break;
+            }
         }
 
-        LOG_DEBUG << "Parsed variable expression: " << nameToken.getValue<std::string>();
-        return std::make_unique<VariableExpr>(nameToken);
+        LOG_DEBUG << "Parsed variable/call/dot expression";
+        return expr;
     }
 
     if (match(Token::Type::LParen)) {
@@ -437,9 +458,8 @@ std::unique_ptr<Expr> Parser::parseTerm() {
     return left;
 }
 
-std::unique_ptr<Expr> Parser::parseFunctionCall(const Token& nameToken) {
-    const auto& name = nameToken.getValue<std::string>();
-    LOG_DEBUG << "Parsing function call for: " << name;
+std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
+    LOG_DEBUG << "Parsing function call arguments...";
     std::vector<std::unique_ptr<Expr>> arguments;
                 
     if (not match(Token::Type::RParen)) {
@@ -449,9 +469,8 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(const Token& nameToken) {
     }
     consume(Token::Type::RParen, "Expected ')' after arguments");
                 
-    LOG_DEBUG << std::format(
-        "Parsed function call for '{}' with {} arguments", name, arguments.size());
-    return std::make_unique<CallExpr>(nameToken, std::move(arguments));
+    LOG_DEBUG << std::format("Parsed function call with {} arguments", arguments.size());
+    return std::make_unique<CallExpr>(std::move(callee), std::move(arguments));
 }
 
 std::unique_ptr<Expr> Parser::parseUnary() {

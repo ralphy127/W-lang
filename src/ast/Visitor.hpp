@@ -19,6 +19,7 @@ class VariableExpr;
 class BinaryExpr;
 class UnaryExpr;
 class CallExpr;
+class DotExpr;
 
 class Visitor {
 public:
@@ -41,4 +42,5 @@ public:
     virtual RuntimeValue visitBinaryExpr(const BinaryExpr&) = 0;
     virtual RuntimeValue visitUnaryExpr(const UnaryExpr&) = 0;
     virtual RuntimeValue visitCallExpr(const CallExpr&) = 0;
+    virtual RuntimeValue visitDotExpr(const DotExpr&) = 0;
 };

@@ -40,6 +40,35 @@ TEST_F(LexerTests, MainFunc) {
     EXPECT_EQ(tokens[6].getValue<std::int32_t>(), 0);
 }
 
+TEST_F(LexerTests, DotTokenizing) {
+    sut = makeSut("gossips.spill_tea(\"Hello\")...");
+
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
+
+    ASSERT_EQ(tokens.size(), 7);
+
+    EXPECT_EQ(tokens[0].getType(), Token::Type::Ident);     // gossips
+    EXPECT_EQ(tokens[1].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[2].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[3].getType(), Token::Type::LParen);    // (
+    EXPECT_EQ(tokens[4].getType(), Token::Type::String);    // "Hello"
+    EXPECT_EQ(tokens[5].getType(), Token::Type::RParen);    // )
+    EXPECT_EQ(tokens[6].getType(), Token::Type::Semi);      // ...
+
+    EXPECT_TRUE(tokens[0].valueIs<std::string>());
+    EXPECT_EQ(tokens[0].getValue<std::string>(), "gossips");
+    
+    EXPECT_TRUE(tokens[2].valueIs<std::string>());
+    EXPECT_EQ(tokens[2].getValue<std::string>(), "spill_tea");
+    
+    EXPECT_TRUE(tokens[4].valueIs<std::string>());
+    EXPECT_EQ(tokens[4].getValue<std::string>(), "Hello");
+}
+
 TEST_F(LexerTests, LanguagePrototype) {
     sut = makeSut(
         "psst: very useful thingy\n"

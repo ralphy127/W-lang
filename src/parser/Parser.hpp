@@ -44,6 +44,7 @@ private:
     bool match(Token::Type type) const { return getToken().getType() == type; }
     bool matchAndAdvanceIfNeeded(Token::Type);
     bool matchAndAdvanceIfNeeded(const std::vector<Token::Type>&);
+    bool matchLookahead(Token::Type curr, Token::Type next);
 
     void throwParserException(const std::string& errorMessage);
 
@@ -59,13 +60,14 @@ private:
     std::unique_ptr<Stmt> parseLoop();
     std::unique_ptr<Stmt> parseRepeat();
     std::unique_ptr<Stmt> parsePrint();
+    std::unique_ptr<Stmt> parseReassign();
 
     std::unique_ptr<Expr> parseExpression();
     std::unique_ptr<Expr> parsePrimary();
     std::unique_ptr<Expr> parseEquality();
     std::unique_ptr<Expr> parseComparison();
     std::unique_ptr<Expr> parseTerm();
-    std::unique_ptr<Expr> parseFunctionCall(const Token&);
+    std::unique_ptr<Expr> parseFunctionCall(std::unique_ptr<Expr> callee);
     std::unique_ptr<Expr> parseUnary();
 
     const std::vector<Token> _tokens;

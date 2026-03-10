@@ -65,13 +65,26 @@ private:
 
 class CallExpr : public Expr {
 public:
-    explicit CallExpr(Token, std::vector<std::unique_ptr<Expr>> args);
+    explicit CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> args);
 
-    const Token& getName() const { return _funcName; }
+    const Expr& getCallee() const { return *_callee; }
     const std::vector<std::unique_ptr<Expr>>& getArgs() const { return _args; }
     RuntimeValue accept(Visitor& v) const override { return v.visitCallExpr(*this); }
 
 private:
-    Token _funcName;
+    std::unique_ptr<Expr> _callee;
     std::vector<std::unique_ptr<Expr>> _args;
+};
+
+class DotExpr : public Expr {
+public:
+    explicit DotExpr(std::unique_ptr<Expr> left, Token right);
+
+    const Expr& getLeft() const { return *_left; }
+    const Token& getRight() const { return _right; }
+    RuntimeValue accept(Visitor& v) const override { return v.visitDotExpr(*this); }
+
+private:
+    std::unique_ptr<Expr> _left;
+    Token _right;
 };

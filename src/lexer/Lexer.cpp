@@ -67,6 +67,14 @@ bool Lexer::tryTokenizeSingleChar(Token& token, char ch) {
             token.setType(Token::Type::Comma);
             LOG_DEBUG << "Tokenized ',' to Token::Type::Comma";
             return true;
+        case '.':
+            // TODO refactor the loookahead
+            if (_pos + 1 < _source.size() and _source[_pos + 1] != '.') {
+                advance(ch);
+                token.setType(Token::Type::Dot);
+                LOG_DEBUG << "Tokenized '.' to Token::Type::Dot";
+                return true;
+            }
         default:
             return false;
     }

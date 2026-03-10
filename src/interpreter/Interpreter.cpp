@@ -302,9 +302,14 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
 
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Visiting CallExpr";
-    const auto& name = expr.getName().getValue<std::string>();
+
+    const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getCallee());
+    if (not varExpr) {
+        throw std::runtime_error{"Function does not exist"};
+    }
+
+    const auto& name = varExpr->getName().getValue<std::string>();
     if (not _functions.contains(name)) {
-        // TODO better error handling, but it requires some bigger decisions
         throw std::runtime_error{"Function does not exist"};
     }
 
@@ -313,7 +318,6 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     const auto& parameters = funcStmt.getParameters();
     const auto parametersCount = parameters.size();
     if (callArgs.size() != parametersCount) {
-        // TODO error handling again
         throw std::runtime_error{"Argument counts do not match"};
     }
 
@@ -347,7 +351,11 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
         throw;
     }
 
-    // TODO make sure default (null) return works
-    _currentEnvironment = _currentEnvironment = previousEnv;
+    _currentEnvironment = previousEnv;
+    return {};
+}
+
+RuntimeValue Interpreter::visitDotExpr(const DotExpr&) {
+    LOG_DEBUG << "Visiting DotExpr";
     return {};
 }

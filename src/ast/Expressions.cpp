@@ -46,12 +46,20 @@ const Expr& UnaryExpr::getRight() const {
     return *_right;
 }
 
-CallExpr::CallExpr(Token token, std::vector<std::unique_ptr<Expr>> args)
-    : _funcName{std::move(token)}
+CallExpr::CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> args)
+    : _callee{std::move(callee)}
     , _args{std::move(args)} {
 
-    assert(_funcName.valueIs<std::string>() && "CallExpr must hold a string token");
+    assert(_callee != nullptr && "CallExpr callee is null");
     for (const auto& arg : _args) {
         assert(arg.get() && "CallExpr argument is null");
     }
+}
+
+DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right)
+    : _left{std::move(left)}
+    , _right{std::move(right)}
+{
+    assert(_left != nullptr && "DotExpr lhs is null");
+    assert(_right.getType() == Token::Type::Ident && "DotExpr rhs must be an ident token");
 }

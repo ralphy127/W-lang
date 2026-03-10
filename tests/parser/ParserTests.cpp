@@ -462,7 +462,10 @@ TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
     const auto* stashStmt = dynamic_cast<const VarDefinitionStmt*>(machoBody.getStatements()[0].get());
 
     const auto& callExpr = dynamic_cast<const CallExpr&>(stashStmt->getInitializer());
-    EXPECT_EQ(callExpr.getName().getValue<std::string>(), "add");
+
+    const auto& calleeExpr = callExpr.getCallee();
+    const auto* varExpr = dynamic_cast<const VariableExpr*>(&calleeExpr);
+    EXPECT_EQ(varExpr->getName().getValue<std::string>(), "add");
     const auto& args = callExpr.getArgs();
     ASSERT_EQ(args.size(), 2);
     
@@ -585,13 +588,37 @@ TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
     
     const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(machoStatements[1].get());
     const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
-    EXPECT_EQ(callExpr.getName().getValue<std::string>(), "print");
+    const auto& calleeExpr = callExpr.getCallee();
+    const auto* varExpr = dynamic_cast<const VariableExpr*>(&calleeExpr);
+    EXPECT_EQ(varExpr->getName().getValue<std::string>(), "print");
     
     const auto& args = callExpr.getArgs();
     ASSERT_EQ(args.size(), 1);
     
     const auto& arg = dynamic_cast<const VariableExpr&>(*args[0]);
     EXPECT_EQ(arg.getName().getValue<std::string>(), "string");
+}
+
+TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
+    auto parserResult = parseSource("gossips.spill_tea(\"Hello\")...");
+    
+    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
+    
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
+    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossips");
+    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+    
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+    
+    const auto& arg = dynamic_cast<const LiteralExpr&>(*args[0]);
+    EXPECT_EQ(arg.getLiteral().getType(), Token::Type::String);
+    EXPECT_EQ(arg.getLiteral().getValue<std::string>(), "Hello");
 }
 
 TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
@@ -770,7 +797,9 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     // Line 45: stash n about calculate_stuff(10, 20)...
     const auto& stmt7 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[7]);
     const auto& callExpr = dynamic_cast<const CallExpr&>(stmt7.getInitializer());
-    EXPECT_EQ(callExpr.getName().getValue<std::string>(), "calculate_stuff");
+    const auto& calleeExpr = callExpr.getCallee();
+    const auto* varExpr = dynamic_cast<const VariableExpr*>(&calleeExpr);
+    EXPECT_EQ(varExpr->getName().getValue<std::string>(), "calculate_stuff");
     EXPECT_EQ(callExpr.getArgs().size(), 2);
 
     // Line 46: spin_around (n) { ... }

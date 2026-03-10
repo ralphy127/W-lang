@@ -55,6 +55,7 @@ public:
         BrSemi,
         Colon,
         Comma,
+        Dot,
         Assign,
         Reassign,
 
