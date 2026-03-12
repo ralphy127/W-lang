@@ -28,6 +28,9 @@ public:
     RuntimeValue visitVariableExpr(const VariableExpr&) override;
     RuntimeValue visitBinaryExpr(const BinaryExpr&) override;
     RuntimeValue visitUnaryExpr(const UnaryExpr&) override;
+    RuntimeValue handleUserDefinedFunctionCall(
+        const VariableExpr&,
+        const std::vector<std::unique_ptr<Expr>>& callArgs);
     RuntimeValue visitCallExpr(const CallExpr&) override;
     RuntimeValue visitDotExpr(const DotExpr&) override;
 

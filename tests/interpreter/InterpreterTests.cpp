@@ -720,4 +720,12 @@ TEST_F(InterpreterTests, VoidFunctionCall) {
     expectOutput(source, "HELLO!!!\n");
 }
 
-
+TEST_F(InterpreterTests, GossipModulePrint) {
+    auto source = R"(
+        gig macho() {
+            gossip.spill_tea("Hello")...
+        }
+    )";
+    
+    expectOutput(source, "Hello\n");
+}

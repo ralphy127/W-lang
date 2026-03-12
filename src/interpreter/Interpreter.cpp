@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "utils/Logging.hpp"
+#include "modules/Gossip.hpp"
 
 namespace {
 
@@ -30,7 +31,10 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&&
 }
 
 Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements)
-    : _statements{std::move(statements)} {}
+    : _statements{std::move(statements)} {
+    
+    _globalEnvironment->defineVar("gossip", modules::createGossipModule());
+}
 
 void Interpreter::interpret() {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());
@@ -300,20 +304,12 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     return Null{};
 }
 
-RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
-    LOG_DEBUG << "Visiting CallExpr";
-
-    const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getCallee());
-    if (not varExpr) {
-        throw std::runtime_error{"Function does not exist"};
-    }
-
-    const auto& name = varExpr->getName().getValue<std::string>();
+RuntimeValue Interpreter::handleUserDefinedFunctionCall(const VariableExpr& varExpr, const std::vector<std::unique_ptr<Expr>>& callArgs) {
+    const auto& name = varExpr.getName().getValue<std::string>();
     if (not _functions.contains(name)) {
         throw std::runtime_error{"Function does not exist"};
     }
 
-    const auto& callArgs = expr.getArgs();
     const auto& funcStmt = _functions.at(name).get();
     const auto& parameters = funcStmt.getParameters();
     const auto parametersCount = parameters.size();
@@ -355,7 +351,46 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     return Null{};
 }
 
-RuntimeValue Interpreter::visitDotExpr(const DotExpr&) {
+RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
+    LOG_DEBUG << "Visiting CallExpr";
+    if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getCallee())) {
+        return handleUserDefinedFunctionCall(*varExpr, expr.getArgs());
+    }
+
+    auto calleeValue = expr.getCallee().accept(*this);
+    if (std::holds_alternative<NativeFunction>(calleeValue)) {
+        LOG_DEBUG << "Executing NativeFunction";
+        
+        const auto& nativeFunc = std::get<NativeFunction>(calleeValue);
+        const auto& callArgs = expr.getArgs();
+        std::vector<RuntimeValue> evaluatedArgs{};
+        evaluatedArgs.reserve(callArgs.size());
+        
+        for (const auto& arg : callArgs) {
+            evaluatedArgs.push_back(arg->accept(*this));
+        }
+        return nativeFunc(evaluatedArgs);
+    }
+
+    throw std::runtime_error{"Unknown instructions in visitCallExpr"};
+}
+
+RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
-    return Null{};
+    const auto& leftName = dynamic_cast<const VariableExpr&>(expr.getLeft()).getName().getValue<std::string>();
+
+    // TODO support things other from global
+    auto mod = _globalEnvironment->getVar(leftName);
+    if (not std::holds_alternative<Module>(mod)) {
+        throw std::runtime_error{"Dot expression supports at the moment supports only modules"};
+    }
+
+    const auto& modMap = *std::get<Module>(mod);
+    // TODO support nested dot expressions
+    const auto& rightName = expr.getRight().getValue<std::string>();
+    if (not modMap.contains(rightName)) {
+        throw std::runtime_error{std::format("{} not found in module {}", rightName, leftName)};
+    }
+
+    return modMap.at(rightName);
 }

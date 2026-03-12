@@ -600,7 +600,7 @@ TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
 }
 
 TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
-    auto parserResult = parseSource("gossips.spill_tea(\"Hello\")...");
+    auto parserResult = parseSource("gossip.spill_tea(\"Hello\")...");
     
     ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
     ASSERT_EQ(parserResult.statements.size(), 1);
@@ -610,7 +610,7 @@ TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
     const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
     const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
     const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
-    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossips");
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
     EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
     
     const auto& args = callExpr.getArgs();

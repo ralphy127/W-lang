@@ -19,10 +19,11 @@ add_subdirectory(src/ast)
 add_subdirectory(src/lexer)
 add_subdirectory(src/parser)
 add_subdirectory(src/runtime)
+add_subdirectory(src/modules)
 add_subdirectory(src/interpreter)
 
 enable_testing()
 add_subdirectory(tests)
 
 add_executable(wlang src/main.cpp)
-target_link_libraries(wlang PRIVATE lexer parser interpreter token ast utils runtime)
+target_link_libraries(wlang PRIVATE lexer parser interpreter token ast utils runtime modules)

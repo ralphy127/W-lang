@@ -41,7 +41,7 @@ TEST_F(LexerTests, MainFunc) {
 }
 
 TEST_F(LexerTests, DotTokenizing) {
-    sut = makeSut("gossips.spill_tea(\"Hello\")...");
+    sut = makeSut("gossip.spill_tea(\"Hello\")...");
 
     const auto result = sut->tokenize();
     const auto& tokens = result.tokens;
@@ -51,7 +51,7 @@ TEST_F(LexerTests, DotTokenizing) {
 
     ASSERT_EQ(tokens.size(), 7);
 
-    EXPECT_EQ(tokens[0].getType(), Token::Type::Ident);     // gossips
+    EXPECT_EQ(tokens[0].getType(), Token::Type::Ident);     // gossip
     EXPECT_EQ(tokens[1].getType(), Token::Type::Dot);       // .
     EXPECT_EQ(tokens[2].getType(), Token::Type::Ident);     // spill_tea
     EXPECT_EQ(tokens[3].getType(), Token::Type::LParen);    // (
@@ -60,7 +60,7 @@ TEST_F(LexerTests, DotTokenizing) {
     EXPECT_EQ(tokens[6].getType(), Token::Type::Semi);      // ...
 
     EXPECT_TRUE(tokens[0].valueIs<std::string>());
-    EXPECT_EQ(tokens[0].getValue<std::string>(), "gossips");
+    EXPECT_EQ(tokens[0].getValue<std::string>(), "gossip");
     
     EXPECT_TRUE(tokens[2].valueIs<std::string>());
     EXPECT_EQ(tokens[2].getValue<std::string>(), "spill_tea");
