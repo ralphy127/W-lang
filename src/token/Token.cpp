@@ -78,6 +78,7 @@ std::string toString(Token::Type type) {
         case Token::Type::Incr: return "Incr";
         case Token::Type::Plus: return "Plus";
         case Token::Type::Minus: return "Minus";
+        case Token::Type::Import: return "Import";
         default: throw std::logic_error{"Not implemented token type in toString"};
     }
 }
@@ -115,6 +116,7 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Incr: return "pump_it;";
         case Token::Type::Plus: return "with";
         case Token::Type::Minus: return "without";
+        case Token::Type::Import: return "summon";
         default: throw std::logic_error{"Not implemented token type in toSourceString"};
     }
 }

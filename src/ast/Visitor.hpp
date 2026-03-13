@@ -13,6 +13,7 @@ class ReturnStmt;
 class BreakStmt;
 class FunctionStmt;
 class ExpressionStmt;
+class ImportStmt;
 
 class LiteralExpr;
 class VariableExpr;
@@ -24,7 +25,7 @@ class DotExpr;
 class Visitor {
 public:
     virtual ~Visitor() = default;
-    
+
     virtual RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) = 0;
     virtual RuntimeValue visitReassignStmt(const ReassignStmt&) = 0;
     virtual RuntimeValue visitBlockStmt(const BlockStmt&) = 0;
@@ -36,7 +37,8 @@ public:
     virtual RuntimeValue visitBreakStmt(const BreakStmt&) = 0;
     virtual RuntimeValue visitFunctionStmt(const FunctionStmt&) = 0;
     virtual RuntimeValue visitExpressionStmt(const ExpressionStmt&) = 0;
-    
+    virtual RuntimeValue visitImportStmt(const ImportStmt&) = 0;
+
     virtual RuntimeValue visitLiteralExpr(const LiteralExpr&) = 0;
     virtual RuntimeValue visitVariableExpr(const VariableExpr&) = 0;
     virtual RuntimeValue visitBinaryExpr(const BinaryExpr&) = 0;

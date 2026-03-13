@@ -69,6 +69,25 @@ TEST_F(LexerTests, DotTokenizing) {
     EXPECT_EQ(tokens[4].getValue<std::string>(), "Hello");
 }
 
+TEST_F(LexerTests, ImportModule) {
+    sut = makeSut("summon gossip...");
+
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
+
+    ASSERT_EQ(tokens.size(), 3);
+
+    EXPECT_EQ(tokens[0].getType(), Token::Type::Import); // summon
+    EXPECT_EQ(tokens[1].getType(), Token::Type::Ident);  // gossip
+    EXPECT_EQ(tokens[2].getType(), Token::Type::Semi);   // ...
+
+    EXPECT_TRUE(tokens[1].valueIs<std::string>());
+    EXPECT_EQ(tokens[1].getValue<std::string>(), "gossip");
+}
+
 TEST_F(LexerTests, LanguagePrototype) {
     sut = makeSut(
         "psst: very useful thingy\n"

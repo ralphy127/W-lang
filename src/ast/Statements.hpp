@@ -159,3 +159,15 @@ public:
 private:
     std::unique_ptr<Expr> _expression;
 };
+
+class ImportStmt : public Stmt {
+public:
+    explicit ImportStmt(Token moduleName);
+
+    const Token& getModuleName() const { return _moduleName; }
+
+    RuntimeValue accept(Visitor& v) const override { return v.visitImportStmt(*this); }
+
+private:
+    Token _moduleName;
+};

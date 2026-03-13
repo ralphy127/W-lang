@@ -23,6 +23,7 @@ public:
     RuntimeValue visitBreakStmt(const BreakStmt&) override;
     RuntimeValue visitFunctionStmt(const FunctionStmt&) override;
     RuntimeValue visitExpressionStmt(const ExpressionStmt&) override;
+    RuntimeValue visitImportStmt(const ImportStmt&) override;
     
     RuntimeValue visitLiteralExpr(const LiteralExpr&) override;
     RuntimeValue visitVariableExpr(const VariableExpr&) override;

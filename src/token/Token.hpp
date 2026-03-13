@@ -32,6 +32,7 @@ public:
         Break,
         Loop,
         Repeat,
+        Import,
 
         Greater,
         Less,

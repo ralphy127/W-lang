@@ -156,6 +156,19 @@ TEST_F(ParserTestFixture, PrintBoolVariable) {
     EXPECT_EQ(varExpr.getName().getValue<std::string>(), "true");
 }
 
+TEST_F(ParserTestFixture, ImportModule) {
+    auto parserResult = parseSource("summon gossip...");
+
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* importStmt = dynamic_cast<const ImportStmt*>(parserResult.statements[0].get());
+
+    const auto& moduleToken = importStmt->getModuleName();
+    EXPECT_EQ(moduleToken.getType(), Token::Type::Ident);
+    EXPECT_EQ(moduleToken.getValue<std::string>(), "gossip");
+}
+
 TEST_F(ParserTestFixture, ParseVarDefinitionWithNotEqualExpression) {
     auto parserResult = parseSource("stash comparison about 10 kinda_sus 5...");
     
@@ -620,6 +633,8 @@ TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
     EXPECT_EQ(arg.getLiteral().getType(), Token::Type::String);
     EXPECT_EQ(arg.getLiteral().getValue<std::string>(), "Hello");
 }
+
+
 
 TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     auto parserResult = parseSource(

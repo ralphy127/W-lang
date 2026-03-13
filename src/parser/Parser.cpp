@@ -126,6 +126,10 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected repeat statement";
         return parseRepeat();
     }
+    if (matchAndAdvanceIfNeeded(Token::Type::Import)) {
+        LOG_DEBUG << "Detected import statement";
+        return parseImport();
+    }
     if (matchAndAdvanceIfNeeded(Token::Type::Break)) {
         LOG_DEBUG << "Detected break statement";
         consume(Token::Type::BrSemi, "Expected '!!!' after 'rage_quit'");
@@ -292,6 +296,13 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
 
     LOG_DEBUG << "Successfully parsed 'repeat' statement";
     return std::make_unique<RepeatStmt>(std::move(countExpr), std::move(body));
+}
+
+std::unique_ptr<Stmt> Parser::parseImport() {
+    LOG_DEBUG << "Parsing 'summon' statement";
+    const auto& moduleToken = consume(Token::Type::Ident, "Expected module name after 'summon'");
+    consume(Token::Type::Semi, "Expected '...' after module import");
+    return std::make_unique<ImportStmt>(moduleToken);
 }
 
 std::unique_ptr<Stmt> Parser::parsePrint() {

@@ -134,3 +134,9 @@ ExpressionStmt::ExpressionStmt(std::unique_ptr<Expr> expression)
 
     assert(_expression.get() && "ExpressionStmt expression is null");
 }
+
+ImportStmt::ImportStmt(Token moduleName)
+    : _moduleName{std::move(moduleName)} {
+
+    assert(_moduleName.getType() == Token::Type::Ident);
+}

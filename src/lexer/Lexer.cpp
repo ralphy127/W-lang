@@ -206,6 +206,11 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'spin_around' to Token::Type::Repeat";
         return true;
     }
+    if (matchAndAdvanceIfNeeded("summon")) {
+        token.setType(Token::Type::Import);
+        LOG_DEBUG << "Tokenized 'summon' to Token::Type::Import";
+        return true;
+    }
     return false;
 }
 

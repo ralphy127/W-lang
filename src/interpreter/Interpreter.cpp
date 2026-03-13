@@ -31,10 +31,7 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&&
 }
 
 Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements)
-    : _statements{std::move(statements)} {
-    
-    _globalEnvironment->defineVar("gossip", modules::createGossipModule());
-}
+    : _statements{std::move(statements)} {}
 
 void Interpreter::interpret() {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());
@@ -208,6 +205,17 @@ RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
     return stmt.getExpression().accept(*this);
 }
 
+RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
+    LOG_DEBUG << "Visiting ImportStmt";
+    const auto& moduleName = stmt.getModuleName().getValue<std::string>();
+
+    if (moduleName == "gossip") {
+        LOG_DEBUG << "Defining module " << moduleName;
+        _currentEnvironment->defineVar(moduleName, modules::createGossipModule());
+        return Null{};
+    }
+    throw std::runtime_error{"Import of unknown module: " + moduleName};
+}
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
     LOG_DEBUG << "Visiting LiteralExpr";

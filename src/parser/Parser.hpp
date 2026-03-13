@@ -59,6 +59,7 @@ private:
     std::unique_ptr<Stmt> parseIf();
     std::unique_ptr<Stmt> parseLoop();
     std::unique_ptr<Stmt> parseRepeat();
+    std::unique_ptr<Stmt> parseImport();
     std::unique_ptr<Stmt> parsePrint();
     std::unique_ptr<Stmt> parseReassign();
 

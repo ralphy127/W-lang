@@ -722,6 +722,8 @@ TEST_F(InterpreterTests, VoidFunctionCall) {
 
 TEST_F(InterpreterTests, GossipModulePrint) {
     auto source = R"(
+        summon gossip...
+
         gig macho() {
             gossip.spill_tea("Hello")...
         }
