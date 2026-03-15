@@ -18,7 +18,6 @@ public:
     RuntimeValue visitIfStmt(const IfStmt&) override;
     RuntimeValue visitLoopStmt(const LoopStmt&) override;
     RuntimeValue visitRepeatStmt(const RepeatStmt&) override;
-    RuntimeValue visitPrintStmt(const PrintStmt&) override;
     RuntimeValue visitReturnStmt(const ReturnStmt&) override;
     RuntimeValue visitBreakStmt(const BreakStmt&) override;
     RuntimeValue visitFunctionStmt(const FunctionStmt&) override;

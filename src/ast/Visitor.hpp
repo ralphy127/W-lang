@@ -8,7 +8,6 @@ class BlockStmt;
 class IfStmt;
 class LoopStmt;
 class RepeatStmt;
-class PrintStmt;
 class ReturnStmt;
 class BreakStmt;
 class FunctionStmt;
@@ -32,7 +31,6 @@ public:
     virtual RuntimeValue visitIfStmt(const IfStmt&) = 0;
     virtual RuntimeValue visitLoopStmt(const LoopStmt&) = 0;
     virtual RuntimeValue visitRepeatStmt(const RepeatStmt&) = 0;
-    virtual RuntimeValue visitPrintStmt(const PrintStmt&) = 0;
     virtual RuntimeValue visitReturnStmt(const ReturnStmt&) = 0;
     virtual RuntimeValue visitBreakStmt(const BreakStmt&) = 0;
     virtual RuntimeValue visitFunctionStmt(const FunctionStmt&) = 0;

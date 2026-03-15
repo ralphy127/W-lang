@@ -104,16 +104,11 @@ const Token& Parser::consume(
 
 std::unique_ptr<Stmt> Parser::parseStatement() {
     LOG_DEBUG << "parseStatement() called at token index " << _current;
-
     if (parsedAll()) {
         LOG_DEBUG << "No more tokens to parse";
         return nullptr;
     }
 
-    if (matchAndAdvanceIfNeeded(Token::Type::Print)) {
-        LOG_DEBUG << "Detected print statement";
-        return parsePrint();
-    }
     if (matchAndAdvanceIfNeeded(Token::Type::If)) { 
         LOG_DEBUG << "Detected If statement";
         return parseIf();
@@ -303,19 +298,6 @@ std::unique_ptr<Stmt> Parser::parseImport() {
     const auto& moduleToken = consume(Token::Type::Ident, "Expected module name after 'summon'");
     consume(Token::Type::Semi, "Expected '...' after module import");
     return std::make_unique<ImportStmt>(moduleToken);
-}
-
-std::unique_ptr<Stmt> Parser::parsePrint() {
-    LOG_DEBUG << "Parsing 'scream' statement";
-    consume(Token::Type::Colon, "Expected ':' afted 'scream");
-    
-    auto printExpr = parseExpression();
-    if (not printExpr) {
-        throwParserException("Expected an expression to scream");
-    }
-
-    consume(Token::Type::Semi, "Expected '...' after scream statement");
-    return std::make_unique<PrintStmt>(std::move(printExpr));
 }
 
 std::unique_ptr<Stmt> Parser::parseReassign() {

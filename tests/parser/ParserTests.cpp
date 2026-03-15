@@ -142,7 +142,7 @@ TEST_F(ParserTestFixture, ParseVarDefinitionWithPlainTrue) {
 TEST_F(ParserTestFixture, PrintBoolVariable) {
     auto parserResult = parseSource(
         "stash true about totally...\n"
-        "scream: true...");
+        "gossip.spill_tea(true)...");
     
     ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
     ASSERT_EQ(parserResult.statements.size(), 2);
@@ -150,9 +150,17 @@ TEST_F(ParserTestFixture, PrintBoolVariable) {
     const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
     EXPECT_EQ(varStmt->getName().getValue<std::string>(), "true");
     
-    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[1].get());
-    
-    const auto& varExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[1].get());
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
+    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+
+    const auto& varExpr = dynamic_cast<const VariableExpr&>(*args[0]);
     EXPECT_EQ(varExpr.getName().getValue<std::string>(), "true");
 }
 
@@ -396,28 +404,44 @@ TEST_F(ParserTestFixture, ParseLoopWithRageQuit) {
 }
 
 TEST_F(ParserTestFixture, ParsePrintStringLiteral) {
-    auto parserResult = parseSource("scream: \"Hello\"...");
+    auto parserResult = parseSource("gossip.spill_tea(\"Hello\")...");
     
     ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
     ASSERT_EQ(parserResult.statements.size(), 1);
     
-    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[0].get());
-    
-    const auto& expr = dynamic_cast<const LiteralExpr&>(printStmt->getExpression());
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
+    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+
+    const auto& expr = dynamic_cast<const LiteralExpr&>(*args[0]);
     
     EXPECT_EQ(expr.getLiteral().getType(), Token::Type::String);
     EXPECT_EQ(expr.getLiteral().getValue<std::string>(), "Hello");
 }
 
 TEST_F(ParserTestFixture, ParsePrintIntLiteral) {
-    auto parserResult = parseSource("scream: 42...");
+    auto parserResult = parseSource("gossip.spill_tea(42)...");
     
     ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
     ASSERT_EQ(parserResult.statements.size(), 1);
     
-    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[0].get());
-    
-    const auto& expr = dynamic_cast<const LiteralExpr&>(printStmt->getExpression());
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
+    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+
+    const auto& expr = dynamic_cast<const LiteralExpr&>(*args[0]);
     
     EXPECT_EQ(expr.getLiteral().getType(), Token::Type::Int);
     EXPECT_EQ(expr.getLiteral().getValue<std::int32_t>(), 42);
@@ -426,7 +450,7 @@ TEST_F(ParserTestFixture, ParsePrintIntLiteral) {
 TEST_F(ParserTestFixture, ParsePrintVariable) {
     auto source = R"(
         stash x about 10...
-        scream: x...
+        gossip.spill_tea(x)...
     )";
     auto parserResult = parseSource(source);
     
@@ -434,9 +458,17 @@ TEST_F(ParserTestFixture, ParsePrintVariable) {
     
     ASSERT_EQ(parserResult.statements.size(), 2);
     
-    const auto* printStmt = dynamic_cast<const PrintStmt*>(parserResult.statements[1].get());
-    
-    const auto& varExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[1].get());
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
+    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+
+    const auto& varExpr = dynamic_cast<const VariableExpr&>(*args[0]);
     
     EXPECT_EQ(varExpr.getName().getValue<std::string>(), "x");
 }
@@ -545,7 +577,7 @@ TEST_F(ParserTestFixture, ParseIfWithBoolLiteral) {
 TEST_F(ParserTestFixture, ParseVoidFunction) {
     auto source = R"(
         gig print(x) {
-            scream: x...
+            gossip.spill_tea(x)...
         })";
     
     auto parserResult = parseSource(source);
@@ -564,15 +596,24 @@ TEST_F(ParserTestFixture, ParseVoidFunction) {
     const auto& statements = body.getStatements();
     ASSERT_EQ(statements.size(), 1);
     
-    const auto* printStmt = dynamic_cast<const PrintStmt*>(statements[0].get());
-    const auto& printExpr = dynamic_cast<const VariableExpr&>(printStmt->getExpression());
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(statements[0].get());
+    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
+    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
+    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
+    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+
+    const auto& args = callExpr.getArgs();
+    ASSERT_EQ(args.size(), 1);
+
+    const auto& printExpr = dynamic_cast<const VariableExpr&>(*args[0]);
     EXPECT_EQ(printExpr.getName().getValue<std::string>(), "x");
 }
 
 TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
     auto source = R"(
         gig print(x) {
-            scream: x...
+            gossip.spill_tea(x)...
         }
 
         gig macho() {
@@ -649,32 +690,32 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
         "    stash isNumberTen about number looks_like 11...\n"
         "\n" // line 10
         "    perhaps (isNumberTen looks_like totally) {\n"
-        "        scream: \"The number is is ten\"...\n"
+        "        gossip.spill_tea(\"The number is is ten\")...\n"
         "    }\n"
         "    or_whatever (isNumberTen looks_like nah) {\n"
-        "        scream: \"The number is not ten\"...\n"
+        "        gossip.spill_tea(\"The number is not ten\")...\n"
         "    }\n"
         "    screw_it {\n"
-        "        scream: \"How the fck did I get here\"...\n"
+        "        gossip.spill_tea(\"How the fck did I get here\")...\n"
         "    }\n"
         "\n" // line 20
         "    stash floatingNumber about 11.0...\n"
         "    perhaps (floatingNumber looks_like 10.0) {\n"
-        "        scream: \"The floatingNumber is ten\"...\n"
+        "        gossip.spill_tea(\"The floatingNumber is ten\")...\n"
         "    }\n"
         "    or_whatever (floatingNumber kinda_sus 20.0) {\n"
-        "        scream: \"The floatingNumber is not 20\"...\n"
+        "        gossip.spill_tea(\"The floatingNumber is not 20\")...\n"
         "    }\n"
         "    or_whatever (floatingNumber tiny_ish 5.0) {\n"
-        "        scream: \"The floatingNumber is smaller than 5\"...\n"
+        "        gossip.spill_tea(\"The floatingNumber is smaller than 5\")...\n"
         "    }\n" // line 30
         "    screw_it {\n"
-        "        scream: \"This language is so weird\"...\n"
+        "        gossip.spill_tea(\"This language is so weird\")...\n"
         "    }\n"
         "\n"
         "    stash counter about 0...\n"
         "    do_until_bored {\n"
-        "        scream: counter...\n"
+        "        gossip.spill_tea(counter)...\n"
         "        pump_it counter...\n"
         "\n"
         "        perhaps (counter bigger_ish 3) {\n" // line 40
@@ -684,7 +725,7 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
         "\n"
         "    stash n about calculate_stuff(10, 20)...\n"
         "    spin_around (n) {\n"
-        "        scream: \"Spinnin\"...\n"
+        "        gossip.spill_tea(\"Spinnin\")...\n"
         "    }\n"
         "\n"
         "    yeet ghosted...\n" // line 50
@@ -718,7 +759,7 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
         "    Functions:\n"
         "        Defined using the 'gig' keyword and return values using 'yeet'.\n"
         "    Output:\n"
-        "        'scream' prints arguments to console in UPPERCASE with appended '!!!'.\n"
+        "        'gossip.spill_tea' prints arguments to console in UPPERCASE with appended '!!!'.\n"
         "    Conditionals:\n"
         "        Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).\n"
         "    Loops:\n"
@@ -796,8 +837,16 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     const auto& doUntilBody = dynamic_cast<const BlockStmt&>(stmt6.getBody()).getStatements();
     ASSERT_EQ(doUntilBody.size(), 3);
     
-    // Line 37: scream: counter...
-    const auto& loopPrint = dynamic_cast<const PrintStmt&>(*doUntilBody[0]);
+    // Line 37: gossip.spill_tea(counter)...
+    const auto& loopCallStmt = dynamic_cast<const ExpressionStmt&>(*doUntilBody[0]);
+    const auto& loopCallExpr = dynamic_cast<const CallExpr&>(loopCallStmt.getExpression());
+    const auto& loopDotExpr = dynamic_cast<const DotExpr&>(loopCallExpr.getCallee());
+    const auto& loopObjectExpr = dynamic_cast<const VariableExpr&>(loopDotExpr.getLeft());
+    EXPECT_EQ(loopObjectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(loopDotExpr.getRight().getValue<std::string>(), "spill_tea");
+    ASSERT_EQ(loopCallExpr.getArgs().size(), 1);
+    const auto& loopPrintArg = dynamic_cast<const VariableExpr&>(*loopCallExpr.getArgs()[0]);
+    EXPECT_EQ(loopPrintArg.getName().getValue<std::string>(), "counter");
     
     // Line 38: pump_it counter...
     const auto& loopPumpIt = dynamic_cast<const ExpressionStmt&>(*doUntilBody[1]);
@@ -822,9 +871,18 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     const auto& repeatCount = dynamic_cast<const VariableExpr&>(stmt8.getCount());
     EXPECT_EQ(repeatCount.getName().getValue<std::string>(), "n");
     
-    // Line 47: scream: "Spinnin"...
+    // Line 47: gossip.spill_tea("Spinnin")...
     const auto& repeatBody = dynamic_cast<const BlockStmt&>(stmt8.getBody()).getStatements();
-    const auto& spinninPrint = dynamic_cast<const PrintStmt&>(*repeatBody[0]);
+    const auto& repeatCallStmt = dynamic_cast<const ExpressionStmt&>(*repeatBody[0]);
+    const auto& repeatCallExpr = dynamic_cast<const CallExpr&>(repeatCallStmt.getExpression());
+    const auto& repeatDotExpr = dynamic_cast<const DotExpr&>(repeatCallExpr.getCallee());
+    const auto& repeatObjectExpr = dynamic_cast<const VariableExpr&>(repeatDotExpr.getLeft());
+    EXPECT_EQ(repeatObjectExpr.getName().getValue<std::string>(), "gossip");
+    EXPECT_EQ(repeatDotExpr.getRight().getValue<std::string>(), "spill_tea");
+    ASSERT_EQ(repeatCallExpr.getArgs().size(), 1);
+    const auto& repeatArg = dynamic_cast<const LiteralExpr&>(*repeatCallExpr.getArgs()[0]);
+    EXPECT_EQ(repeatArg.getLiteral().getType(), Token::Type::String);
+    EXPECT_EQ(repeatArg.getLiteral().getValue<std::string>(), "Spinnin");
 
     // Line 50: yeet ghosted...
     const auto& stmt9 = dynamic_cast<const ReturnStmt&>(*machoStatements[9]);

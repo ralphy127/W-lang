@@ -112,11 +112,6 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'stash' to Token::Type::Var";
         return true;
     }
-    if (matchAndAdvanceIfNeeded("scream")) {
-        token.setType(Token::Type::Print);
-        LOG_DEBUG << "Tokenized 'scream' to Token::Type::Print";
-        return true;
-    }
     if (matchAndAdvanceIfNeeded("yeet")) {
         token.setType(Token::Type::Return);
         LOG_DEBUG << "Tokenized 'yeet' to Token::Type::Return";

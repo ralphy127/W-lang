@@ -95,17 +95,6 @@ const Stmt& RepeatStmt::getBody() const {
     return *_body;
 }
 
-PrintStmt::PrintStmt(std::unique_ptr<Expr> expression)
-    : _expression{std::move(expression)} {
-    
-    assert(_expression.get() && "PrintStmt expression is null");
-}
-
-const Expr& PrintStmt::getExpression() const {
-    assert(_expression.get() && "PrintStmt expression is null");
-    return *_expression;
-}
-
 ReturnStmt::ReturnStmt(std::unique_ptr<Expr> value)
     : _value{std::move(value)} {
 }

@@ -31,7 +31,6 @@ bool Token::isOperator() const {
 
 bool Token::isStatementStart() const {
     return _type == Type::Var or
-           _type == Type::Print or
            _type == Type::If or
            _type == Type::Elif or
            _type == Type::Else or
@@ -45,7 +44,6 @@ std::string toString(Token::Type type) {
         case Token::Type::Eof: return "Eof";
         case Token::Type::Func: return "Func";
         case Token::Type::Var: return "Var";
-        case Token::Type::Print: return "Print";
         case Token::Type::Return: return "Return";
         case Token::Type::If: return "If";
         case Token::Type::Elif: return "Elif";
@@ -87,7 +85,6 @@ std::string toSourceString(Token::Type type) {
     switch (type) {
         case Token::Type::Func: return "gig";
         case Token::Type::Var: return "stash";
-        case Token::Type::Print: return "scream";
         case Token::Type::Return: return "yeet";
         case Token::Type::If: return "perhaps";
         case Token::Type::Elif: return "or_whatever";

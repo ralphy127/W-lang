@@ -24,7 +24,6 @@ public:
 
         Func,
         Var,
-        Print,
         Return,
         If,
         Elif,

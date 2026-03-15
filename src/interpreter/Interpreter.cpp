@@ -164,18 +164,6 @@ RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
     return Null{};
 }
 
-RuntimeValue Interpreter::visitPrintStmt(const PrintStmt& stmt) {
-    LOG_DEBUG << "Visiting PrintStmt";
-    const auto value = stmt.getExpression().accept(*this);
-
-    auto str = stringify(value);
-    LOG_DEBUG << "Printing: " << str;
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-    std::cout << str << "!!!" << std::endl;
-    
-    return Null{};
-}
-
 RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     LOG_DEBUG << "Visiting ReturnStmt";
     if (stmt.hasValue()) {
@@ -388,7 +376,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     const auto& leftName = dynamic_cast<const VariableExpr&>(expr.getLeft()).getName().getValue<std::string>();
 
     // TODO support things other from global
-    auto mod = _globalEnvironment->getVar(leftName);
+    auto mod = _currentEnvironment->getVar(leftName);
     if (not std::holds_alternative<Module>(mod)) {
         throw std::runtime_error{"Dot expression supports at the moment supports only modules"};
     }

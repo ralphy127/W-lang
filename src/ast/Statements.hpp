@@ -103,17 +103,6 @@ private:
     std::unique_ptr<Stmt> _body;
 };
 
-class PrintStmt : public Stmt {
-public:
-    explicit PrintStmt(std::unique_ptr<Expr> expression);
-
-    const Expr& getExpression() const;
-    RuntimeValue accept(Visitor& v) const override { return v.visitPrintStmt(*this); }
-
-private:
-    std::unique_ptr<Expr> _expression;
-};
-
 class ReturnStmt : public Stmt {
 public:
     explicit ReturnStmt(std::unique_ptr<Expr> value);

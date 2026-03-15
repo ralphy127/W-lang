@@ -1,3 +1,5 @@
+summon gossip...
+
 psst: very useful thingy
 gig calculate_stuff (x, y) {
     yeet 2 with 2 without 2...
@@ -9,32 +11,32 @@ gig macho() {
     stash isNumberTen about number looks_like 11...
 
     perhaps (isNumberTen looks_like totally) {
-        scream: "The number is is ten"...
+        gossip.spill_tea("The number is is ten")...
     }
     or_whatever (isNumberTen looks_like nah) {
-        scream: "The number is not ten"...
+        gossip.spill_tea("The number is not ten")...
     }
     screw_it {
-        scream: "How the fck did I get here"...
+        gossip.spill_tea("How the fck did I get here")...
     }
 
     stash floatingNumber about 11.0...
     perhaps (floatingNumber looks_like 10.0) {
-        scream: "The floatingNumber is ten"...
+        gossip.spill_tea("The floatingNumber is ten")...
     }
     or_whatever (floatingNumber kinda_sus 20.0) {
-        scream: "The floatingNumber is not 20"...
+        gossip.spill_tea("The floatingNumber is not 20")...
     }
     or_whatever (floatingNumber tiny_ish 5.0) {
-        scream: "The floatingNumber is smaller than 5"...
+        gossip.spill_tea("The floatingNumber is smaller than 5")...
     }
     screw_it {
-        scream: "This language is so weird"...
+        gossip.spill_tea("This language is so weird")...
     }
 
     stash counter about 0...
     do_until_bored {
-        scream: counter...
+        gossip.spill_tea(counter)...
         pump_it counter...
 
         perhaps (counter bigger_ish 3) {
@@ -44,7 +46,7 @@ gig macho() {
 
     stash n about calculate_stuff(10, 20)...
     spin_around (n) {
-        scream: "Spinnin"...
+        gossip.spill_tea("Spinnin")...
     }
 
     yeet ghosted...
@@ -53,14 +55,14 @@ gig macho() {
 rant_stop
     Output:
     
-    THE NUMBER IS NOT TEN!!!
-    THE FLOATINGNUMBER IS NOT 20!!!
-    0!!!
-    1!!!
-    2!!!
-    3!!!
-    SPINNIN!!!
-    SPINNIN!!!
+    The number is not ten
+    The floatingNumber is not 20
+    0
+    1
+    2
+    3
+    Spinnin
+    Spinnin
 
     Syntax:
         Every statement must end with an ellipsis (...) to indicate hesitation.
@@ -69,6 +71,9 @@ rant_stop
         block comments are between 'rant_stop' and 'rant_start'.
     Variables:
         Declared using 'stash [name] about [value]' (dynamic typing).
+    Modules:
+        Import modules using 'summon [module_name]...'
+        Access module functions or properties with dot notation (e.g., gossip.spill_tea(...)).
     Assignment:
         Variable updates use 'might_be' instead of 'about'.
     Types:
@@ -77,7 +82,7 @@ rant_stop
     Functions:
         Defined using the 'gig' keyword and return values using 'yeet'.
     Output:
-        'scream' prints arguments to console in UPPERCASE with appended '!!!'.
+        'gossip.spill_tea' prints arguments to console.
     Conditionals:
         Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).
     Loops:

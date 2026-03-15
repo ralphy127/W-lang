@@ -101,32 +101,32 @@ TEST_F(LexerTests, LanguagePrototype) {
         "    stash isNumberTen about number looks_like 11...\n"
         "\n" // line 10
         "    perhaps (isNumberTen looks_like totally) {\n"
-        "        scream: \"The number is is ten\"...\n"
+        "        gossip.spill_tea(\"The number is is ten\")...\n"
         "    }\n"
         "    or_whatever (isNumberTen looks_like nah) {\n"
-        "        scream: \"The number is not ten\"...\n"
+        "        gossip.spill_tea(\"The number is not ten\")...\n"
         "    }\n"
         "    screw_it {\n"
-        "        scream: \"How the fck did I get here\"...\n"
+        "        gossip.spill_tea(\"How the fck did I get here\")...\n"
         "    }\n"
         "\n" // line 20
         "    stash floatingNumber about 11.0...\n"
         "    perhaps (floatingNumber looks_like 10.0) {\n"
-        "        scream: \"The floatingNumber is ten\"...\n"
+        "        gossip.spill_tea(\"The floatingNumber is ten\")...\n"
         "    }\n"
         "    or_whatever (floatingNumber kinda_sus 20.0) {\n"
-        "        scream: \"The floatingNumber is not 20\"...\n"
+        "        gossip.spill_tea(\"The floatingNumber is not 20\")...\n"
         "    }\n"
         "    or_whatever (floatingNumber tiny_ish 5.0) {\n"
-        "        scream: \"The floatingNumber is smaller than 5\"...\n"
+        "        gossip.spill_tea(\"The floatingNumber is smaller than 5\")...\n"
         "    }\n" // line 30
         "    screw_it {\n"
-        "        scream: \"This language is so weird\"...\n"
+        "        gossip.spill_tea(\"This language is so weird\")...\n"
         "    }\n"
         "\n"
         "    stash counter about 0...\n"
         "    do_until_bored {\n"
-        "        scream: counter...\n"
+        "        gossip.spill_tea(counter)...\n"
         "        pump_it counter...\n"
         "\n"
         "        perhaps (counter bigger_ish 3) {\n" // line 40
@@ -136,7 +136,7 @@ TEST_F(LexerTests, LanguagePrototype) {
         "\n"
         "    stash n about calculate_stuff(10, 20)...\n"
         "    spin_around (n) {\n"
-        "        scream: \"Spinnin\"...\n"
+        "        gossip.spill_tea(\"Spinnin\")...\n"
         "    }\n"
         "\n"
         "    yeet ghosted...\n" // line 50
@@ -170,7 +170,7 @@ TEST_F(LexerTests, LanguagePrototype) {
         "    Functions:\n"
         "        Defined using the 'gig' keyword and return values using 'yeet'.\n"
         "    Output:\n"
-        "        'scream' prints arguments to console in UPPERCASE with appended '!!!'.\n"
+        "        'gossip.spill_tea' prints arguments to console in UPPERCASE with appended '!!!'.\n"
         "    Conditionals:\n"
         "        Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).\n"
         "    Loops:\n"
@@ -255,10 +255,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 12: scream: "The number is is ten"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 12: gossip.spill_tea("The number is is ten")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The number is is ten"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 13: }
@@ -273,10 +276,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 15: scream: "The number is not ten"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 15: gossip.spill_tea("The number is not ten")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The number is not ten"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 16: }
@@ -286,10 +292,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Else);      // screw_it
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 18: scream: "How the fck did I get here"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 18: gossip.spill_tea("How the fck did I get here")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "How the fck did I get here"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 19: }
@@ -313,10 +322,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 23: scream: "The floatingNumber is ten"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 23: gossip.spill_tea("The floatingNumber is ten")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is ten"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 24: }
@@ -332,10 +344,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 26: scream: "The floatingNumber is not 20"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 26: gossip.spill_tea("The floatingNumber is not 20")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is not 20"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 27: }
@@ -351,10 +366,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 29: scream: "The floatingNumber is smaller than 5"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 29: gossip.spill_tea("The floatingNumber is smaller than 5")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is smaller than 5"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 30: }
@@ -364,10 +382,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Else);      // screw_it
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 32: scream: "This language is so weird"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 32: gossip.spill_tea("This language is so weird")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "This language is so weird"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 33: }
@@ -385,10 +406,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Loop);      // do_until_bored
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 37: scream: counter...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 37: gossip.spill_tea(counter)...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 38: pump_it counter...
@@ -435,10 +459,13 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
     
-    // Line 47: scream: "Spinnin"...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Print);     // scream
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Colon);     // :
+    // Line 47: gossip.spill_tea("Spinnin")...
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
     EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "Spinnin"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     
     // Line 48: }
