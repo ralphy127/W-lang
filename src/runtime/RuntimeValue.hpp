@@ -14,11 +14,12 @@ using String = std::string;
 using Int = std::int32_t;
 using Bool = bool;
 using Float = double;
+using Vector = std::shared_ptr<std::vector<RuntimeValue>>;
 // TODO ? change functions in interpretor to global Function type
 using NativeFunction = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
 using Module = std::shared_ptr<std::unordered_map<std::string, RuntimeValue>>;
 
-using RuntimeValueBase = std::variant<Null, String, Int, Bool, Float, NativeFunction, Module>;
+using RuntimeValueBase = std::variant<Null, String, Int, Bool, Float, Vector, NativeFunction, Module>;
 struct RuntimeValue : RuntimeValueBase {
     using RuntimeValueBase::variant;
 };

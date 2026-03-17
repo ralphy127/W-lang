@@ -88,3 +88,15 @@ private:
     std::unique_ptr<Expr> _left;
     Token _right;
 };
+
+class VectorExpr : public Expr {
+public:
+    explicit VectorExpr(std::vector<std::unique_ptr<Expr>> initializers);
+
+    const std::vector<std::unique_ptr<Expr>>& getInitializers() const { return _initializers; }
+
+    RuntimeValue accept(Visitor& v) const override { return v.visitVectorExpr(*this); }
+
+private:
+    std::vector<std::unique_ptr<Expr>> _initializers;
+};

@@ -810,6 +810,20 @@ TEST_F(InterpreterTests, GossipModulePrint) {
     expectOutput(source, "Hello\n");
 }
 
+TEST_F(InterpreterTests, GossipPrintsVectorWithVariableElement) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash x about 22...
+            stash list about [11, x, 33]...
+            gossip.spill_tea(list)...
+        }
+    )";
+
+    expectOutput(source, "[11, 22, 33]\n");
+}
+
 TEST_F(InterpreterTests, ScopedImportModulesTest) {
     // TODO explicitly check error
     auto source = R"(

@@ -51,6 +51,7 @@ CallExpr::CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Exp
     , _args{std::move(args)} {
 
     assert(_callee != nullptr && "CallExpr callee is null");
+    // TODO why wouldn't you allow nulls?
     for (const auto& arg : _args) {
         assert(arg.get() && "CallExpr argument is null");
     }
@@ -63,3 +64,6 @@ DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right)
     assert(_left != nullptr && "DotExpr lhs is null");
     assert(_right.getType() == Token::Type::Ident && "DotExpr rhs must be an ident token");
 }
+
+VectorExpr::VectorExpr(std::vector<std::unique_ptr<Expr>> initializers)
+    : _initializers{std::move(initializers)} {}

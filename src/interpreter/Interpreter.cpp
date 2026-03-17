@@ -390,3 +390,29 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
 
     return modMap.at(rightName);
 }
+
+RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
+    LOG_DEBUG << "Visiting VectorExpr";
+    
+    auto vector = std::make_shared<Vector::element_type>();
+    const auto& initializers = expr.getInitializers();
+    if (initializers.empty()) {
+        LOG_DEBUG << "Created empty vector";
+        return vector;
+    }
+    const auto vectorSize = initializers.size();
+    vector->reserve(vectorSize);
+
+    auto firstElement = initializers[0]->accept(*this);
+    const auto expectedTypeId = firstElement.index();
+
+    for (size_t i{0ull}; i < vectorSize; ++i) {
+        auto nextValue = initializers[i]->accept(*this);
+        if (nextValue.index() != expectedTypeId) {
+            throw std::runtime_error{"All items in vector must be of the same type"};
+        }
+        vector->push_back(std::move(nextValue));
+    }
+
+    return RuntimeValue{vector};
+}

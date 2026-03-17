@@ -51,6 +51,8 @@ public:
         RParen,
         LBrace,
         RBrace,
+        LBracket,
+        RBracket,
         Semi,
         BrSemi,
         Colon,

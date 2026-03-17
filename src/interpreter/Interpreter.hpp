@@ -33,6 +33,7 @@ public:
         const std::vector<std::unique_ptr<Expr>>& callArgs);
     RuntimeValue visitCallExpr(const CallExpr&) override;
     RuntimeValue visitDotExpr(const DotExpr&) override;
+    RuntimeValue visitVectorExpr(const VectorExpr&) override;
 
 private:
     const std::vector<std::unique_ptr<Stmt>> _statements;

@@ -57,6 +57,16 @@ bool Lexer::tryTokenizeSingleChar(Token& token, char ch) {
             token.setType(Token::Type::RBrace);
             LOG_DEBUG << "Tokenized '}' to Token::Type::RBrace";
             return true;
+        case '[':
+            advance(ch);
+            token.setType(Token::Type::LBracket);
+            LOG_DEBUG << "Tokenized '}' to Token::Type::LBracket";
+            return true;
+        case ']':
+            advance(ch);
+            token.setType(Token::Type::RBracket);
+            LOG_DEBUG << "Tokenized '}' to Token::Type::RBracket";
+            return true;
         case ':':
             advance(ch);
             token.setType(Token::Type::Colon);

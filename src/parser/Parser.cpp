@@ -374,6 +374,19 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
         return expr;
     }
 
+    if (matchAndAdvanceIfNeeded(Token::Type::LBracket)) {
+        LOG_DEBUG << "Parsing vector";
+        std::vector<std::unique_ptr<Expr>> elements{};
+        if (not match(Token::Type::RBracket)) {
+            do {
+                elements.push_back(parseExpression());
+            } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
+        }
+        consume(Token::Type::RBracket, "Expected ']' at the end of a vector");
+        LOG_DEBUG << std::format("Parsed vector with {} elements", elements.size());
+        return std::make_unique<VectorExpr>(std::move(elements));
+    }
+
     LOG_DEBUG << "No primary expression matched at current token";
     return nullptr;
 }

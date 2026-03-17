@@ -88,6 +88,42 @@ TEST_F(LexerTests, ImportModule) {
     EXPECT_EQ(tokens[1].getValue<std::string>(), "gossip");
 }
 
+TEST_F(LexerTests, VectorDefinition) {
+    sut = makeSut("stash list about [11, 22, 33]...");
+
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
+
+    ASSERT_EQ(tokens.size(), 11);
+
+    EXPECT_EQ(tokens[0].getType(), Token::Type::Var);       // stash
+    EXPECT_EQ(tokens[1].getType(), Token::Type::Ident);     // list
+    EXPECT_EQ(tokens[2].getType(), Token::Type::Assign);    // about
+    EXPECT_EQ(tokens[3].getType(), Token::Type::LBracket);  // [
+    EXPECT_EQ(tokens[4].getType(), Token::Type::Int);       // 11
+    EXPECT_EQ(tokens[5].getType(), Token::Type::Comma);     // ,
+    EXPECT_EQ(tokens[6].getType(), Token::Type::Int);       // 22
+    EXPECT_EQ(tokens[7].getType(), Token::Type::Comma);     // ,
+    EXPECT_EQ(tokens[8].getType(), Token::Type::Int);       // 33
+    EXPECT_EQ(tokens[9].getType(), Token::Type::RBracket);  // ]
+    EXPECT_EQ(tokens[10].getType(), Token::Type::Semi);     // ...
+
+    EXPECT_TRUE(tokens[1].valueIs<std::string>());
+    EXPECT_EQ(tokens[1].getValue<std::string>(), "list");
+
+    EXPECT_TRUE(tokens[4].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[4].getValue<std::int32_t>(), 11);
+
+    EXPECT_TRUE(tokens[6].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[6].getValue<std::int32_t>(), 22);
+
+    EXPECT_TRUE(tokens[8].valueIs<std::int32_t>());
+    EXPECT_EQ(tokens[8].getValue<std::int32_t>(), 33);
+}
+
 TEST_F(LexerTests, LanguagePrototype) {
     sut = makeSut(
         "psst: very useful thingy\n"

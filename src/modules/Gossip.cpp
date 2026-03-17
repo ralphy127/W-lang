@@ -12,12 +12,18 @@ RuntimeValue spill_tea(const std::vector<RuntimeValue>& args) {
             std::cout << stringify(arg);
         }
     }
-    
+
     std::cout << '\n';
     return Null{};
 }
 
 RuntimeValue eavesdrop(const std::vector<RuntimeValue>& args) {
+    if (not args.empty()) {
+        for (const auto& arg : args) {
+            std::cout << stringify(arg);
+        }
+    }
+
     std::string input{};
     std::getline(std::cin, input);
     return String{input};
@@ -26,7 +32,7 @@ RuntimeValue eavesdrop(const std::vector<RuntimeValue>& args) {
 }
 
 Module createGossipModule() {
-    auto moduleMap = std::make_shared<std::unordered_map<std::string, RuntimeValue>>();
+    auto moduleMap = std::make_shared<Module::element_type>();
 
     (*moduleMap)["spill_tea"] = gossip::spill_tea;
     (*moduleMap)["eavesdrop"] = gossip::eavesdrop;

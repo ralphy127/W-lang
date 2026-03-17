@@ -164,6 +164,32 @@ TEST_F(ParserTestFixture, PrintBoolVariable) {
     EXPECT_EQ(varExpr.getName().getValue<std::string>(), "true");
 }
 
+TEST_F(ParserTestFixture, ParseSummonAndVectorPrintWithVariableElement) {
+    auto parserResult = parseSource(
+        "stash list about [11, x, 33]...");
+
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* listVarStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(listVarStmt->getName().getValue<std::string>(), "list");
+
+    const auto* vectorExpr = dynamic_cast<const VectorExpr*>(&listVarStmt->getInitializer());
+    ASSERT_EQ(vectorExpr->getInitializers().size(), 3);
+
+    const auto* firstItem = dynamic_cast<const LiteralExpr*>(vectorExpr->getInitializers()[0].get());
+    ASSERT_NE(firstItem, nullptr);
+    EXPECT_EQ(firstItem->getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(firstItem->getLiteral().getValue<std::int32_t>(), 11);
+
+    const auto* secondItem = dynamic_cast<const VariableExpr*>(vectorExpr->getInitializers()[1].get());
+    EXPECT_EQ(secondItem->getName().getValue<std::string>(), "x");
+
+    const auto* thirdItem = dynamic_cast<const LiteralExpr*>(vectorExpr->getInitializers()[2].get());
+    EXPECT_EQ(thirdItem->getLiteral().getType(), Token::Type::Int);
+    EXPECT_EQ(thirdItem->getLiteral().getValue<std::int32_t>(), 33);
+}
+
 TEST_F(ParserTestFixture, ImportModule) {
     auto parserResult = parseSource("summon gossip...");
 

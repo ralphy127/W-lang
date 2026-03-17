@@ -66,6 +66,8 @@ std::string toString(Token::Type type) {
         case Token::Type::RParen: return "RParen";
         case Token::Type::LBrace: return "LBrace";
         case Token::Type::RBrace: return "RBrace";
+        case Token::Type::LBracket: return "LBracket";
+        case Token::Type::RBracket: return "RBracket";
         case Token::Type::Semi: return "Semi";
         case Token::Type::BrSemi: return "BrSemi";
         case Token::Type::Colon: return "Colon";
@@ -103,6 +105,8 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::RParen: return ")";
         case Token::Type::LBrace: return "{";
         case Token::Type::RBrace: return "}";
+        case Token::Type::LBracket: return "[";
+        case Token::Type::RBracket: return "]";
         case Token::Type::Semi: return "...";
         case Token::Type::BrSemi: return "!!!";
         case Token::Type::Colon: return ":";
