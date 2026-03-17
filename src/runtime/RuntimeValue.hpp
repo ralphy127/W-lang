@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include "native_types/Vector.hpp"
 
 struct RuntimeValue;
 
@@ -14,7 +15,6 @@ using String = std::string;
 using Int = std::int32_t;
 using Bool = bool;
 using Float = double;
-using Vector = std::shared_ptr<std::vector<RuntimeValue>>;
 // TODO ? change functions in interpretor to global Function type
 using NativeFunction = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
 using Module = std::shared_ptr<std::unordered_map<std::string, RuntimeValue>>;

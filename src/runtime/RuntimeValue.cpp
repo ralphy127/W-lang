@@ -8,12 +8,12 @@ std::string stringifyVector(const Vector& vector) {
     }
 
     std::string result{"["};
-    const auto vectorSize = vector->size();
+    const auto vectorSize = vector->data.size();
     for (std::size_t index{0}; index < vectorSize; ++index) {
         if (index > 0) {
             result += ", ";
         }
-        result += stringify((*vector)[index]);
+        result += stringify(vector->data[index]);
     }
     result += "]";
 

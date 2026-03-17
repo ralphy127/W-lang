@@ -5,7 +5,9 @@ add_subdirectory(lexer)
 add_subdirectory(parser)
 add_subdirectory(runtime)
 add_subdirectory(modules)
+add_subdirectory(native_types)
 add_subdirectory(interpreter)
 
 add_executable(main main.cpp)
-target_link_libraries(main PRIVATE lexer parser token utils runtime modules interpreter ast)
+target_link_libraries(main PRIVATE
+    lexer parser token utils runtime modules interpreter ast native_types)
