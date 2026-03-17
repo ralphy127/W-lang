@@ -76,3 +76,36 @@ template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 std::string stringify(const RuntimeValue& value);
+
+template<typename T>
+bool is(const RuntimeValueBase& v) {
+    return std::holds_alternative<T>(v);
+}
+
+template<typename T>
+T& as(RuntimeValueBase& v) {
+    return std::get<T>(v);
+}
+
+template<typename T>
+const T& as(const RuntimeValueBase& v) {
+    return std::get<T>(v);
+}
+
+template<typename T>
+T& tryAs(RuntimeValueBase& v) {
+    if (not is<T>(v)) {
+        // TODO TypeError
+        throw std::runtime_error{"Type error"};
+    }
+    return as<T>(v);
+}
+
+template<typename T>
+const T& tryAs(const RuntimeValueBase& v) {
+    if (not is<T>(v)) {
+        // TODO TypeError
+        throw std::runtime_error{"Type error"};
+    }
+    return as<T>(v);
+}
