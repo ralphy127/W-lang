@@ -32,6 +32,8 @@ public:
         const VariableExpr&,
         const std::vector<std::unique_ptr<Expr>>& callArgs);
     RuntimeValue visitCallExpr(const CallExpr&) override;
+    RuntimeValue handleModuleCall(const Module&, const std::string& rightName);
+    RuntimeValue handleVectorMethodCall(const Vector&, const std::string& rightName);
     RuntimeValue visitDotExpr(const DotExpr&) override;
     RuntimeValue visitVectorExpr(const VectorExpr&) override;
 

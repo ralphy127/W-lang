@@ -53,7 +53,7 @@ int main(int argc, const char* argv[]) {
         std::cerr << "Usage: ./wlang <filepath>\n";
         return -1;
     }
-    if (argc == 3 and strcmp(argv[2], "debug") == 0) {
+    if (argc == 3 and strcmp(argv[2], "--debug") == 0) {
         ::logLevel = logLevelDebug;
     }
 

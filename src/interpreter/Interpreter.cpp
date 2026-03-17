@@ -53,7 +53,7 @@ void Interpreter::interpret() {
     catch (ReturnStatementException) {}
     catch (const std::exception& e) {
         // TODO error handling
-        LOG_ERROR << "[FATAL] Caught unexpected error:" << e.what();
+        LOG_ERROR << "[FATAL] Caught unexpected error: " << e.what();
     }
     LOG_DEBUG << "Interpretation completed";
 }
@@ -98,7 +98,7 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
     catch (const std::exception& e) {
         _currentEnvironment = previousEnvironment;
         --_scopeDepth;
-        throw e;
+        throw;
     }
     
     _currentEnvironment = previousEnvironment;
@@ -371,24 +371,99 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     throw std::runtime_error{"Unknown instructions in visitCallExpr"};
 }
 
+RuntimeValue Interpreter::handleModuleCall(const Module& mod, const std::string& rightName) {
+    auto it = mod->find(rightName);
+    if (it == mod->end()) {
+        throw std::runtime_error{std::format("{} not found in module", rightName)};
+    }
+
+    return it->second;
+}
+
+// TODO get rid of this - at least move it to another file, ideally come up with some generic
+// solution, such as making an umap, enum, something different than this sh
+RuntimeValue Interpreter::handleVectorMethodCall(const Vector& vector, const std::string& rightName) {
+    if (rightName == "yoink") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:yoink called";
+            if (args.size() != 1ull) {
+                throw std::runtime_error{"Vector:yoink takes exactly 1 argument (index)"};
+            }
+            auto& arg = args[0];
+            if (not std::holds_alternative<Int>(arg)) {
+                // TODO ValueError ?
+                throw std::runtime_error{"Vector:yoink takes an Int"};
+            }
+            
+            auto vectorSize = vector->size();
+            auto index = static_cast<size_t>(std::get<Int>(arg)) - 1ull;
+            if (index >= vectorSize) {
+                // TODO some custom OutOfBoundsError ?
+                throw std::runtime_error{"Index out of bounds"};
+            }
+            
+            auto value = vector->at(index);
+            LOG_DEBUG << std::format("Retrieving value: {} at index{}", stringify(value), index);
+            return value;
+        }};
+    }
+    if (rightName == "patch") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:patch called";
+            // TODO extract common things, for now not needed as the whole method shall be removed
+            if (args.empty()) {
+                throw std::runtime_error{"Vector is empty"};
+            }
+            if (args.size() != 2ull) {
+                throw std::runtime_error{"Vector:patch takes 2 arguments (index, value)"};
+            }
+            auto& arg = args[0];
+            if (not std::holds_alternative<Int>(arg)) {
+                // TODO ValueError ?
+                throw std::runtime_error{"Vector:patch takes an Int as the first argument"};
+            }
+            
+            auto vectorSize = vector->size();
+            auto index = static_cast<size_t>(std::get<Int>(arg)) - 1ull;
+            if (index >= vectorSize) {
+                // TODO some custom OutOfBoundsError ?
+                throw std::runtime_error{"Index out of bounds"};
+            }
+
+            // TODO store type in Vector? - make an adapter
+            auto& firstElement = vector->at(0ull);
+            auto& value = args[1];
+            if (value.index() != firstElement.index()) {
+                // TODO some ValueError
+                throw std::runtime_error{"Wrong type"};
+            }
+            
+            auto& oldValue = vector->at(index);
+            LOG_DEBUG << std::format("Changing value at index: {} from {} to {}",
+                index, stringify(oldValue), stringify(value));
+            oldValue = value;
+            return Null{};
+        }};
+    }
+
+    throw std::runtime_error{std::format("Vector does not have {} method", rightName)};
+}
+
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
     const auto& leftName = dynamic_cast<const VariableExpr&>(expr.getLeft()).getName().getValue<std::string>();
 
-    // TODO support things other from global
-    auto mod = _currentEnvironment->getVar(leftName);
-    if (not std::holds_alternative<Module>(mod)) {
-        throw std::runtime_error{"Dot expression supports at the moment supports only modules"};
-    }
-
-    const auto& modMap = *std::get<Module>(mod);
     // TODO support nested dot expressions
+    auto var = _currentEnvironment->getVar(leftName);
     const auto& rightName = expr.getRight().getValue<std::string>();
-    if (not modMap.contains(rightName)) {
-        throw std::runtime_error{std::format("{} not found in module {}", rightName, leftName)};
+    if (std::holds_alternative<Module>(var)) {
+        return handleModuleCall(std::get<Module>(var), rightName);
+    }
+    if (std::holds_alternative<Vector>(var)) {
+        return handleVectorMethodCall(std::get<Vector>(var), rightName);
     }
 
-    return modMap.at(rightName);
+    throw std::runtime_error{"Unknown dot expression"};
 }
 
 RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {

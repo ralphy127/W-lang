@@ -824,6 +824,26 @@ TEST_F(InterpreterTests, GossipPrintsVectorWithVariableElement) {
     expectOutput(source, "[11, 22, 33]\n");
 }
 
+TEST_F(InterpreterTests, VectorPatchCorrectlySetsElements) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            gossip.spill_tea(vector)...
+            vector.patch(1, 99)...
+            gossip.spill_tea(vector)...
+            vector.patch(3, 0)...
+            gossip.spill_tea(vector)...
+        }
+    )";
+
+    expectOutput(source,
+        "[11, 22, 33]\n"
+        "[99, 22, 33]\n"
+        "[99, 22, 0]\n");
+}
+
 TEST_F(InterpreterTests, ScopedImportModulesTest) {
     // TODO explicitly check error
     auto source = R"(
