@@ -20,6 +20,12 @@ std::string stringifyVector(const Vector& vector) {
     return result;
 }
 
+std::string stringifyFloat(Float f) {
+    auto str = std::to_string(f);
+    str.erase(str.find_last_not_of('0') + 1ull, std::string::npos); 
+    return str;
+}
+
 }
 
 std::string stringify(const RuntimeValue& value) {
@@ -28,7 +34,7 @@ std::string stringify(const RuntimeValue& value) {
         [](const String& str) { return str; },
         [](Int i) { return std::to_string(i); },
         [](Bool boolean) { return boolean ? std::string{"totally"} : std::string{"nah"}; },
-        [](Float d) { return std::to_string(d); },
+        [](Float f) { return stringifyFloat(f); },
         [](const Vector& vector) { return stringifyVector(vector); },
         [](NativeFunction) { return std::string{"function"}; },
         [](Module) { return std::string{"module"}; }

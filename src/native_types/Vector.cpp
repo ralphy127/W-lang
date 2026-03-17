@@ -40,6 +40,11 @@ namespace {
 
     void expectTheSameTypes(const Vector& vector, const RuntimeValue& value) {
         // TODO could use some enum instead of relying on variant's index
+        if (vector->data.empty() and vector->typeId == 0ull) {
+            // TODO this should not be here
+            vector->typeId = value.index();
+            return;
+        }
         if (vector->typeId != value.index()) {
             // TODO some ValueError
             throw std::runtime_error{"Wrong type"};
@@ -70,11 +75,64 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
             expectInBounds(vector, index);
             auto& value = args[1];
             expectTheSameTypes(vector, value);
-
             auto& oldValue = vector->data.at(index);
+
             LOG_DEBUG << std::format("Changing value at index: {} from {} to {}",
                 index, stringify(oldValue), stringify(value));
             oldValue = value;
+            return Null{};
+        }};
+    }
+    if (name == "shove") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:shove called";
+            expectArgsSize(args, 1ull);
+            auto& value = args[0];
+            expectTheSameTypes(vector, value);
+
+            LOG_DEBUG << std::format("Adding {} to the end of the vector", stringify(value));
+            vector->data.push_back(value);
+            return Null{};
+        }};
+    }
+    if (name == "kick") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:kick called";
+            expectNotEmpty(vector);
+            expectArgsSize(args, 0ull);
+            auto valueToRemove = vector->data.back();
+
+            LOG_DEBUG << std::format("Popping {} from the end of the vector", stringify(valueToRemove));
+            vector->data.pop_back();
+            return valueToRemove;
+        }};
+    }
+    if (name == "vibe_check") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:vibe_check called";
+            expectArgsSize(args, 0ull);
+
+            LOG_DEBUG << std::format("Checking if a vector is empty");
+            return Bool{vector->data.empty()};
+        }};
+    }
+    if (name == "vibe_count") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:vibe_count called";
+            expectArgsSize(args, 0ull);
+
+            LOG_DEBUG << std::format("Counting vector size");
+            return static_cast<Int>(vector->data.size());
+        }};
+    }
+    if (name == "reset_the_vibe") {
+        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+            LOG_DEBUG << "Vector:reset_the_vibe called";
+            expectArgsSize(args, 0ull);
+
+            LOG_DEBUG << std::format("Reseting vector");
+            vector->data.clear();
+            vector->typeId = 0ull;
             return Null{};
         }};
     }
