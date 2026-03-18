@@ -382,6 +382,7 @@ RuntimeValue Interpreter::handleModuleCall(const Module& mod, const std::string&
 
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
+    // TODO do not force variable on the left, blocking e.g. gossip.eavesdrop().to_solid()...
     const auto& leftName = dynamic_cast<const VariableExpr&>(expr.getLeft()).getName().getValue<std::string>();
 
     // TODO support nested dot expressions
@@ -430,18 +431,23 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
     LOG_DEBUG << "Visiting LogicalExpr";
 
     const auto op = expr.getOperator().getType();
-    auto leftResult = expr.getLeft().accept(*this);
-    if (op == Token::Type::Or and leftResult == Bool{true}) {
-        return Bool{true};
+    const auto leftResult = expr.getLeft().accept(*this);
+    const auto leftBool = tryAs<Bool>(leftResult);
+    if (op == Token::Type::Or) {
+        if (leftBool) {
+            return Bool{true};
+        }
+        const auto rightResult = expr.getRight().accept(*this);
+        return tryAs<Bool>(rightResult);
     }
 
-    auto rightResult = expr.getRight().accept(*this);
-    if (op == Token::Type::Or and rightResult == Bool{true}) {
-        return Bool{true};
-    }
-    if (op == Token::Type::And and leftResult == Bool{true} and rightResult == Bool{true}) {
-        return Bool{true};
+    if (op == Token::Type::And) {
+        if (not leftBool) {
+            return Bool{false};
+        }
+        const auto rightResult = expr.getRight().accept(*this);
+        return tryAs<Bool>(rightResult);
     }
 
-    return Bool{false};
+    throw std::runtime_error{"Unknown logical operator"};
 }

@@ -116,6 +116,40 @@ TEST_F(InterpreterTests, EvaluatesLogicalAnd) {
     expectOutput(source, "totally\nnah\n");
 }
 
+TEST_F(InterpreterTests, LogicalAndShortCircuitsRightSide) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash board about [1, 2, 3]...
+            perhaps ((nah also (board.yoink(99) looks_like 1))) {
+                gossip.spill_tea("should not print")...
+            }
+            gossip.spill_tea("ok")...
+        }
+    )";
+
+    expectOutput(source, "ok\n");
+}
+
+TEST_F(InterpreterTests, LogicalOrShortCircuitsRightSide) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash board about [1, 2, 3]...
+            perhaps ((totally either (board.yoink(99) looks_like 1))) {
+                gossip.spill_tea("ok")...
+            }
+            screw_it {
+                gossip.spill_tea("should not print")...
+            }
+        }
+    )";
+
+    expectOutput(source, "ok\n");
+}
+
 TEST_F(InterpreterTests, EvaluatesMixedLogicalInPerhaps) {
     auto source = R"(
         summon gossip...
