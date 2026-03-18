@@ -84,6 +84,74 @@ TEST_F(InterpreterTests, OutputsCorrectBooleanValues) {
     expectOutput(source, "totally\nnah\ntotally\nnah\ntotally\nnah\n");
 }
 
+TEST_F(InterpreterTests, EvaluatesLogicalOr) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash result1 about totally either nah...
+            gossip.spill_tea(result1)...
+            stash result2 about nah either nah...
+            gossip.spill_tea(result2)...
+            yeet ghosted...
+        }
+    )";
+
+    expectOutput(source, "totally\nnah\n");
+}
+
+TEST_F(InterpreterTests, EvaluatesLogicalAnd) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash result1 about totally also totally...
+            gossip.spill_tea(result1)...
+            stash result2 about totally also nah...
+            gossip.spill_tea(result2)...
+            yeet ghosted...
+        }
+    )";
+
+    expectOutput(source, "totally\nnah\n");
+}
+
+TEST_F(InterpreterTests, EvaluatesMixedLogicalInPerhaps) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            perhaps (totally also nah either totally) {
+                gossip.spill_tea("mixed true")...
+            }
+            screw_it {
+                gossip.spill_tea("mixed false")...
+            }
+            yeet ghosted...
+        }
+    )";
+
+    expectOutput(source, "mixed true\n");
+}
+
+TEST_F(InterpreterTests, EvaluatesHeavilyNestedLogicalInPerhaps) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            perhaps ((((totally also nah) either (totally also totally)) also ((nah either totally) either (totally also (totally either nah)))) either ((nah also totally) either (nah also (totally either nah)))) {
+                gossip.spill_tea("nested true")...
+            }
+            screw_it {
+                gossip.spill_tea("nested false")...
+            }
+            yeet ghosted...
+        }
+    )";
+
+    expectOutput(source, "nested true\n");
+}
+
 TEST_F(InterpreterTests, SimpleIfWithTrueCondition) {
     auto source = R"(
         summon gossip...

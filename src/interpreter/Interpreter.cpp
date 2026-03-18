@@ -423,3 +423,23 @@ RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
 
     return RuntimeValue{vector};
 }
+
+RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
+    LOG_DEBUG << "Visiting LogicalExpr";
+
+    const auto op = expr.getOperator().getType();
+    auto leftResult = expr.getLeft().accept(*this);
+    if (op == Token::Type::Or and leftResult == Bool{true}) {
+        return Bool{true};
+    }
+
+    auto rightResult = expr.getRight().accept(*this);
+    if (op == Token::Type::Or and rightResult == Bool{true}) {
+        return Bool{true};
+    }
+    if (op == Token::Type::And and leftResult == Bool{true} and rightResult == Bool{true}) {
+        return Bool{true};
+    }
+
+    return Bool{false};
+}

@@ -21,6 +21,7 @@ class UnaryExpr;
 class CallExpr;
 class DotExpr;
 class VectorExpr;
+class LogicalExpr;
 
 class Visitor {
 public:
@@ -45,4 +46,5 @@ public:
     virtual RuntimeValue visitCallExpr(const CallExpr&) = 0;
     virtual RuntimeValue visitDotExpr(const DotExpr&) = 0;
     virtual RuntimeValue visitVectorExpr(const VectorExpr&) = 0;
+    virtual RuntimeValue visitLogicalExpr(const LogicalExpr&) = 0;
 };

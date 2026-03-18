@@ -2,14 +2,22 @@
 #include "utils/Logging.hpp"
 #include <cassert>
 #include <format>
+#include <algorithm>
 
 Parser::Parser(std::vector<Token> tokens)
     : _tokens{std::move(tokens)} {}
 
 ParserResult Parser::parse() {
-    LOG_INFO << "Starting parse with " << _tokens.size() << " tokens";
+    const auto tokensCount = static_cast<int>(_tokens.size());
+    LOG_INFO << "Starting parse with " << tokensCount << " tokens";
     std::vector<std::unique_ptr<Stmt>> statements;
     std::vector<ParserError> errors;
+
+    // TODO do sth smarter, unnecessary empty loop in production
+    LOG_DEBUG << "Tokens: ";
+    for (int i{0}; i < tokensCount; ++i) {
+        LOG_DEBUG << std::format("{} : {}", i, toString(_tokens[i].getType()));
+    }
 
     while (not parsedAll()) {
         try {
@@ -247,14 +255,14 @@ std::unique_ptr<Stmt> Parser::parseIf() {
 
     consume(Token::Type::LParen, "Expected '(' after 'perhaps'");
     auto ifCondition = parseExpression();
-    consume(Token::Type::RParen, "Expected ')' after condition");
+    consume(Token::Type::RParen, "Expected ')' after 'perhaps' condition");
     auto ifBody = parseBlock("perhaps");
 
     std::vector<ElseIfClause> elIfClauses{};
     while (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Elif)) {
         consume(Token::Type::LParen, "Expected '(' after 'or_whatever'");
         auto elifCondition = parseExpression();
-        consume(Token::Type::RParen, "Expected ')' after condition");
+        consume(Token::Type::RParen, "Expected ')' after 'or_whatever' condition");
         auto elifBody = parseBlock("or_whatever");
 
         elIfClauses.emplace_back(std::move(elifCondition), std::move(elifBody));
@@ -314,17 +322,58 @@ std::unique_ptr<Stmt> Parser::parseReassign() {
 
 std::unique_ptr<Expr> Parser::parseExpression() {
     LOG_DEBUG << "parseExpression() called at token index " << _current;
-    if (auto expr = parseEquality()) {
+    if (auto expr = parseOr()) {
         LOG_DEBUG << "Expression parsed successfully";
         return expr;
     }
-    if (auto expr = parsePrimary()) {
-        LOG_DEBUG << "Expression parsed successfully";
-        return expr;
-    }
-
     LOG_WARN << "Expected an expression at token index " << _current << " - returning null";
     return nullptr;
+}
+
+std::unique_ptr<Expr> Parser::parseOr() {
+    LOG_DEBUG << "parseOr() called at token index " << _current;
+    auto left = parseAnd();
+
+    if (not parsedAll()) {
+        const auto& token = getToken();
+        const auto tokenType = token.getType();
+        if (tokenType == Token::Type::Or) {
+            advance();
+            auto right = parseAnd();
+            if (not right) {
+                throwParserException(
+                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            }
+            LOG_DEBUG << "Parsed logical or expression successfully";
+            return std::make_unique<LogicalExpr>(std::move(left), token, std::move(right));
+        }
+    }
+
+    LOG_DEBUG << "No or operator matched, returning left operand";
+    return left;
+}
+
+std::unique_ptr<Expr> Parser::parseAnd() {
+    LOG_DEBUG << "parseAnd() called at token index " << _current;
+    auto left = parseEquality();
+
+    if (not parsedAll()) {
+        const auto& token = getToken();
+        const auto tokenType = token.getType();
+        if (tokenType == Token::Type::And) {
+            advance();
+            auto right = parseEquality();
+            if (not right) {
+                throwParserException(
+                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            }
+            LOG_DEBUG << "Parsed logical or expression successfully";
+            return std::make_unique<LogicalExpr>(std::move(left), token, std::move(right));
+        }
+    }
+
+    LOG_DEBUG << "No and operator matched, returning left operand";
+    return left;
 }
 
 std::unique_ptr<Expr> Parser::parsePrimary() {
@@ -367,7 +416,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
         return expr;
     }
 
-    if (match(Token::Type::LParen)) {
+    if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
         LOG_DEBUG << "Parsing grouped expression";
         auto expr = parseExpression();
         consume(Token::Type::RParen, "Expected ) after expression");

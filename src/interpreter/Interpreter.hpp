@@ -35,6 +35,7 @@ public:
     RuntimeValue handleModuleCall(const Module&, const std::string& rightName);
     RuntimeValue visitDotExpr(const DotExpr&) override;
     RuntimeValue visitVectorExpr(const VectorExpr&) override;
+    RuntimeValue visitLogicalExpr(const LogicalExpr&) override;
 
 private:
     const std::vector<std::unique_ptr<Stmt>> _statements;

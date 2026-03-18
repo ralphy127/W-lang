@@ -124,6 +124,35 @@ TEST_F(LexerTests, VectorDefinition) {
     EXPECT_EQ(tokens[8].getValue<std::int32_t>(), 33);
 }
 
+TEST_F(LexerTests, AndAlso) {
+    sut = makeSut("also");
+
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
+
+    ASSERT_EQ(tokens.size(), 1);
+
+    EXPECT_EQ(tokens[0].getType(), Token::Type::And);   // also
+}
+
+TEST_F(LexerTests, OrEither) {
+    sut = makeSut("either");
+
+    const auto result = sut->tokenize();
+    const auto& tokens = result.tokens;
+    const auto& errors = result.errors;
+
+    EXPECT_TRUE(errors.empty());
+
+    ASSERT_EQ(tokens.size(), 1);
+
+    EXPECT_EQ(tokens[0].getType(), Token::Type::Or);    // either
+}
+
+
 TEST_F(LexerTests, LanguagePrototype) {
     sut = makeSut(
         "psst: very useful thingy\n"

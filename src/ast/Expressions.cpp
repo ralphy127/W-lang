@@ -23,16 +23,6 @@ BinaryExpr::BinaryExpr(std::unique_ptr<Expr> left, Token token, std::unique_ptr<
     assert(_right.get() && "right side of binary expression is null");
 }
 
-const Expr& BinaryExpr::getLeft() const {
-    assert(_left.get() && "left side of binary expression is null");
-    return *_left;
-}
-
-const Expr& BinaryExpr::getRight() const {
-    assert(_right.get() && "right side of binary expression is null");
-    return *_right;
-}
-
 UnaryExpr::UnaryExpr(Token token, std::unique_ptr<Expr> right)
     : _operator{std::move(token)}
     , _right{std::move(right)} {
@@ -67,3 +57,13 @@ DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right)
 
 VectorExpr::VectorExpr(std::vector<std::unique_ptr<Expr>> initializers)
     : _initializers{std::move(initializers)} {}
+
+LogicalExpr::LogicalExpr(std::unique_ptr<Expr> left, Token token, std::unique_ptr<Expr> right)
+    : _operator{std::move(token)}
+    , _left{std::move(left)}
+    , _right{std::move(right)} {
+    
+    assert(_operator.isLogicalOperator() && "LogicalExpr must hold an operator token");
+    assert(_left.get() && "left side of binary expression is null");
+    assert(_right.get() && "right side of binary expression is null");
+}

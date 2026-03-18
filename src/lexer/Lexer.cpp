@@ -173,6 +173,16 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'kinda_sus' to Token::Type::NotEqual";
         return true;
     }
+    if (matchAndAdvanceIfNeeded("also")) {
+        token.setType(Token::Type::And);
+        LOG_DEBUG << "Tokenized 'also' to Token::Type::And";
+        return true;
+    }
+    if (matchAndAdvanceIfNeeded("either")) {
+        token.setType(Token::Type::Or);
+        LOG_DEBUG << "Tokenized 'either' to Token::Type::Or";
+        return true;
+    }
 
     if (matchAndAdvanceIfNeeded("totally")) {
         token.setType(Token::Type::True);

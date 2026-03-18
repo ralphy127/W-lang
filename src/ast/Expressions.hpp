@@ -40,8 +40,8 @@ public:
     explicit BinaryExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right);
 
     const Token& getOperator() const { return _operator; }
-    const Expr& getLeft() const;
-    const Expr& getRight() const;
+    const Expr& getLeft() const { return *_left; }
+    const Expr& getRight() const { return *_right; }
     RuntimeValue accept(Visitor& v) const override { return v.visitBinaryExpr(*this); }
 
 private:
@@ -99,4 +99,19 @@ public:
 
 private:
     std::vector<std::unique_ptr<Expr>> _initializers;
+};
+
+class LogicalExpr : public Expr {
+public:
+    explicit LogicalExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right);
+
+    const Token& getOperator() const { return _operator; }
+    const Expr& getLeft() const { return *_left; }
+    const Expr& getRight() const { return *_right; }
+    RuntimeValue accept(Visitor& v) const override { return v.visitLogicalExpr(*this); }
+
+private:
+    Token _operator;
+    std::unique_ptr<Expr> _left;
+    std::unique_ptr<Expr> _right;
 };

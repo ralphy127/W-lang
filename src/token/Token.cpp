@@ -29,6 +29,10 @@ bool Token::isOperator() const {
            _type == Type::Less;
 }
 
+bool Token::isLogicalOperator() const {
+    return _type == Type::And or _type == Type::Or;
+}
+
 bool Token::isStatementStart() const {
     return _type == Type::Var or
            _type == Type::If or
@@ -55,6 +59,8 @@ std::string toString(Token::Type type) {
         case Token::Type::Less: return "Less";
         case Token::Type::Equal: return "Equal";
         case Token::Type::NotEqual: return "NotEqual";
+        case Token::Type::And: return "And";
+        case Token::Type::Or: return "Or";
         case Token::Type::Ident: return "Ident";
         case Token::Type::Null: return "Null";
         case Token::Type::True: return "True";
@@ -98,6 +104,8 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Less: return "tiny_ish";
         case Token::Type::Equal: return "looks_like";
         case Token::Type::NotEqual: return "kinda_sus";
+        case Token::Type::And: return "also";
+        case Token::Type::Or: return "either";
         case Token::Type::Null: return "ghosted";
         case Token::Type::True: return "totally";
         case Token::Type::False: return "nah";

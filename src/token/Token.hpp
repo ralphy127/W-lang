@@ -37,6 +37,8 @@ public:
         Less,
         Equal,
         NotEqual,
+        And,
+        Or,
 
         Ident,
 
@@ -90,6 +92,7 @@ public:
 
     bool isLiteral() const;
     bool isOperator() const;
+    bool isLogicalOperator() const;
     bool isStatementStart() const;
 
 private:

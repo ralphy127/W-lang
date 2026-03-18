@@ -296,6 +296,69 @@ TEST_F(ParserTestFixture, ParsePrecedenceEqualityAndAddition) {
     EXPECT_EQ(equalityRight.getLiteral().getValue<std::int32_t>(), 4);
 }
 
+TEST_F(ParserTestFixture, ParseVarDefinitionWithAndExpression) {
+    auto parserResult = parseSource("stash result about totally also nah...");
+
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    ASSERT_NE(varStmt, nullptr);
+
+    const auto& initializer = dynamic_cast<const LogicalExpr&>(varStmt->getInitializer());
+    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::And);
+
+    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
+    EXPECT_EQ(left.getLiteral().getType(), Token::Type::True);
+
+    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
+    EXPECT_EQ(right.getLiteral().getType(), Token::Type::False);
+}
+
+TEST_F(ParserTestFixture, ParseVarDefinitionWithOrExpression) {
+    auto parserResult = parseSource("stash result about nah either totally...");
+
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    ASSERT_NE(varStmt, nullptr);
+
+    const auto& initializer = dynamic_cast<const LogicalExpr&>(varStmt->getInitializer());
+    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Or);
+
+    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
+    EXPECT_EQ(left.getLiteral().getType(), Token::Type::False);
+
+    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
+    EXPECT_EQ(right.getLiteral().getType(), Token::Type::True);
+}
+
+TEST_F(ParserTestFixture, ParsePerhapsWithMixedAndOrCondition) {
+    auto parserResult = parseSource("perhaps (totally also nah either totally) { yeet 1... }");
+
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
+    ASSERT_NE(ifStmt, nullptr);
+
+    const auto& condition = dynamic_cast<const LogicalExpr&>(ifStmt->getCondition());
+    EXPECT_EQ(condition.getOperator().getType(), Token::Type::Or);
+
+    const auto& left = dynamic_cast<const LogicalExpr&>(condition.getLeft());
+    EXPECT_EQ(left.getOperator().getType(), Token::Type::And);
+
+    const auto& leftLeft = dynamic_cast<const LiteralExpr&>(left.getLeft());
+    EXPECT_EQ(leftLeft.getLiteral().getType(), Token::Type::True);
+
+    const auto& leftRight = dynamic_cast<const LiteralExpr&>(left.getRight());
+    EXPECT_EQ(leftRight.getLiteral().getType(), Token::Type::False);
+
+    const auto& right = dynamic_cast<const LiteralExpr&>(condition.getRight());
+    EXPECT_EQ(right.getLiteral().getType(), Token::Type::True);
+}
+
 TEST_F(ParserTestFixture, ParseSimpleIfStatement) {
     auto parserResult = parseSource("perhaps (totally) { yeet 1... }");
     
