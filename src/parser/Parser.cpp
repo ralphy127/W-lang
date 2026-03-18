@@ -334,22 +334,23 @@ std::unique_ptr<Expr> Parser::parseOr() {
     LOG_DEBUG << "parseOr() called at token index " << _current;
     auto left = parseAnd();
 
-    if (not parsedAll()) {
+    while (not parsedAll()) {
         const auto& token = getToken();
         const auto tokenType = token.getType();
-        if (tokenType == Token::Type::Or) {
-            advance();
-            auto right = parseAnd();
-            if (not right) {
-                throwParserException(
-                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
-            }
-            LOG_DEBUG << "Parsed logical or expression successfully";
-            return std::make_unique<LogicalExpr>(std::move(left), token, std::move(right));
+        if (tokenType != Token::Type::Or) {
+            break;
         }
+        advance();
+        auto right = parseAnd();
+        if (not right) {
+            throwParserException(
+                std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+        }
+        LOG_DEBUG << "Parsed logical or expression successfully";
+        left = std::make_unique<LogicalExpr>(std::move(left), token, std::move(right));
     }
 
-    LOG_DEBUG << "No or operator matched, returning left operand";
+    LOG_DEBUG << "No more or operators, returning expression";
     return left;
 }
 
@@ -357,22 +358,23 @@ std::unique_ptr<Expr> Parser::parseAnd() {
     LOG_DEBUG << "parseAnd() called at token index " << _current;
     auto left = parseEquality();
 
-    if (not parsedAll()) {
+    while (not parsedAll()) {
         const auto& token = getToken();
         const auto tokenType = token.getType();
-        if (tokenType == Token::Type::And) {
-            advance();
-            auto right = parseEquality();
-            if (not right) {
-                throwParserException(
-                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
-            }
-            LOG_DEBUG << "Parsed logical or expression successfully";
-            return std::make_unique<LogicalExpr>(std::move(left), token, std::move(right));
+        if (tokenType != Token::Type::And) {
+            break;
         }
+        advance();
+        auto right = parseEquality();
+        if (not right) {
+            throwParserException(
+                std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+        }
+        LOG_DEBUG << "Parsed logical and expression successfully";
+        left = std::make_unique<LogicalExpr>(std::move(left), token, std::move(right));
     }
 
-    LOG_DEBUG << "No and operator matched, returning left operand";
+    LOG_DEBUG << "No more and operators, returning expression";
     return left;
 }
 

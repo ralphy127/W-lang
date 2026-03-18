@@ -764,7 +764,24 @@ TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
     EXPECT_EQ(arg.getLiteral().getValue<std::string>(), "Hello");
 }
 
-
+TEST_F(ParserTestFixture, ParseComplexNestedLogicalCondition) {
+    auto source = R"(
+        perhaps (((x bigger_ish 0) also (x tiny_ish 4)) also
+                 ((y bigger_ish 0) also (y tiny_ish 4)) also
+                 (index looks_like " ")) {
+            yeet 1...
+        }
+    )";
+    auto parserResult = parseSource(source);
+    
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+    
+    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
+    
+    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
+    ASSERT_EQ(thenBlock.getStatements().size(), 1);
+}
 
 TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     auto parserResult = parseSource(
