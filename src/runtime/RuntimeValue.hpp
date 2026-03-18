@@ -7,11 +7,11 @@
 #include <memory>
 #include <unordered_map>
 #include "native_types/Vector.hpp"
+#include "native_types/String.hpp"
 
 struct RuntimeValue;
 
 using Null = std::monostate;
-using String = std::string;
 using Int = std::int32_t;
 using Bool = bool;
 using Float = double;

@@ -878,6 +878,21 @@ TEST_F(InterpreterTests, GossipModulePrint) {
     expectOutput(source, "Hello\n");
 }
 
+// TODO move String tests somewhere else
+
+TEST_F(InterpreterTests, StringToSolidConvertsStringToInt) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash string about "11"...
+            gossip.spill_tea(string.to_solid())...
+        }
+    )";
+
+    expectOutput(source, "11\n");
+}
+
 // TODO move Vector tests somewhere else
 
 TEST_F(InterpreterTests, GossipPrintsVectorWithVariableElement) {

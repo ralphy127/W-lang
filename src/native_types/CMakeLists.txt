@@ -1,4 +1,6 @@
 add_library(native_types
+    String.cpp
+    String.hpp
     Vector.cpp
     Vector.hpp
 )

@@ -3,7 +3,6 @@
 #include <iostream>
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
-#include "native_types/Vector.hpp"
 
 namespace {
 
@@ -393,6 +392,9 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     }
     if (std::holds_alternative<Vector>(var)) {
         return callVectorMethod(std::get<Vector>(var), rightName);
+    }
+    if (std::holds_alternative<String>(var)) {
+        return callStringMethod(std::get<String>(var), rightName);
     }
 
     throw std::runtime_error{"Unknown dot expression"};
