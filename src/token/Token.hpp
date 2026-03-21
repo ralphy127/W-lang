@@ -68,6 +68,8 @@ public:
         Minus,
     };
 
+    Token() = default;
+
     explicit Token(
         Type type,
         std::uint32_t line,

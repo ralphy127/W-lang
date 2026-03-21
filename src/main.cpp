@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 #include <exception>
-
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
@@ -33,7 +32,7 @@ static void run(const std::string& filePath) {
         Parser parser{std::move(lexerResult.tokens)};
         auto parserResult = parser.parse();
         if (not parserResult.errors.empty()) {
-            throw std::runtime_error{"Parsing error"};
+            throw ParserCrash{filePath, std::move(parserResult.errors)};
         }
 
         return std::move(parserResult.statements);
@@ -63,6 +62,9 @@ int main(int argc, const char* argv[]) {
     }
     catch (const LexerCrash& crash) {
         errorReporter.printLexerErrors(crash);
+    }
+    catch (const ParserCrash& crash) {
+        errorReporter.printParserErrors(crash);
     }
     catch (const std::exception& e) {
         // TODO handle exceptions

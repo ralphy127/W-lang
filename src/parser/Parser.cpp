@@ -30,27 +30,78 @@ ParserResult Parser::parse() {
                 break;
             }
         }
-        catch(const ParserException& e) {
-            LOG_ERROR << "Parser error at line " << e.line << ", column " << e.column << ": " << e.what();
-            errors.emplace_back(e.line, e.column, e.what());
+        catch(ParserError error) {
+            LOG_ERROR << std::format("Parse error at line {}, column {}: {}",
+                error.badToken.getLine(), error.badToken.getColumn(), error.msg);
+            errors.emplace_back(std::move(error));
+            synchronize();
         }
         catch(const std::exception& e) {
             LOG_ERROR << "Unexpected exception: " << e.what();
-            const auto& token = getToken();
-            errors.emplace_back(token.getLine(), token.getColumn(), e.what());
+            errors.emplace_back(getToken(), e.what());
+            synchronize();
         }
-
-        // TODO synchronize
     }
 
     LOG_INFO << "Parse completed: " << statements.size() << " statements, " << errors.size() << " errors";
     return {std::move(statements), std::move(errors)};
 }
 
-Parser::ParserException::ParserException(std::uint32_t line, std::uint32_t column, const std::string msg)
-    : std::runtime_error{msg}
-    , line{line}
-    , column{column} {}
+void Parser::synchronize() {
+    if (parsedAll()) {
+        return;
+    }
+
+    advance();
+    std::uint32_t blockDepth{0u};
+
+    while (not parsedAll()) {
+        const auto tokenType = getToken().getType();
+
+        if (tokenType == Token::Type::LBrace) {
+            ++blockDepth;
+            advance();
+            continue;
+        }
+        if (tokenType == Token::Type::RBrace) {
+            if (blockDepth > 0u) {
+                --blockDepth;
+            }
+            advance();
+            continue;
+        }
+
+        if (blockDepth == 0u) {
+            switch (tokenType) {
+            case Token::Type::Func:
+            case Token::Type::Var:
+            case Token::Type::If:
+            case Token::Type::Elif:
+            case Token::Type::Else:
+            case Token::Type::Break:
+            case Token::Type::Loop:
+            case Token::Type::Repeat:
+            case Token::Type::Import:
+            case Token::Type::Ident:
+            case Token::Type::Int:
+            case Token::Type::Float:
+            case Token::Type::String:
+            case Token::Type::True:
+            case Token::Type::False:
+            case Token::Type::Null:
+            case Token::Type::LParen:
+            case Token::Type::LBracket:
+            case Token::Type::Incr:
+            case Token::Type::Return:
+                return;
+            default:
+                break;
+            }
+        }
+
+        advance();
+    }
+}
 
 const Token& Parser::getPreviousToken() const {
     assert(_current > 0u);
@@ -92,11 +143,8 @@ bool Parser::matchAndAdvanceIfNeeded(const std::vector<Token::Type>& types) {
     return true;
 }
 
-void Parser::throwParserException(const std::string& errorMessage) {
-    const auto& token = getToken();
-    const auto line = token.getLine();
-    const auto column = token.getColumn();
-    throw ParserException{line, column, errorMessage};
+void Parser::throwParserError(const std::string& errorMessage) {
+    throw ParserError{getToken(), errorMessage};
 }
 
 const Token& Parser::consume(
@@ -104,7 +152,7 @@ const Token& Parser::consume(
     const std::string& errorMessage) {
 
     if (not match(type)) {
-        throwParserException(errorMessage);
+        throwParserError(errorMessage);
     }
     LOG_DEBUG << std::format("Consuming token: {} at token index: {}", toString(type), _current);
     return getTokenAndAdvance();
@@ -177,7 +225,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
     LOG_DEBUG << "Parsing function definition starting at token index " << _current;
     const auto& nameToken = consume(Token::Type::Ident, "Expected function name after 'gig'");
     if (not nameToken.valueIs<std::string>()) {
-        throwParserException("Expected string as a function name");
+        throwParserError("Expected string as a function name");
     }
     const auto& name = nameToken.getValue<std::string>();
     LOG_DEBUG << "Function name: " << name;
@@ -205,13 +253,16 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     LOG_DEBUG << "Parsing variable definition starting at token index " << _current;
     const auto& nameToken = consume(Token::Type::Ident, "Expected variable name after 'stash'");
     if (not nameToken.valueIs<std::string>()) {
-        throwParserException("Expected string as a function name");
+        throwParserError("Expected string as a function name");
     }
 
     std::unique_ptr<Expr> initializer{nullptr};
     
     if (matchAndAdvanceIfNeeded(Token::Type::Assign)) {
         initializer = parseExpression();
+    }
+    else {
+        consume(Token::Type::Semi, "Missing 'about' in variable definition");
     }
 
     consume(Token::Type::Semi, "Expected '...' after variable definition");
@@ -243,7 +294,7 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
     LOG_DEBUG << "Parsing return value expression";
     auto value = parseExpression();
     if (not value) {
-        throwParserException("Expected an expression after 'yeet'");
+        throwParserError("Expected an expression after 'yeet'");
     }
     consume(Token::Type::Semi, "Expected '...' after return value");
     LOG_DEBUG << "Return statement parsed successfully";
@@ -291,7 +342,7 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
     consume(Token::Type::LParen, "Expected '(' after 'repeat'");
     auto countExpr = parseExpression();
     if (not countExpr) {
-        throwParserException("Expected loop count expression inside '()'");
+        throwParserError("Expected loop count expression inside '()'");
     }
 
     consume(Token::Type::RParen, "Expected ')' after loop count expression");
@@ -317,7 +368,7 @@ std::unique_ptr<Stmt> Parser::parseReassign() {
     consume(Token::Type::Semi, "Expected '...' after reassignment");
     return std::make_unique<ReassignStmt>(nameToken, std::move(value));
             
-    throwParserException("Expected 'might_be' after variable name");
+    throwParserError("Expected 'might_be' after variable name");
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {
@@ -343,7 +394,7 @@ std::unique_ptr<Expr> Parser::parseOr() {
         advance();
         auto right = parseAnd();
         if (not right) {
-            throwParserException(
+            throwParserError(
                 std::format("Expected right operand after '{}'", toSourceString(tokenType)));
         }
         LOG_DEBUG << "Parsed logical or expression successfully";
@@ -367,7 +418,7 @@ std::unique_ptr<Expr> Parser::parseAnd() {
         advance();
         auto right = parseEquality();
         if (not right) {
-            throwParserException(
+            throwParserError(
                 std::format("Expected right operand after '{}'", toSourceString(tokenType)));
         }
         LOG_DEBUG << "Parsed logical and expression successfully";
@@ -380,15 +431,7 @@ std::unique_ptr<Expr> Parser::parseAnd() {
 
 std::unique_ptr<Expr> Parser::parsePrimary() {
     LOG_DEBUG << "parsePrimary() called at token index " << _current;
-    const bool isLiteral =
-        match(Token::Type::Int) or
-        match(Token::Type::Float) or
-        match(Token::Type::String) or
-        match(Token::Type::True) or
-        match(Token::Type::False) or
-        match(Token::Type::Null);
-    if (isLiteral) {
-        const auto& token = getToken();
+    if (const auto& token = getToken(); token.isLiteral()) {
         LOG_DEBUG << "Parsed literal expression: " << toString(token.getType());
         return std::make_unique<LiteralExpr>(getTokenAndAdvance());
     }
@@ -396,7 +439,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     if (match(Token::Type::Ident)) {
         const auto& nameToken = getTokenAndAdvance();
         if (not nameToken.valueIs<std::string>()) {
-            throwParserException("Ident should have a proper name");
+            throwParserError("Ident should have a proper name");
         }
 
         std::unique_ptr<Expr> expr = std::make_unique<VariableExpr>(nameToken);
@@ -454,7 +497,7 @@ std::unique_ptr<Expr> Parser::parseEquality() {
             advance();
             auto right = parseComparison();
             if (not right) {
-                throwParserException(
+                throwParserError(
                     std::format("Expected right operand after '{}'", toSourceString(tokenType)));
             }
             LOG_DEBUG << "Parsed equality binary expression successfully";
@@ -477,7 +520,7 @@ std::unique_ptr<Expr> Parser::parseComparison() {
             advance();
             auto right = parseTerm();
             if (not right) {
-                throwParserException(
+                throwParserError(
                     std::format("Expected right operand after '{}'", toSourceString(tokenType)));
             }
             LOG_DEBUG << "Parsed comparison binary expression successfully";
@@ -501,7 +544,7 @@ std::unique_ptr<Expr> Parser::parseTerm() {
             advance();
             auto right = parseUnary();
             if (not right) {
-                throwParserException(
+                throwParserError(
                     std::format("Expected right operand after '{}'", toSourceString(tokenType)));
             }
             left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right));

@@ -1,0 +1,16 @@
+psst: parser error cases (lexer should tokenize these)
+
+gig () {
+	yeet 0...
+}
+
+stash number 10...
+
+perhaps totally) {
+	yeet 1...
+}
+
+do_until_bored
+	yeet 2...
+
+summon ...

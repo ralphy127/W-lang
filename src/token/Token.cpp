@@ -109,6 +109,9 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Null: return "ghosted";
         case Token::Type::True: return "totally";
         case Token::Type::False: return "nah";
+        case Token::Type::Int: return "Solid";
+        case Token::Type::Float: return "Change";
+        case Token::Type::String: return "Yap";
         case Token::Type::LParen: return "(";
         case Token::Type::RParen: return ")";
         case Token::Type::LBrace: return "{";
@@ -126,6 +129,7 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Plus: return "with";
         case Token::Type::Minus: return "without";
         case Token::Type::Import: return "summon";
-        default: throw std::logic_error{"Not implemented token type in toSourceString"};
+        default: throw std::logic_error{"Not implemented token type in toSourceString: "
+            + std::to_string(std::to_underlying(type))};
     }
 }

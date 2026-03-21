@@ -9,9 +9,8 @@
 #include "ast/Expressions.hpp"
 
 struct ParserError {
-    std::uint32_t line;
-    std::uint32_t column;
-    std::string message;
+    Token badToken;
+    std::string msg;
 };
 
 struct ParserResult {
@@ -26,15 +25,9 @@ public:
     ParserResult parse();
 
 private:
-    class ParserException : public std::runtime_error {
-    public:
-        std::uint32_t line;
-        std::uint32_t column;
-        explicit ParserException(std::uint32_t line, std::uint32_t column, const std::string msg);
-        ~ParserException() noexcept override = default;
-    };
-
     bool parsedAll() const { return _current >= _tokens.size(); }
+    
+    void synchronize();
 
     void advance() { _current++; }
     const Token& getPreviousToken() const;
@@ -46,7 +39,7 @@ private:
     bool matchAndAdvanceIfNeeded(const std::vector<Token::Type>&);
     bool matchLookahead(Token::Type curr, Token::Type next);
 
-    void throwParserException(const std::string& errorMessage);
+    void throwParserError(const std::string& errorMessage);
 
     const Token& consume(Token::Type, const std::string& errorMessage);
 

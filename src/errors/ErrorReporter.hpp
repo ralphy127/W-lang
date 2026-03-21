@@ -5,4 +5,5 @@
 class ErrorReporter {
 public:
     void printLexerErrors(const LexerCrash&);
+    void printParserErrors(const ParserCrash&);
 };

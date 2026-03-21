@@ -86,7 +86,20 @@ void ErrorReporter::printLexerErrors(const LexerCrash& crash) {
             case LexerErrorType::UnterminatedBlockComment: msg = "Ranting never ends!"; break;
             case LexerErrorType::UnknownToken: msg = "What the heck is this character?"; break;
         }
-        printError(crash.fileName, error.line, error.column, error.length ,msg);
+        printError(crash.fileName, error.line, error.column, error.length, msg);
+    }
+    std::cerr << '\n';
+}
+
+void ErrorReporter::printParserErrors(const ParserCrash& crash) {
+    std::cerr << '\n';
+    for (const auto& error : crash.errors) {
+        printError(
+            crash.fileName,
+            error.badToken.getLine(),
+            error.badToken.getColumn(),
+            1u,
+            error.msg);
     }
     std::cerr << '\n';
 }
