@@ -31,6 +31,10 @@ LexerResult Lexer::tokenize() {
     return {std::move(tokens), std::move(errors)};
 }
 
+LexerError Lexer::createError(LexerErrorType type, const std::string& badSource) {
+    return {_line, _col, static_cast<std::uint32_t>(badSource.size()), type};
+};
+
 bool Lexer::tryTokenizeSingleChar(Token& token, char ch) {
     switch (ch) {
         case '\0':
@@ -279,6 +283,7 @@ std::expected<void, LexerError> Lexer::tryTokenizeString(Token& token) {
 
     advance(ch);
     std::string stringValue{};
+    auto startCol = _col;
     bool foundStringEnd{false};
 
     while (not tokenizedAll()) {
@@ -291,7 +296,7 @@ std::expected<void, LexerError> Lexer::tryTokenizeString(Token& token) {
         }
         if (ch == '\n') {
             LOG_ERROR << "string not terminated before end of line";
-            return std::unexpected{createError(LexerErrorType::UnterminatedString)};
+            return std::unexpected{LexerError{_line, startCol, static_cast<std::uint32_t>(stringValue.size()), LexerErrorType::UnterminatedString}};
         }
         stringValue.push_back(ch);
         advance(ch);
@@ -299,7 +304,7 @@ std::expected<void, LexerError> Lexer::tryTokenizeString(Token& token) {
     
     if (not foundStringEnd) {
         LOG_ERROR << "string not terminated";
-        return std::unexpected{createError(LexerErrorType::UnterminatedString)};
+        return std::unexpected{createError(LexerErrorType::UnterminatedString, "X")};
     }
     
     LOG_DEBUG << "Tokenized string: " << stringValue;
@@ -360,14 +365,9 @@ std::expected<Token, LexerError> Lexer::getTokenAndAdvance() {
         return token;
     }
 
-    LOG_DEBUG << "Returning token at line " << token.getLine() << ", column "
-              << token.getColumn() << ": " << std::to_underlying(token.getType());
-
-    if (token.getType() == Token::Type::Unknown) {
-        return std::unexpected{createError(LexerErrorType::UnknownToken)};
-    }
-
-    return token;
+    auto error = LexerError{_line, _col, 1u, LexerErrorType::UnknownToken};
+    advance(ch);
+    return std::unexpected{std::move(error)};
 }
 
 char Lexer::getChar() const {
@@ -415,6 +415,8 @@ std::expected<void, LexerError> Lexer::skipComments() {
         }
         if (matchAndAdvanceIfNeeded("rant_stop")) {
             bool found = false;
+            std::uint32_t startLine = _line;
+            std::uint32_t startCol = _col - 9u;
 
             while (not tokenizedAll()) {
                 if (_col == 1 and matchAndAdvanceIfNeeded("rant_start")) {
@@ -429,7 +431,7 @@ std::expected<void, LexerError> Lexer::skipComments() {
 
             if (not found) {
                 LOG_ERROR << "unterminated block comment";
-                return std::unexpected{createError(LexerErrorType::UnterminatedBlockComment)};
+                return std::unexpected{LexerError{startLine, startCol, 9u, LexerErrorType::UnterminatedBlockComment}};
             }
             LOG_DEBUG << "skipped block comment";
             skipWhitespaces();

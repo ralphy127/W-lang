@@ -6,9 +6,12 @@
 #include "ast/Statements.hpp"
 #include "runtime/Environment.hpp"
 
+struct ParserError;
+using AstResolver = std::function<std::vector<std::unique_ptr<Stmt>>(const std::string&)>;
+
 class Interpreter : public Visitor {
 public:
-    explicit Interpreter(std::vector<std::unique_ptr<Stmt>>);
+    explicit Interpreter(std::vector<std::unique_ptr<Stmt>>, AstResolver);
 
     void interpret();
 
@@ -39,6 +42,7 @@ public:
 
 private:
     const std::vector<std::unique_ptr<Stmt>> _statements;
+    AstResolver _astResolver;
     std::unordered_map<std::string, std::reference_wrapper<const FunctionStmt>> _functions;
     std::shared_ptr<Environment> _globalEnvironment{std::make_shared<Environment>()};
     std::shared_ptr<Environment> _currentEnvironment{_globalEnvironment};

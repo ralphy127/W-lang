@@ -1,0 +1,11 @@
+psst: file intentionally contains lexer errors
+
+gig macho() {
+	stash ok about 123...
+	gossip.spill_tea("this string is never closed...
+	@ # [ ] it $ % &[]
+}
+
+rant_stop
+	this block comment is never terminated
+	because there is no rant_start at column 1

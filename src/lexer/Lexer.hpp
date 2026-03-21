@@ -15,6 +15,7 @@ enum class LexerErrorType {
 struct LexerError {
     std::uint32_t line;
     std::uint32_t column;
+    std::uint32_t length;
     LexerErrorType type;
 };
 
@@ -30,6 +31,7 @@ public:
     LexerResult tokenize();
 
 private:
+    LexerError createError(LexerErrorType, const std::string& badSource);
     bool tryTokenizeSingleChar(Token& token, char ch);
     bool tryTokenizeKeyword(Token& token);
     bool tryTokenizeNumber(Token& token, char ch);
@@ -44,7 +46,6 @@ private:
     std::expected<void, LexerError> skipComments();
     bool match(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);
-    LexerError createError(LexerErrorType type) { return {_line, _col, type}; };
 
     const std::string _source;
     std::uint64_t _pos{0ull};

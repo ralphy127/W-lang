@@ -4,6 +4,10 @@
 #include "interpreter/Interpreter.hpp"
 
 struct InterpreterTests : ::testing::Test {
+    AstResolver astSolver = [](const std::string&) {
+        return std::vector<std::unique_ptr<Stmt>>{};
+    };
+
     ParserResult parseSource(const std::string& source) {
         Lexer lexer{source};
         auto lexerResult = lexer.tokenize();
@@ -19,7 +23,7 @@ struct InterpreterTests : ::testing::Test {
         std::stringstream buffer{};
         auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
         
-        Interpreter interpreter{std::move(statements)};
+        Interpreter interpreter{std::move(statements), astSolver};
         interpreter.interpret();
         
         std::cout.rdbuf(oldCout);

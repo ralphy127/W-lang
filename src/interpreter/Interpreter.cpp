@@ -1,6 +1,7 @@
 #include "Interpreter.hpp"
 
 #include <iostream>
+#include <cassert>
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
 
@@ -30,8 +31,15 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&&
 
 }
 
-Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements)
-    : _statements{std::move(statements)} {}
+Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements, AstResolver astResolver)
+    : _statements{std::move(statements)}
+    , _astResolver{std::move(astResolver)} {
+
+    for (const auto& stmt : _statements) {
+        assert(stmt);
+    }
+    assert(astResolver);
+}
 
 void Interpreter::interpret() {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());

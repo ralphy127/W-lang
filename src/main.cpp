@@ -8,10 +8,12 @@
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
 #include "utils/Logging.hpp"
+#include "errors/ErrorReporter.hpp"
 
 static std::string readFile(const std::string& filepath) {
     const std::ifstream file(filepath);
     if (not file.is_open()) {
+        // TODO handle this differently
         throw std::runtime_error("Cannot open file: " + filepath);
     }
     
@@ -20,29 +22,25 @@ static std::string readFile(const std::string& filepath) {
     return buffer.str();
 }
 
-static void run(std::string sourceCode) {
-    Lexer lexer{std::move(sourceCode)};
-    auto lexerResult = lexer.tokenize();
-
-    if (not lexerResult.errors.empty()) {
-        // TODO handle lexer errors
-        for (const auto& error : lexerResult.errors) {
-            std::cerr << error.line << ' ' << error.column << ' ' << std::to_underlying(error.type) << '\n';
+static void run(const std::string& filePath) {
+    AstResolver resolver = [](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
+        Lexer lexer{readFile(filePath)};
+        auto lexerResult = lexer.tokenize();
+        if (not lexerResult.errors.empty()) {
+            throw LexerCrash{filePath, std::move(lexerResult.errors)};
         }
-        std::cerr << "Found lexing errors";
-        return;
-    }
 
+        Parser parser{std::move(lexerResult.tokens)};
+        auto parserResult = parser.parse();
+        if (not parserResult.errors.empty()) {
+            throw std::runtime_error{"Parsing error"};
+        }
 
-    Parser parser{std::move(lexerResult.tokens)};
-    auto parserResult = parser.parse();
-    if (not parserResult.errors.empty()) {
-        // TODO handle parser errors
-        std::cerr << "Found parsing errors";
-        return;
-    }
+        return std::move(parserResult.statements);
+    };
 
-    Interpreter interpreter{std::move(parserResult.statements)};
+    auto mainAst = resolver(filePath);
+    Interpreter interpreter{std::move(mainAst), std::move(resolver)};
     interpreter.interpret();
 }
 
@@ -58,11 +56,13 @@ int main(int argc, const char* argv[]) {
     }
 
     const auto filepath = argv[1];
+    ErrorReporter errorReporter{};
 
     try {
-        auto sourceCode = readFile(filepath);
-        run(std::move(sourceCode));
-        
+        run(std::move(filepath));
+    }
+    catch (const LexerCrash& crash) {
+        errorReporter.printLexerErrors(crash);
     }
     catch (const std::exception& e) {
         // TODO handle exceptions
