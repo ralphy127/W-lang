@@ -19,7 +19,15 @@ using Float = double;
 using NativeFunction = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
 using Module = std::shared_ptr<std::unordered_map<std::string, RuntimeValue>>;
 
-using RuntimeValueBase = std::variant<Null, String, Int, Bool, Float, Vector, NativeFunction, Module>;
+using RuntimeValueBase = std::variant<
+    Null,
+    String,
+    Int,
+    Bool,
+    Float,
+    Vector,
+    NativeFunction,
+    Module>;
 struct RuntimeValue : RuntimeValueBase {
     using RuntimeValueBase::variant;
 };

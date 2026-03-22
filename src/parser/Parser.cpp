@@ -13,19 +13,23 @@ ParserResult Parser::parse() {
     std::vector<std::unique_ptr<Stmt>> statements;
     std::vector<ParserError> errors;
 
-    // TODO do sth smarter, unnecessary empty loop in production
-    LOG_DEBUG << "Tokens: ";
-    for (int i{0}; i < tokensCount; ++i) {
-        LOG_DEBUG << std::format("{} : {}", i, toString(_tokens[i].getType()));
-    }
+    const auto stringifyAllTokens = [&tokens = _tokens, tokensCount]() -> std::string {
+        std::string result{"Tokens to parse: \n"};
+        for (int i{0}; i < tokensCount; ++i) {
+            result += std::format("{} : {}\n", i, toString(tokens[i].getType()));
+        }
+        return result;
+    };
+    LOG_DEBUG << stringifyAllTokens();
 
     while (not parsedAll()) {
         try {
             if (auto statement = parseDefinition()) {
                 statements.push_back(std::move(statement));
-                LOG_DEBUG << "Successfully parsed definition, total statements: " << statements.size();
+                LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
             }
             else {
+                // TODO handle it somehow
                 LOG_WARN << "parseDefinition() returned nullptr, stopping parse loop";
                 break;
             }
@@ -43,8 +47,37 @@ ParserResult Parser::parse() {
         }
     }
 
-    LOG_INFO << "Parse completed: " << statements.size() << " statements, " << errors.size() << " errors";
+    LOG_INFO << std::format(
+        "Parsing complete: {} statements, {} errors", statements.size(), errors.size());
     return {std::move(statements), std::move(errors)};
+}
+
+static bool isSafeToContinue(Token::Type tokenType) {
+    switch (tokenType) {
+        case Token::Type::Func:
+        case Token::Type::Var:
+        case Token::Type::If:
+        case Token::Type::Elif:
+        case Token::Type::Else:
+        case Token::Type::Break:
+        case Token::Type::Loop:
+        case Token::Type::Repeat:
+        case Token::Type::Import:
+        case Token::Type::Ident:
+        case Token::Type::Int:
+        case Token::Type::Float:
+        case Token::Type::String:
+        case Token::Type::True:
+        case Token::Type::False:
+        case Token::Type::Null:
+        case Token::Type::LParen:
+        case Token::Type::LBracket:
+        case Token::Type::Incr:
+        case Token::Type::Return:
+            return true;
+        default:
+            return false;
+    }
 }
 
 void Parser::synchronize() {
@@ -70,33 +103,8 @@ void Parser::synchronize() {
             advance();
             continue;
         }
-
-        if (blockDepth == 0u) {
-            switch (tokenType) {
-            case Token::Type::Func:
-            case Token::Type::Var:
-            case Token::Type::If:
-            case Token::Type::Elif:
-            case Token::Type::Else:
-            case Token::Type::Break:
-            case Token::Type::Loop:
-            case Token::Type::Repeat:
-            case Token::Type::Import:
-            case Token::Type::Ident:
-            case Token::Type::Int:
-            case Token::Type::Float:
-            case Token::Type::String:
-            case Token::Type::True:
-            case Token::Type::False:
-            case Token::Type::Null:
-            case Token::Type::LParen:
-            case Token::Type::LBracket:
-            case Token::Type::Incr:
-            case Token::Type::Return:
-                return;
-            default:
-                break;
-            }
+        if (blockDepth == 0u and isSafeToContinue(tokenType)) {
+            return;
         }
 
         advance();
@@ -120,7 +128,8 @@ const Token& Parser::getTokenAndAdvance() {
 
 bool Parser::matchLookahead(Token::Type curr, Token::Type next) {
     return match(curr) and
-        _current + 1 < _tokens.size() and next == _tokens[_current + 1].getType();
+        _current + 1 < _tokens.size() and
+        next == _tokens[_current + 1].getType();
 }
 
 bool Parser::matchAndAdvanceIfNeeded(Token::Type type) {
@@ -134,7 +143,7 @@ bool Parser::matchAndAdvanceIfNeeded(Token::Type type) {
 bool Parser::matchAndAdvanceIfNeeded(const std::vector<Token::Type>& types) {
     const auto startPos = _current;
     for (const auto type : types) {
-        if (not match(type)) {
+        if (not parsedAll() and not match(type)) {
             _current = startPos;
             return false;
         }
@@ -143,6 +152,7 @@ bool Parser::matchAndAdvanceIfNeeded(const std::vector<Token::Type>& types) {
     return true;
 }
 
+// TODO redundant?
 void Parser::throwParserError(const std::string& errorMessage) {
     throw ParserError{getToken(), errorMessage};
 }
@@ -171,7 +181,7 @@ SourceRange Parser::makeRange(const Token& start, const AstNode& end) {
 }
 
 std::unique_ptr<Stmt> Parser::parseStatement() {
-    LOG_DEBUG << "parseStatement() called at token index " << _current;
+    LOG_DEBUG << "parseStatement() called at token index: " << _current;
     if (parsedAll()) {
         LOG_DEBUG << "No more tokens to parse";
         return nullptr;
@@ -214,12 +224,14 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_WARN << "Returning nullptr in parseStatement()";
         return nullptr;
     }
+
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after expression");
+    
     return std::make_unique<ExpressionStmt>(std::move(expr), makeRange(firstToken, semiToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseDefinition() {
-    LOG_DEBUG << "parseDefinition() called at token index " << _current;
+    LOG_DEBUG << "parseDefinition() called at token index: " << _current;
     if (parsedAll()) {
         LOG_DEBUG << "No more tokens to parse";
         return nullptr;
@@ -236,12 +248,14 @@ std::unique_ptr<Stmt> Parser::parseDefinition() {
 }
 
 std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
-    LOG_DEBUG << "Parsing function definition starting at token index " << _current;
+    LOG_DEBUG << "Parsing function definition starting at token index: " << _current;
     const auto& gigToken = getPreviousToken();
+    // TODO consumeIdent which checks for string
     const auto& nameToken = consume(Token::Type::Ident, "Expected function name after 'gig'");
     if (not nameToken.valueIs<std::string>()) {
         throwParserError("Expected string as a function name");
     }
+
     const auto& name = nameToken.getValue<std::string>();
     LOG_DEBUG << "Function name: " << name;
 
@@ -256,17 +270,20 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
         }
         while (matchAndAdvanceIfNeeded(Token::Type::Comma));
     }
-
     LOG_DEBUG << "Function has " << parameters.size() << " parameter(s)";
+
     consume(Token::Type::RParen, "Expected ')' after function parameters");
+
     auto body = parseBlock("gig");
     auto srcRange = makeRange(gigToken, *body);
+
     LOG_DEBUG << "Successfully parsed function definition for '" << name << "'";
-    return std::make_unique<FunctionStmt>(nameToken, std::move(parameters), std::move(body), srcRange);
+    return std::make_unique<FunctionStmt>(
+        nameToken, std::move(parameters), std::move(body), srcRange);
 }
 
 std::unique_ptr<Stmt> Parser::parseVarDefinition() {
-    LOG_DEBUG << "Parsing variable definition starting at token index " << _current;
+    LOG_DEBUG << "Parsing variable definition starting at token index: " << _current;
     const auto& stashToken = getPreviousToken();
     const auto& nameToken = consume(Token::Type::Ident, "Expected variable name after 'stash'");
     if (not nameToken.valueIs<std::string>()) {
@@ -283,24 +300,32 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     }
 
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after variable definition");
-    return std::make_unique<VarDefinitionStmt>(nameToken, std::move(initializer), makeRange(stashToken, semiToken));
+    LOG_DEBUG << std::format(
+        "Successfully parsed variable definition for '{}'", nameToken.getValue<std::string>());
+    return std::make_unique<VarDefinitionStmt>(
+        nameToken, std::move(initializer), makeRange(stashToken, semiToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
-    LOG_DEBUG << std::format("Parsing block ({}) starting at token index ", blockIdent, _current);
+    LOG_DEBUG << std::format(
+        "Parsing block ({}) starting at token index: {}", blockIdent, _current);
     const auto& lbraceToken = consume(Token::Type::LBrace, "Expected '{' opening block");
+
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
         statements.push_back(parseDefinition());
     }
+    LOG_DEBUG << std::format("Parsed {} statement(s) in block", statements.size());
+
     const auto& rbraceToken = consume(Token::Type::RBrace, "Expected '}' closing block");
+
     LOG_DEBUG << "Block parsed with " << statements.size() << " statement(s)";
     return std::make_unique<BlockStmt>(std::move(statements), makeRange(lbraceToken, rbraceToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseReturn() {
     const auto& returnToken = consume(Token::Type::Return, "Expected return token");
-    LOG_DEBUG << "Parsing return statement at token index " << _current;
+    LOG_DEBUG << "Parsing return statement at token index: " << _current;
     if (match(Token::Type::Semi)) {
         // TODO why not eat semi?
         const auto& nextToken = getToken();
@@ -317,7 +342,9 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
     if (not value) {
         throwParserError("Expected an expression after 'yeet'");
     }
+
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after return value");
+
     LOG_DEBUG << "Return statement parsed successfully";
     return std::make_unique<ReturnStmt>(std::move(value), makeRange(returnToken, semiToken));
 }
@@ -326,8 +353,10 @@ std::unique_ptr<Stmt> Parser::parseIf() {
     LOG_DEBUG << "Parsing 'perhaps' statement";
     const auto& ifToken = getPreviousToken();
     consume(Token::Type::LParen, "Expected '(' after 'perhaps'");
+
     auto ifCondition = parseExpression();
     consume(Token::Type::RParen, "Expected ')' after 'perhaps' condition");
+
     auto ifBody = parseBlock("perhaps");
 
     std::vector<ElseIfClause> elIfClauses{};
@@ -339,14 +368,17 @@ std::unique_ptr<Stmt> Parser::parseIf() {
 
         elIfClauses.emplace_back(std::move(elifCondition), std::move(elifBody));
     }
+    LOG_DEBUG << std::format("Parsed {} elif clause(s)", elIfClauses.size());
 
     std::unique_ptr<Stmt> elseClause{nullptr};
     if (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Else)) {
+        LOG_DEBUG << "Detected else clause";
         elseClause = parseBlock("screw_it");
     }
 
     const auto& lastToken = getPreviousToken();
 
+    LOG_DEBUG << "If statement parsed successfully";
     return std::make_unique<IfStmt>(
         makeRange(ifToken, lastToken),
         std::move(ifCondition),
@@ -361,6 +393,8 @@ std::unique_ptr<Stmt> Parser::parseLoop() {
     const auto& loopToken = getPreviousToken();
     auto body = parseBlock("do_until_bored");
     auto srcRange = makeRange(loopToken, *body);
+
+    LOG_DEBUG << "Successfully parsed 'do_until_bored' statement";
     return std::make_unique<LoopStmt>(std::move(body), srcRange);
 }
 
@@ -372,10 +406,12 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
     if (not countExpr) {
         throwParserError("Expected loop count expression inside '()'");
     }
-
     consume(Token::Type::RParen, "Expected ')' after loop count expression");
+
     auto body = parseBlock("spin_around");
+
     auto srcRange = makeRange(loopToken, *body);
+
     LOG_DEBUG << "Successfully parsed 'repeat' statement";
     return std::make_unique<RepeatStmt>(std::move(countExpr), std::move(body), srcRange);
 }
@@ -385,31 +421,34 @@ std::unique_ptr<Stmt> Parser::parseImport() {
     const auto& importToken = getPreviousToken();
     const auto& moduleToken = consume(Token::Type::Ident, "Expected module name after 'summon'");
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after module import");
+    LOG_DEBUG << "Successfully parsed 'summon' statement for module '{}'"
+              << moduleToken.getValue<std::string>();
     return std::make_unique<ImportStmt>(moduleToken, makeRange(importToken, semiToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseReassign() {
-    LOG_DEBUG << "parseReassign() called at token index " << _current;
+    LOG_DEBUG << "parseReassign() called at token index: " << _current;
     const auto& nameToken = getTokenAndAdvance();
     advance();
             
     auto value = parseExpression();
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after reassignment");
-    return std::make_unique<ReassignStmt>(nameToken, std::move(value), makeRange(nameToken, semiToken));
+    return std::make_unique<ReassignStmt>(
+        nameToken, std::move(value), makeRange(nameToken, semiToken));
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {
-    LOG_DEBUG << "parseExpression() called at token index " << _current;
+    LOG_DEBUG << "parseExpression() called at token index: " << _current;
     if (auto expr = parseOr()) {
         LOG_DEBUG << "Expression parsed successfully";
         return expr;
     }
-    LOG_WARN << "Expected an expression at token index " << _current << " - returning null";
+    LOG_WARN << "Expected an expression at token index: " << _current << " - returning null";
     return nullptr;
 }
 
 std::unique_ptr<Expr> Parser::parseOr() {
-    LOG_DEBUG << "parseOr() called at token index " << _current;
+    LOG_DEBUG << "parseOr() called at token index: " << _current;
     auto left = parseAnd();
 
     while (not parsedAll()) {
@@ -439,7 +478,7 @@ std::unique_ptr<Expr> Parser::parseOr() {
 }
 
 std::unique_ptr<Expr> Parser::parseAnd() {
-    LOG_DEBUG << "parseAnd() called at token index " << _current;
+    LOG_DEBUG << "parseAnd() called at token index: " << _current;
     auto left = parseEquality();
 
     while (not parsedAll()) {
@@ -468,7 +507,7 @@ std::unique_ptr<Expr> Parser::parseAnd() {
 }
 
 std::unique_ptr<Expr> Parser::parsePrimary() {
-    LOG_DEBUG << "parsePrimary() called at token index " << _current;
+    LOG_DEBUG << "parsePrimary() called at token index: " << _current;
     if (const auto& token = getToken(); token.isLiteral()) {
         LOG_DEBUG << "Parsed literal expression: " << toString(token.getType());
         return std::make_unique<LiteralExpr>(getTokenAndAdvance(), makeRange(token, token));
@@ -480,12 +519,15 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
             throwParserError("Ident should have a proper name");
         }
 
-        std::unique_ptr<Expr> expr = std::make_unique<VariableExpr>(nameToken, makeRange(nameToken, nameToken));
+        std::unique_ptr<Expr> expr = std::make_unique<VariableExpr>(
+            nameToken, makeRange(nameToken, nameToken));
 
         while (not parsedAll()) {
             if (matchAndAdvanceIfNeeded(Token::Type::Dot)) {
-                const auto& propertyToken = consume(Token::Type::Ident, "Expected property name after '.'");
-                expr = std::make_unique<DotExpr>(std::move(expr), propertyToken, makeRange(nameToken, propertyToken));
+                const auto& propertyToken = consume(
+                    Token::Type::Ident, "Expected property name after '.'");
+                expr = std::make_unique<DotExpr>(
+                    std::move(expr), propertyToken, makeRange(nameToken, propertyToken));
             }
             else if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
                 expr = parseFunctionCall(std::move(expr)); 
@@ -515,9 +557,12 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
                 elements.push_back(parseExpression());
             } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
         }
-        const auto& rbracketToken = consume(Token::Type::RBracket, "Expected ']' at the end of a vector");
+        const auto& rbracketToken = consume(
+            Token::Type::RBracket, "Expected ']' at the end of a vector");
         LOG_DEBUG << std::format("Parsed vector with {} elements", elements.size());
-        return std::make_unique<VectorExpr>(std::move(elements), makeRange(lbracketToken, rbracketToken));
+        return std::make_unique<VectorExpr>(
+            std::move(elements),
+            makeRange(lbracketToken, rbracketToken));
     }
 
     LOG_DEBUG << "No primary expression matched at current token";
@@ -526,7 +571,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
 // TODO possible refactor of binary expressions parsing
 std::unique_ptr<Expr> Parser::parseEquality() {
-    LOG_DEBUG << "parseEquality() called at token index " << _current;
+    LOG_DEBUG << "parseEquality() called at token index: " << _current;
     auto left = parseComparison();
 
     if (not parsedAll()) {
@@ -550,7 +595,7 @@ std::unique_ptr<Expr> Parser::parseEquality() {
 }
 
 std::unique_ptr<Expr> Parser::parseComparison() {
-    LOG_DEBUG << "parseComparison() called at token index " << _current;
+    LOG_DEBUG << "parseComparison() called at token index: " << _current;
     auto left = parseTerm();
 
     if (not parsedAll()) {
@@ -574,7 +619,7 @@ std::unique_ptr<Expr> Parser::parseComparison() {
 }
 
 std::unique_ptr<Expr> Parser::parseTerm() {
-    LOG_DEBUG << "parseTerm() called at token index" << _current;
+    LOG_DEBUG << "parseTerm() called at token index: " << _current;
     auto left = parseUnary();
 
     while (not parsedAll()) {
@@ -613,7 +658,8 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
     const auto& rParenToken = consume(Token::Type::RParen, "Expected ')' after arguments");
                 
     LOG_DEBUG << std::format("Parsed function call with {} arguments", arguments.size());
-    return std::make_unique<CallExpr>(std::move(callee), std::move(arguments), makeRange(lParenToken, rParenToken));
+    return std::make_unique<CallExpr>(
+        std::move(callee), std::move(arguments), makeRange(lParenToken, rParenToken));
 }
 
 std::unique_ptr<Expr> Parser::parseUnary() {

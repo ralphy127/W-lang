@@ -43,6 +43,7 @@ private:
     void advance(char ch);
     char getCharAndAdvance();
     void skipWhitespaces();
+    bool skipMultilineComment();
     std::expected<void, LexerError> skipComments();
     bool match(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);

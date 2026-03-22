@@ -144,7 +144,7 @@ TEST_F(ParserTestFixture, PrintBoolVariable) {
         "stash true about totally...\n"
         "gossip.spill_tea(true)...");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 2);
     
     const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
@@ -171,21 +171,25 @@ TEST_F(ParserTestFixture, ParseSummonAndVectorPrintWithVariableElement) {
     ASSERT_TRUE(parserResult.errors.empty());
     ASSERT_EQ(parserResult.statements.size(), 1);
 
-    const auto* listVarStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
+    const auto* listVarStmt = dynamic_cast<const VarDefinitionStmt*>(
+        parserResult.statements[0].get());
     EXPECT_EQ(listVarStmt->getName().getValue<std::string>(), "list");
 
     const auto* vectorExpr = dynamic_cast<const VectorExpr*>(&listVarStmt->getInitializer());
     ASSERT_EQ(vectorExpr->getInitializers().size(), 3);
 
-    const auto* firstItem = dynamic_cast<const LiteralExpr*>(vectorExpr->getInitializers()[0].get());
+    const auto* firstItem = dynamic_cast<const LiteralExpr*>(
+        vectorExpr->getInitializers()[0].get());
     ASSERT_NE(firstItem, nullptr);
     EXPECT_EQ(firstItem->getLiteral().getType(), Token::Type::Int);
     EXPECT_EQ(firstItem->getLiteral().getValue<std::int32_t>(), 11);
 
-    const auto* secondItem = dynamic_cast<const VariableExpr*>(vectorExpr->getInitializers()[1].get());
+    const auto* secondItem = dynamic_cast<const VariableExpr*>(
+        vectorExpr->getInitializers()[1].get());
     EXPECT_EQ(secondItem->getName().getValue<std::string>(), "x");
 
-    const auto* thirdItem = dynamic_cast<const LiteralExpr*>(vectorExpr->getInitializers()[2].get());
+    const auto* thirdItem = dynamic_cast<const LiteralExpr*>(
+        vectorExpr->getInitializers()[2].get());
     EXPECT_EQ(thirdItem->getLiteral().getType(), Token::Type::Int);
     EXPECT_EQ(thirdItem->getLiteral().getValue<std::int32_t>(), 33);
 }
@@ -362,7 +366,7 @@ TEST_F(ParserTestFixture, ParsePerhapsWithMixedAndOrCondition) {
 TEST_F(ParserTestFixture, ParseSimpleIfStatement) {
     auto parserResult = parseSource("perhaps (totally) { yeet 1... }");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
@@ -372,7 +376,7 @@ TEST_F(ParserTestFixture, ParseSimpleIfStatement) {
     
     const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
     const auto& thenStatements = thenBlock.getStatements();
-    ASSERT_EQ(thenStatements.size(), 1) << "Then block should have exactly one statement";
+    ASSERT_EQ(thenStatements.size(), 1);
     
     const auto* returnStmt = dynamic_cast<const ReturnStmt*>(thenStatements[0].get());
     
@@ -380,7 +384,7 @@ TEST_F(ParserTestFixture, ParseSimpleIfStatement) {
     EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
     EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
     
-    EXPECT_TRUE(ifStmt->getElseIfClauses().empty()) << "Elif list should be empty";
+    EXPECT_TRUE(ifStmt->getElseIfClauses().empty());
 }
 
 TEST_F(ParserTestFixture, ParseFullIfElseChain) {
@@ -400,7 +404,7 @@ TEST_F(ParserTestFixture, ParseFullIfElseChain) {
     )";
     auto parserResult = parseSource(source);
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
@@ -412,7 +416,7 @@ TEST_F(ParserTestFixture, ParseFullIfElseChain) {
     ASSERT_EQ(thenBlock.getStatements().size(), 1);
     
     const auto& elifs = ifStmt->getElseIfClauses();
-    ASSERT_EQ(elifs.size(), 2) << "Should have parsed exactly two or_whatever branches";
+    ASSERT_EQ(elifs.size(), 2);
     
     const auto& elif1Cond = dynamic_cast<const LiteralExpr&>(*elifs[0].condition);
     EXPECT_EQ(elif1Cond.getLiteral().getValue<std::int32_t>(), 2);
@@ -429,7 +433,8 @@ TEST_F(ParserTestFixture, ParseFullIfElseChain) {
     const auto& elseBlock = dynamic_cast<const BlockStmt&>(ifStmt->getElseBlock());
     ASSERT_EQ(elseBlock.getStatements().size(), 1);
     
-    const auto* elseReturnStmt = dynamic_cast<const ReturnStmt*>(elseBlock.getStatements()[0].get());
+    const auto* elseReturnStmt = dynamic_cast<const ReturnStmt*>(
+        elseBlock.getStatements()[0].get());
     
     const auto& elseReturnValue = dynamic_cast<const LiteralExpr&>(elseReturnStmt->getValue());
     EXPECT_EQ(elseReturnValue.getLiteral().getValue<std::int32_t>(), 4);
@@ -438,14 +443,14 @@ TEST_F(ParserTestFixture, ParseFullIfElseChain) {
 TEST_F(ParserTestFixture, ParseDoUntilBoredStatement) {
     auto parserResult = parseSource("do_until_bored { yeet 1... }");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
 
     const auto* loopStmt = dynamic_cast<const LoopStmt*>(parserResult.statements[0].get());
     
     const auto& bodyBlock = dynamic_cast<const BlockStmt&>(loopStmt->getBody());
     const auto& bodyStatements = bodyBlock.getStatements();
-    ASSERT_EQ(bodyStatements.size(), 1) << "Loop body should have exactly one statement";
+    ASSERT_EQ(bodyStatements.size(), 1);
     
     const auto* returnStmt = dynamic_cast<const ReturnStmt*>(bodyStatements[0].get());
     
@@ -457,7 +462,7 @@ TEST_F(ParserTestFixture, ParseDoUntilBoredStatement) {
 TEST_F(ParserTestFixture, ParseSpinAroundStatement) {
     auto parserResult = parseSource("spin_around (5) { yeet 1... }");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* repeatStmt = dynamic_cast<const RepeatStmt*>(parserResult.statements[0].get());
@@ -468,7 +473,7 @@ TEST_F(ParserTestFixture, ParseSpinAroundStatement) {
     
     const auto& bodyBlock = dynamic_cast<const BlockStmt&>(repeatStmt->getBody());
     const auto& bodyStatements = bodyBlock.getStatements();
-    ASSERT_EQ(bodyStatements.size(), 1) << "Loop body should have exactly one statement";
+    ASSERT_EQ(bodyStatements.size(), 1);
     
     const auto* returnStmt = dynamic_cast<const ReturnStmt*>(bodyStatements[0].get());
     
@@ -480,14 +485,14 @@ TEST_F(ParserTestFixture, ParseSpinAroundStatement) {
 TEST_F(ParserTestFixture, ParseLoopWithRageQuit) {
     auto parserResult = parseSource("do_until_bored { rage_quit!!! }");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* loopStmt = dynamic_cast<const LoopStmt*>(parserResult.statements[0].get());
     
     const auto& bodyBlock = dynamic_cast<const BlockStmt&>(loopStmt->getBody());
     const auto& bodyStatements = bodyBlock.getStatements();
-    ASSERT_EQ(bodyStatements.size(), 1) << "Loop body should have exactly one statement";
+    ASSERT_EQ(bodyStatements.size(), 1);
     
     const auto* breakStmt = dynamic_cast<const BreakStmt*>(bodyStatements[0].get());
 }
@@ -495,7 +500,7 @@ TEST_F(ParserTestFixture, ParseLoopWithRageQuit) {
 TEST_F(ParserTestFixture, ParsePrintStringLiteral) {
     auto parserResult = parseSource("gossip.spill_tea(\"Hello\")...");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
@@ -517,7 +522,7 @@ TEST_F(ParserTestFixture, ParsePrintStringLiteral) {
 TEST_F(ParserTestFixture, ParsePrintIntLiteral) {
     auto parserResult = parseSource("gossip.spill_tea(42)...");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
@@ -543,7 +548,7 @@ TEST_F(ParserTestFixture, ParsePrintVariable) {
     )";
     auto parserResult = parseSource(source);
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     
     ASSERT_EQ(parserResult.statements.size(), 2);
     
@@ -575,7 +580,7 @@ TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
     )";
     auto parserResult = parseSource(source);
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 2);
     
     const auto* addFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
@@ -593,7 +598,8 @@ TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
     const auto& machoBody = dynamic_cast<const BlockStmt&>(machoFunc->getBody());
     ASSERT_EQ(machoBody.getStatements().size(), 2);
     
-    const auto* stashStmt = dynamic_cast<const VarDefinitionStmt*>(machoBody.getStatements()[0].get());
+    const auto* stashStmt = dynamic_cast<const VarDefinitionStmt*>(
+        machoBody.getStatements()[0].get());
 
     const auto& callExpr = dynamic_cast<const CallExpr&>(stashStmt->getInitializer());
 
@@ -614,7 +620,7 @@ TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
 TEST_F(ParserTestFixture, ParseAssignStatement) {
     auto parserResult = parseSource("counter might_be 42...");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* reassignStmt = dynamic_cast<const ReassignStmt*>(parserResult.statements[0].get());
@@ -629,7 +635,7 @@ TEST_F(ParserTestFixture, ParseAssignStatement) {
 TEST_F(ParserTestFixture, ParseIncAsUnaryExpressionStatement) {
     auto parserResult = parseSource("pump_it counter...");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
@@ -646,7 +652,7 @@ TEST_F(ParserTestFixture, ParseIncAsUnaryExpressionStatement) {
 TEST_F(ParserTestFixture, ParseIfWithBoolLiteral) {
     auto parserResult = parseSource("perhaps (totally) { yeet ghosted... }");
 
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
 
     const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
@@ -671,7 +677,7 @@ TEST_F(ParserTestFixture, ParseVoidFunction) {
     
     auto parserResult = parseSource(source);
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* funcStmt = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
@@ -713,7 +719,7 @@ TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
     
     auto parserResult = parseSource(source);
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 2);
     
     const auto* printFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
@@ -745,7 +751,7 @@ TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
 TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
     auto parserResult = parseSource("gossip.spill_tea(\"Hello\")...");
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser returned errors!";
+    ASSERT_EQ(parserResult.errors.size(), 0);
     ASSERT_EQ(parserResult.statements.size(), 1);
     
     const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
@@ -783,6 +789,7 @@ TEST_F(ParserTestFixture, ParseComplexNestedLogicalCondition) {
     ASSERT_EQ(thenBlock.getStatements().size(), 1);
 }
 
+// TODO refactor this to short uts
 TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
     auto parserResult = parseSource(
         "psst: very useful thingy\n"
@@ -882,8 +889,8 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
         "rant_start\n"
     );
     
-    ASSERT_EQ(parserResult.errors.size(), 0) << "Parser errors found in the prototype!";
-    ASSERT_EQ(parserResult.statements.size(), 2) << "Expected exactly 2 global statements (functions)";
+    ASSERT_EQ(parserResult.errors.size(), 0);
+    ASSERT_EQ(parserResult.statements.size(), 2);
 
     // Line 2: gig calculate_stuff (x, y) { ... }
     const auto& calcFunc = dynamic_cast<const FunctionStmt&>(*parserResult.statements[0]);
@@ -897,7 +904,8 @@ TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
 
     // Line 7: gig macho() { ... }
     const auto& machoFunc = dynamic_cast<const FunctionStmt&>(*parserResult.statements[1]);
-    const auto& machoStatements = dynamic_cast<const BlockStmt&>(machoFunc.getBody()).getStatements();
+    const auto& machoStatements = dynamic_cast<const BlockStmt&>(
+        machoFunc.getBody()).getStatements();
     
     ASSERT_EQ(machoStatements.size(), 10);
 

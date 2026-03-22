@@ -38,7 +38,10 @@ private:
 
 class BinaryExpr : public Expr {
 public:
-    explicit BinaryExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right, SourceRange);
+    explicit BinaryExpr(
+        std::unique_ptr<Expr> left,
+        Token, std::unique_ptr<Expr> right,
+        SourceRange);
 
     const Token& getOperator() const { return _operator; }
     const Expr& getLeft() const { return *_left; }
@@ -66,7 +69,10 @@ private:
 
 class CallExpr : public Expr {
 public:
-    explicit CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> args, SourceRange);
+    explicit CallExpr(
+        std::unique_ptr<Expr> callee,
+        std::vector<std::unique_ptr<Expr>> args,
+        SourceRange);
 
     const Expr& getCallee() const { return *_callee; }
     const std::vector<std::unique_ptr<Expr>>& getArgs() const { return _args; }
@@ -104,7 +110,10 @@ private:
 
 class LogicalExpr : public Expr {
 public:
-    explicit LogicalExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right, SourceRange);
+    explicit LogicalExpr(
+        std::unique_ptr<Expr> left,
+        Token, std::unique_ptr<Expr> right,
+        SourceRange);
 
     const Token& getOperator() const { return _operator; }
     const Expr& getLeft() const { return *_left; }

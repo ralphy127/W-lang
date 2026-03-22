@@ -1,0 +1,9 @@
+summon gossip...
+
+gig print(msg) {
+    gossip.spill_tea(msg)...
+}
+
+gig input(msg) {
+    yeet gossip.eavesdrop(msg)...
+}

@@ -152,7 +152,7 @@ TEST_F(LexerTests, OrEither) {
     EXPECT_EQ(tokens[0].getType(), Token::Type::Or);    // either
 }
 
-
+// TODO refactor this to short uts
 TEST_F(LexerTests, LanguagePrototype) {
     sut = makeSut(
         "psst: very useful thingy\n"
@@ -436,7 +436,8 @@ TEST_F(LexerTests, LanguagePrototype) {
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
     EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is smaller than 5"
+    // "The floatingNumber is smaller than 5"
+    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);
     EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
     EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
     

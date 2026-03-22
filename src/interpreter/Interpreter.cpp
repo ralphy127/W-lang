@@ -1,5 +1,4 @@
 #include "Interpreter.hpp"
-
 #include <iostream>
 #include <cassert>
 #include "utils/Logging.hpp"
@@ -52,7 +51,10 @@ void Interpreter::interpret() {
     const auto it = _functions.find("macho");
     if (it == _functions.end()) {
         LOG_ERROR << "Missing entry point 'gig macho()'";
-        throw RuntimeError{RuntimeError::Type::Logic, SourceRange{{1u, 1u}, {1u, 1u}}, "I don't know where to begin: add gig macho()"};
+        throw RuntimeError{
+            RuntimeError::Type::Logic,
+            SourceRange{{1u, 1u}, {1u, 1u}},
+            "I don't know where to begin: add gig macho()"};
     }
 
     LOG_DEBUG << "Executing 'macho' function";
@@ -118,19 +120,24 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
 RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     LOG_DEBUG << "Visiting IfStmt";
     const auto condition = stmt.getCondition().accept(*this);
-    if (not std::holds_alternative<bool>(condition)) {
-        throw RuntimeError{RuntimeError::Type::Value, stmt.getCondition().getSrcRange(), "That check needs Bool vibes only"};
+    if (not is<Bool>(condition)) {
+        throw RuntimeError{
+            RuntimeError::Type::Value,
+            stmt.getCondition().getSrcRange(),
+            "That check needs Bool vibes only"};
     }
-    if (std::get<bool>(condition)) {
+    if (as<Bool>(condition)) {
         stmt.getThenBlock().accept(*this);
         return Null{};
     }
     for (const auto& elseIfClause : stmt.getElseIfClauses()) {
         const auto elseIfCondition = elseIfClause.condition->accept(*this);
-        if (not std::holds_alternative<bool>(elseIfCondition)) {
-            throw RuntimeError{RuntimeError::Type::Value, elseIfClause.condition->getSrcRange(), "That check needs Bool vibes only"};
+        if (not is<Bool>(elseIfCondition)) {
+            throw RuntimeError{RuntimeError::Type::Value,
+                elseIfClause.condition->getSrcRange(),
+                "That check needs Bool vibes only"};
         }
-        if (std::get<bool>(elseIfCondition)) {
+        if (as<Bool>(elseIfCondition)) {
             elseIfClause.body->accept(*this);
             return Null{};
         }
@@ -192,6 +199,7 @@ RuntimeValue Interpreter::visitBreakStmt(const BreakStmt& stmt) {
 RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
     LOG_DEBUG << "Visiting FunctionStmt";
     auto funcName = stmt.getName().getValue<std::string>();
+
     LOG_DEBUG << "Registering function: " << funcName;
     _functions.emplace(funcName, stmt);
     return Null{};
@@ -211,7 +219,10 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
         _currentEnvironment->defineVar(moduleName, modules::createGossipModule());
         return Null{};
     }
-    throw RuntimeError{RuntimeError::Type::Value, stmt.getSrcRange(), "That thing cannot be summoned"};
+
+    throw RuntimeError{RuntimeError::Type::Value,
+        stmt.getSrcRange(),
+        "That thing cannot be summoned"};
 }
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
@@ -252,6 +263,7 @@ RuntimeValue Interpreter::visitVariableExpr(const VariableExpr& expr) {
     LOG_DEBUG << "Visiting VariableExpr";
     const auto& name = expr.getName().getValue<std::string>();
     LOG_DEBUG << std::format("Accessing variable {} at scope depth {}", name, _scopeDepth);
+
     auto value = _currentEnvironment->getVar(name);
     LOG_DEBUG << std::format("Retrieved value: {}", stringify(value));
     return value;
@@ -286,7 +298,10 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
                 return applyMath(left, right, [](auto&& a, auto&& b) { return a - b; });
             }
             default:
-                throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud: unknown binary operator"};
+                throw RuntimeError{
+                    RuntimeError::Type::Undefined,
+                    expr.getSrcRange(),
+                    "Call the dev bud: unknown binary operator"};
         }
     }
     catch (const std::invalid_argument& e) {
@@ -308,30 +323,40 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
         if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getRight())) {
             const auto& name = varExpr->getName().getValue<std::string>();
             auto oldValue = std::get<std::int32_t>(varExpr->accept(*this));
-            LOG_DEBUG << std::format("Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
+            LOG_DEBUG << std::format(
+                "Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
             _currentEnvironment->reassignVar(name, oldValue + 1);
             return Null{};
         }
         else {
             // TODO maybe chceck it somehow in parser ?
-            throw RuntimeError{RuntimeError::Type::Logic, expr.getSrcRange(), "Can't pump_it into the void!"};
+            throw RuntimeError{
+                RuntimeError::Type::Logic,
+                expr.getSrcRange(),
+                "Can't pump_it into the void!"};
         }
     }
     LOG_WARN << "Unknown unary operator";
     return Null{};
 }
 
-RuntimeValue Interpreter::handleUserDefinedFunctionCall(const VariableExpr& varExpr, const std::vector<std::unique_ptr<Expr>>& callArgs) {
+RuntimeValue Interpreter::handleUserDefinedFunctionCall(
+    const VariableExpr& varExpr,
+    const std::vector<std::unique_ptr<Expr>>& callArgs) {
     const auto& name = varExpr.getName().getValue<std::string>();
     if (not _functions.contains(name)) {
-        throw RuntimeError{RuntimeError::Type::Value, varExpr.getSrcRange(), "That ain't a function"};
+        throw RuntimeError{
+            RuntimeError::Type::Value, varExpr.getSrcRange(), "That ain't a function"};
     }
 
     const auto& funcStmt = _functions.at(name).get();
     const auto& parameters = funcStmt.getParameters();
     const auto parametersCount = parameters.size();
     if (callArgs.size() != parametersCount) {
-        throw RuntimeError{RuntimeError::Type::Logic, varExpr.getSrcRange(), std::format("We agreed to {} args, got {}!", parametersCount, callArgs.size())};
+        throw RuntimeError{
+            RuntimeError::Type::Logic,
+            varExpr.getSrcRange(),
+            std::format("We agreed to {} args, got {}!", parametersCount, callArgs.size())};
     }
 
     LOG_DEBUG << "Evaluating arguments";
@@ -375,7 +400,7 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     }
 
     auto calleeValue = expr.getCallee().accept(*this);
-    if (std::holds_alternative<NativeFunction>(calleeValue)) {
+    if (is<NativeFunction>(calleeValue)) {
         LOG_DEBUG << "Executing NativeFunction";
         
         const auto& nativeFunc = std::get<NativeFunction>(calleeValue);
@@ -393,10 +418,17 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud"};
 }
 
-RuntimeValue Interpreter::handleModuleCall(const Module& mod, const std::string& rightName, const DotExpr& expr) {
+RuntimeValue Interpreter::handleModuleCall(
+    const Module& mod,
+    const std::string& rightName,
+    const DotExpr& expr) {
+
     auto it = mod->find(rightName);
     if (it == mod->end()) {
-        throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), std::format("Module ain't got '{}'", rightName)};
+        throw RuntimeError{
+            RuntimeError::Type::Value,
+            expr.getSrcRange(),
+            std::format("Module ain't got '{}'", rightName)};
     }
 
     return it->second;
@@ -405,19 +437,20 @@ RuntimeValue Interpreter::handleModuleCall(const Module& mod, const std::string&
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
     // TODO do not force variable on the left, blocking e.g. gossip.eavesdrop().to_solid()...
-    const auto& leftName = dynamic_cast<const VariableExpr&>(expr.getLeft()).getName().getValue<std::string>();
+    const auto& leftName = dynamic_cast<const VariableExpr&>(
+        expr.getLeft()).getName().getValue<std::string>();
 
     // TODO support nested dot expressions
     auto var = _currentEnvironment->getVar(leftName);
     const auto& rightName = expr.getRight().getValue<std::string>();
-    if (std::holds_alternative<Module>(var)) {
-        return handleModuleCall(std::get<Module>(var), rightName, expr);
+    if (is<Module>(var)) {
+        return handleModuleCall(as<Module>(var), rightName, expr);
     }
-    if (std::holds_alternative<Vector>(var)) {
-        return callVectorMethod(std::get<Vector>(var), rightName);
+    if (is<Vector>(var)) {
+        return callVectorMethod(as<Vector>(var), rightName);
     }
-    if (std::holds_alternative<String>(var)) {
-        return callStringMethod(std::get<String>(var), rightName);
+    if (is<String>(var)) {
+        return callStringMethod(as<String>(var), rightName);
     }
 
     throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), "Can't dot into that"};
@@ -441,7 +474,10 @@ RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
     for (size_t i{0ull}; i < vectorSize; ++i) {
         auto nextValue = initializers[i]->accept(*this);
         if (nextValue.index() != vector->typeId) {
-            throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), "Lineup got mixed vibes - all elements must be the same type"};
+            throw RuntimeError{
+                RuntimeError::Type::Value,
+                expr.getSrcRange(),
+                "Lineup got mixed vibes - all elements must be the same type"};
         }
         vector->data.push_back(std::move(nextValue));
     }
@@ -472,5 +508,8 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
     }
 
     // TODO investigate how parser would allow an unknown logical operator here
-    throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud: unknown logical operator"};
+    throw RuntimeError{
+        RuntimeError::Type::Undefined,
+        expr.getSrcRange(),
+        "Call the dev bud: unknown logical operator"};
 }

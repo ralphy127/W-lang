@@ -102,7 +102,8 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
             expectArgsSize(args, 0ull);
             auto valueToRemove = vector->data.back();
 
-            LOG_DEBUG << std::format("Popping {} from the end of the vector", stringify(valueToRemove));
+            LOG_DEBUG << std::format(
+                "Popping {} from the end of the vector", stringify(valueToRemove));
             vector->data.pop_back();
             return valueToRemove;
         }};

@@ -1,16 +1,19 @@
 #include "Statements.hpp"
 #include <cassert>
 
-VarDefinitionStmt::VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer, SourceRange srcRange)
+VarDefinitionStmt::VarDefinitionStmt(
+    Token name,
+    std::unique_ptr<Expr> initializer,
+    SourceRange srcRange)
     : Stmt{srcRange}
     , _name{std::move(name)}
     , _initializer{std::move(initializer)} {
     
-    assert(_name.valueIs<std::string>() && "VarDefinitionStmt must hold a string token for name");
+    assert(_name.valueIs<std::string>());
 }
 
 const Expr& VarDefinitionStmt::getInitializer() const {
-    assert(_initializer.get() && "VardDefinitionStmt initializer is null");
+    assert(_initializer.get());
     return *_initializer;
 }
 
@@ -19,12 +22,12 @@ ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange 
     , _name{std::move(name)}
     , _value{std::move(value)} {
     
-    assert(_name.valueIs<std::string>() && "ReassignStmt must hold a string token for name");
-    assert(_value.get() && "ReassignStmt value is null");
+    assert(_name.valueIs<std::string>());
+    assert(_value.get());
 }
 
 const Expr& ReassignStmt::getValue() const {
-    assert(_value.get() && "ReassignStmt value is null");
+    assert(_value.get());
     return *_value;
 }
 
@@ -33,7 +36,7 @@ BlockStmt::BlockStmt(std::vector<std::unique_ptr<Stmt>> statements, SourceRange 
     , _statements{std::move(statements)} {
     
     for (const auto& statement : _statements) {
-        assert(statement.get() && "BlockStmt contains null statement");
+        assert(statement.get());
     }
 }
 
@@ -48,26 +51,26 @@ IfStmt::IfStmt(SourceRange srcRange,
     , _elseIfs{std::move(elseIfs)}
     , _elseBlock{std::move(elseBlock)} {
     
-    assert(_condition.get() && "IfStmt condition is null");
-    assert(_thenBlock.get() && "IfStmt then block is null");
+    assert(_condition.get());
+    assert(_thenBlock.get());
     for (const auto& elseIfClause : _elseIfs) {
-        assert(elseIfClause.condition.get() && "IfStmt else-if clause condition is null");
-        assert(elseIfClause.body.get() && "IfStmt else-if clause body is null");
+        assert(elseIfClause.condition.get());
+        assert(elseIfClause.body.get());
     }
 }
 
 const Expr& IfStmt::getCondition() const {
-    assert(_condition.get() && "IfStmt condition is null");
+    assert(_condition.get());
     return *_condition;
 }
 
 const Stmt& IfStmt::getThenBlock() const {
-    assert(_thenBlock.get() && "IfStmt then block is null");
+    assert(_thenBlock.get());
     return *_thenBlock;
 }
 
 const Stmt& IfStmt::getElseBlock() const {
-    assert(_elseBlock.get() && "IfStmt else block is null");
+    assert(_elseBlock.get());
     return *_elseBlock;
 }
 
@@ -75,30 +78,33 @@ LoopStmt::LoopStmt(std::unique_ptr<Stmt> body, SourceRange srcRange)
     : Stmt{srcRange}
     , _body{std::move(body)} {
     
-    assert(_body.get() && "LoopStmt body is null");
+    assert(_body.get());
 }
 
 const Stmt& LoopStmt::getBody() const {
-    assert(_body.get() && "LoopStmt body is null");
+    assert(_body.get());
     return *_body;
 }
 
-RepeatStmt::RepeatStmt(std::unique_ptr<Expr> count, std::unique_ptr<Stmt> body, SourceRange srcRange)
+RepeatStmt::RepeatStmt(
+    std::unique_ptr<Expr> count,
+    std::unique_ptr<Stmt> body,
+    SourceRange srcRange)
     : Stmt{srcRange}
     , _count{std::move(count)}
     , _body{std::move(body)} {
     
-    assert(_count.get() && "RepeatStmt count is null");
-    assert(_body.get() && "RepeatStmt body is null");
+    assert(_count.get());
+    assert(_body.get());
 }
 
 const Expr& RepeatStmt::getCount() const {
-    assert(_count.get() && "RepeatStmt count is null");
+    assert(_count.get());
     return *_count;
 }
 
 const Stmt& RepeatStmt::getBody() const {
-    assert(_body.get() && "RepeatStmt body is null");
+    assert(_body.get());
     return *_body;
 }
 
@@ -108,22 +114,26 @@ ReturnStmt::ReturnStmt(std::unique_ptr<Expr> value, SourceRange srcRange)
 }
 
 const Expr& ReturnStmt::getValue() const {
-    assert(_value.get() && "ReturnStmt value is null");
+    assert(_value.get());
     return *_value;
 }
 
-FunctionStmt::FunctionStmt(Token name, std::vector<Token> parameters, std::unique_ptr<Stmt> body, SourceRange srcRange)
+FunctionStmt::FunctionStmt(
+    Token name,
+    std::vector<Token> parameters,
+    std::unique_ptr<Stmt> body,
+    SourceRange srcRange)
     : Stmt{srcRange}
     , _name{std::move(name)}
     , _parameters{std::move(parameters)}
     , _body{std::move(body)} {
     
-    assert(_name.valueIs<std::string>() && "FunctionStmt must hold a string token for name");
-    assert(_body.get() && "FunctionStmt body is null");
+    assert(_name.valueIs<std::string>());
+    assert(_body.get());
 }
 
 const Stmt& FunctionStmt::getBody() const {
-    assert(_body.get() && "FunctionStmt body is null");
+    assert(_body.get());
     return *_body;
 }
 
@@ -131,7 +141,7 @@ ExpressionStmt::ExpressionStmt(std::unique_ptr<Expr> expression, SourceRange src
     : Stmt{srcRange}
     , _expression{std::move(expression)} {
 
-    assert(_expression.get() && "ExpressionStmt expression is null");
+    assert(_expression.get());
 }
 
 ImportStmt::ImportStmt(Token moduleName, SourceRange srcRange)
