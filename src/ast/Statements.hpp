@@ -10,12 +10,13 @@
 
 class Stmt : public AstNode {
 public:
+    Stmt(SourceRange srcRange) : AstNode{srcRange} {}
     virtual RuntimeValue accept(Visitor&) const = 0;
 };
 
 class VarDefinitionStmt : public Stmt {
 public:
-    explicit VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer);
+    explicit VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer, SourceRange);
 
     const Token& getName() const { return _name; }
     bool hasInitializer() const { return _initializer != nullptr; }
@@ -29,7 +30,7 @@ private:
 
 class ReassignStmt : public Stmt {
 public:
-    explicit ReassignStmt(Token name, std::unique_ptr<Expr> value);
+    explicit ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange);
 
     const Token& getName() const { return _name; }
     const Expr& getValue() const;
@@ -42,8 +43,8 @@ private:
 
 class BlockStmt : public Stmt {
 public:
-    BlockStmt() = default;
-    explicit BlockStmt(std::vector<std::unique_ptr<Stmt>> statements);
+    BlockStmt() : Stmt{SourceRange{}} {}
+    explicit BlockStmt(std::vector<std::unique_ptr<Stmt>> statements, SourceRange);
 
     const std::vector<std::unique_ptr<Stmt>>& getStatements() const { return _statements; }
 
@@ -60,7 +61,8 @@ struct ElseIfClause {
 
 class IfStmt : public Stmt {
 public:
-    explicit IfStmt(std::unique_ptr<Expr> condition, 
+    explicit IfStmt(SourceRange srcRange,
+                    std::unique_ptr<Expr> condition, 
                     std::unique_ptr<Stmt> thenBlock,
                     std::vector<ElseIfClause> elseIfs = std::vector<ElseIfClause>{},
                     std::unique_ptr<Stmt> elseBlock = nullptr);
@@ -81,7 +83,7 @@ private:
 
 class LoopStmt : public Stmt {
 public:
-    explicit LoopStmt(std::unique_ptr<Stmt> body);
+    explicit LoopStmt(std::unique_ptr<Stmt> body, SourceRange);
 
     const Stmt& getBody() const;
     RuntimeValue accept(Visitor& v) const override { return v.visitLoopStmt(*this); }
@@ -92,7 +94,7 @@ private:
 
 class RepeatStmt : public Stmt {
 public:
-    explicit RepeatStmt(std::unique_ptr<Expr> count, std::unique_ptr<Stmt> body);
+    explicit RepeatStmt(std::unique_ptr<Expr> count, std::unique_ptr<Stmt> body, SourceRange);
 
     const Expr& getCount() const;
     const Stmt& getBody() const;
@@ -105,7 +107,7 @@ private:
 
 class ReturnStmt : public Stmt {
 public:
-    explicit ReturnStmt(std::unique_ptr<Expr> value);
+    explicit ReturnStmt(std::unique_ptr<Expr> value, SourceRange);
 
     // TODO consider std::optional to avoid hasValue/getValue boilerplate, look at other examples
     const Expr& getValue() const;
@@ -118,6 +120,7 @@ private:
 
 class BreakStmt : public Stmt {
 public:
+    BreakStmt(SourceRange srcRange) : Stmt{srcRange} {}
     RuntimeValue accept(Visitor& v) const override { return v.visitBreakStmt(*this); }
 };
 
@@ -125,7 +128,8 @@ class FunctionStmt : public Stmt {
 public:
     explicit FunctionStmt(Token name, 
                          std::vector<Token> parameters,
-                         std::unique_ptr<Stmt> body);
+                         std::unique_ptr<Stmt> body,
+                         SourceRange);
 
     const Token& getName() const { return _name; }
     const std::vector<Token>& getParameters() const { return _parameters; }
@@ -140,7 +144,7 @@ private:
 
 class ExpressionStmt : public Stmt {
 public:
-    explicit ExpressionStmt(std::unique_ptr<Expr>);
+    explicit ExpressionStmt(std::unique_ptr<Expr>, SourceRange);
 
     const Expr& getExpression() const { return *_expression; }
     RuntimeValue accept(Visitor& v) const override { return v.visitExpressionStmt(*this); }
@@ -151,7 +155,7 @@ private:
 
 class ImportStmt : public Stmt {
 public:
-    explicit ImportStmt(Token moduleName);
+    explicit ImportStmt(Token moduleName, SourceRange);
 
     const Token& getModuleName() const { return _moduleName; }
 

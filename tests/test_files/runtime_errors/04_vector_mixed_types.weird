@@ -1,0 +1,3 @@
+gig macho() {
+    stash v about [1, "two"]...
+}

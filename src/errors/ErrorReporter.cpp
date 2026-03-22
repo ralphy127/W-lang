@@ -35,7 +35,7 @@ void printError(
     const std::string& msg) {
     std::ifstream file{fileName};
 
-    std::cerr << std::format("{}:{}:{} error: {}\n", fileName, line, column, msg);
+    std::cerr << std::format("{}:{}:{} - {}\n", fileName, line, column, msg);
     if (not file.is_open()) return;
 
     std::string prevLine;
@@ -75,6 +75,22 @@ void printError(
     }
 }
 
+std::string runtimeErrorTypeToString(RuntimeError::Type type) {
+    switch (type) {
+        case RuntimeError::Type::Undefined:
+            return "Mystery";
+        case RuntimeError::Type::Value:
+            return "Nope";
+        case RuntimeError::Type::Logic:
+            return "BrainLag";
+        case RuntimeError::Type::Math:
+            return "MathOops";
+        case RuntimeError::Type::OutOfBounds:
+            return "OuttaBounds";
+    }
+    return "Unknown";
+}
+
 }
 
 void ErrorReporter::printLexerErrors(const LexerCrash& crash) {
@@ -101,5 +117,21 @@ void ErrorReporter::printParserErrors(const ParserCrash& crash) {
             1u,
             error.msg);
     }
+    std::cerr << '\n';
+}
+
+void ErrorReporter::printRuntimeError(const RuntimeError& error, const std::string& fileName) {
+    std::cerr << '\n';
+    // TODO different handling of these errors
+    // TODO what with multi line errors
+    const auto typeStr = runtimeErrorTypeToString(error.type);
+    const auto msg = std::format("[{}] {}", typeStr, error.msg);
+    std::uint32_t length = 1u;
+    if (error.srcRange.end.line == error.srcRange.start.line and
+        error.srcRange.end.column > error.srcRange.start.column) {
+
+        length = error.srcRange.end.column - error.srcRange.start.column;
+    }
+    printError(fileName, error.srcRange.start.line, error.srcRange.start.column, length, msg);
     std::cerr << '\n';
 }

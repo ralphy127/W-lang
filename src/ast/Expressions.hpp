@@ -10,12 +10,13 @@
 
 class Expr : public AstNode {
 public:
+    Expr(SourceRange srcRange) : AstNode{srcRange} {}
     virtual RuntimeValue accept(Visitor&) const = 0;
 };
 
 class LiteralExpr : public Expr {
 public:
-    explicit LiteralExpr(Token);
+    explicit LiteralExpr(Token, SourceRange);
 
     const Token& getLiteral() const { return _literal; }
     RuntimeValue accept(Visitor& v) const override { return v.visitLiteralExpr(*this); }
@@ -26,7 +27,7 @@ private:
 
 class VariableExpr : public Expr {
 public:
-    explicit VariableExpr(Token);
+    explicit VariableExpr(Token, SourceRange);
 
     const Token& getName() const { return _variableName; }
     RuntimeValue accept(Visitor& v) const override { return v.visitVariableExpr(*this); }
@@ -37,7 +38,7 @@ private:
 
 class BinaryExpr : public Expr {
 public:
-    explicit BinaryExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right);
+    explicit BinaryExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right, SourceRange);
 
     const Token& getOperator() const { return _operator; }
     const Expr& getLeft() const { return *_left; }
@@ -52,7 +53,7 @@ private:
 
 class UnaryExpr : public Expr {
 public:
-    explicit UnaryExpr(Token, std::unique_ptr<Expr> right);
+    explicit UnaryExpr(Token, std::unique_ptr<Expr> right, SourceRange);
 
     const Token& getOperator() const { return _operator; }
     const Expr& getRight() const;
@@ -65,7 +66,7 @@ private:
 
 class CallExpr : public Expr {
 public:
-    explicit CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> args);
+    explicit CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> args, SourceRange);
 
     const Expr& getCallee() const { return *_callee; }
     const std::vector<std::unique_ptr<Expr>>& getArgs() const { return _args; }
@@ -78,7 +79,7 @@ private:
 
 class DotExpr : public Expr {
 public:
-    explicit DotExpr(std::unique_ptr<Expr> left, Token right);
+    explicit DotExpr(std::unique_ptr<Expr> left, Token right, SourceRange);
 
     const Expr& getLeft() const { return *_left; }
     const Token& getRight() const { return _right; }
@@ -91,7 +92,7 @@ private:
 
 class VectorExpr : public Expr {
 public:
-    explicit VectorExpr(std::vector<std::unique_ptr<Expr>> initializers);
+    explicit VectorExpr(std::vector<std::unique_ptr<Expr>> initializers, SourceRange);
 
     const std::vector<std::unique_ptr<Expr>>& getInitializers() const { return _initializers; }
 
@@ -103,7 +104,7 @@ private:
 
 class LogicalExpr : public Expr {
 public:
-    explicit LogicalExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right);
+    explicit LogicalExpr(std::unique_ptr<Expr> left, Token, std::unique_ptr<Expr> right, SourceRange);
 
     const Token& getOperator() const { return _operator; }
     const Expr& getLeft() const { return *_left; }

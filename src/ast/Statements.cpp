@@ -1,8 +1,9 @@
 #include "Statements.hpp"
 #include <cassert>
 
-VarDefinitionStmt::VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer)
-    : _name{std::move(name)}
+VarDefinitionStmt::VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _name{std::move(name)}
     , _initializer{std::move(initializer)} {
     
     assert(_name.valueIs<std::string>() && "VarDefinitionStmt must hold a string token for name");
@@ -13,8 +14,9 @@ const Expr& VarDefinitionStmt::getInitializer() const {
     return *_initializer;
 }
 
-ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value)
-    : _name{std::move(name)}
+ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _name{std::move(name)}
     , _value{std::move(value)} {
     
     assert(_name.valueIs<std::string>() && "ReassignStmt must hold a string token for name");
@@ -26,19 +28,22 @@ const Expr& ReassignStmt::getValue() const {
     return *_value;
 }
 
-BlockStmt::BlockStmt(std::vector<std::unique_ptr<Stmt>> statements)
-    : _statements{std::move(statements)} {
+BlockStmt::BlockStmt(std::vector<std::unique_ptr<Stmt>> statements, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _statements{std::move(statements)} {
     
     for (const auto& statement : _statements) {
         assert(statement.get() && "BlockStmt contains null statement");
     }
 }
 
-IfStmt::IfStmt(std::unique_ptr<Expr> condition, 
+IfStmt::IfStmt(SourceRange srcRange,
+               std::unique_ptr<Expr> condition, 
                std::unique_ptr<Stmt> thenBlock,
                std::vector<ElseIfClause> elseIfs,
                std::unique_ptr<Stmt> elseBlock)
-    : _condition{std::move(condition)}
+    : Stmt{srcRange}
+    , _condition{std::move(condition)}
     , _thenBlock{std::move(thenBlock)}
     , _elseIfs{std::move(elseIfs)}
     , _elseBlock{std::move(elseBlock)} {
@@ -66,8 +71,9 @@ const Stmt& IfStmt::getElseBlock() const {
     return *_elseBlock;
 }
 
-LoopStmt::LoopStmt(std::unique_ptr<Stmt> body)
-    : _body{std::move(body)} {
+LoopStmt::LoopStmt(std::unique_ptr<Stmt> body, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _body{std::move(body)} {
     
     assert(_body.get() && "LoopStmt body is null");
 }
@@ -77,8 +83,9 @@ const Stmt& LoopStmt::getBody() const {
     return *_body;
 }
 
-RepeatStmt::RepeatStmt(std::unique_ptr<Expr> count, std::unique_ptr<Stmt> body)
-    : _count{std::move(count)}
+RepeatStmt::RepeatStmt(std::unique_ptr<Expr> count, std::unique_ptr<Stmt> body, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _count{std::move(count)}
     , _body{std::move(body)} {
     
     assert(_count.get() && "RepeatStmt count is null");
@@ -95,8 +102,9 @@ const Stmt& RepeatStmt::getBody() const {
     return *_body;
 }
 
-ReturnStmt::ReturnStmt(std::unique_ptr<Expr> value)
-    : _value{std::move(value)} {
+ReturnStmt::ReturnStmt(std::unique_ptr<Expr> value, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _value{std::move(value)} {
 }
 
 const Expr& ReturnStmt::getValue() const {
@@ -104,8 +112,9 @@ const Expr& ReturnStmt::getValue() const {
     return *_value;
 }
 
-FunctionStmt::FunctionStmt(Token name, std::vector<Token> parameters, std::unique_ptr<Stmt> body)
-    : _name{std::move(name)}
+FunctionStmt::FunctionStmt(Token name, std::vector<Token> parameters, std::unique_ptr<Stmt> body, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _name{std::move(name)}
     , _parameters{std::move(parameters)}
     , _body{std::move(body)} {
     
@@ -118,14 +127,16 @@ const Stmt& FunctionStmt::getBody() const {
     return *_body;
 }
 
-ExpressionStmt::ExpressionStmt(std::unique_ptr<Expr> expression)
-    : _expression{std::move(expression)} {
+ExpressionStmt::ExpressionStmt(std::unique_ptr<Expr> expression, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _expression{std::move(expression)} {
 
     assert(_expression.get() && "ExpressionStmt expression is null");
 }
 
-ImportStmt::ImportStmt(Token moduleName)
-    : _moduleName{std::move(moduleName)} {
+ImportStmt::ImportStmt(Token moduleName, SourceRange srcRange)
+    : Stmt{srcRange}
+    , _moduleName{std::move(moduleName)} {
 
     assert(_moduleName.getType() == Token::Type::Ident);
 }

@@ -4,6 +4,7 @@
 #include <cassert>
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
+#include "runtime/RuntimeErrors.hpp"
 
 namespace {
 
@@ -24,7 +25,7 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&&
         [&operation](Float l, Int r) -> RuntimeValue {
             return Float{operation(l, static_cast<Float>(r))}; },
         [](auto&&, auto&&) -> RuntimeValue { 
-            throw std::runtime_error("Math works only on numbers"); 
+            throw std::invalid_argument("Math is only mathing on numbers"); 
         }
     }, left, right);
 }
@@ -51,7 +52,7 @@ void Interpreter::interpret() {
     const auto it = _functions.find("macho");
     if (it == _functions.end()) {
         LOG_ERROR << "Missing entry point 'gig macho()'";
-        throw std::runtime_error("Missing entry point 'gig macho()'");
+        throw RuntimeError{RuntimeError::Type::Logic, SourceRange{{1u, 1u}, {1u, 1u}}, "I don't know where to begin: add gig macho()"};
     }
 
     LOG_DEBUG << "Executing 'macho' function";
@@ -118,7 +119,7 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     LOG_DEBUG << "Visiting IfStmt";
     const auto condition = stmt.getCondition().accept(*this);
     if (not std::holds_alternative<bool>(condition)) {
-        throw std::runtime_error{"If statement's condition should be a boolean"};
+        throw RuntimeError{RuntimeError::Type::Value, stmt.getCondition().getSrcRange(), "That check needs Bool vibes only"};
     }
     if (std::get<bool>(condition)) {
         stmt.getThenBlock().accept(*this);
@@ -127,7 +128,7 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     for (const auto& elseIfClause : stmt.getElseIfClauses()) {
         const auto elseIfCondition = elseIfClause.condition->accept(*this);
         if (not std::holds_alternative<bool>(elseIfCondition)) {
-            throw std::runtime_error{"Else if statement's condition should be a boolean"};
+            throw RuntimeError{RuntimeError::Type::Value, elseIfClause.condition->getSrcRange(), "That check needs Bool vibes only"};
         }
         if (std::get<bool>(elseIfCondition)) {
             elseIfClause.body->accept(*this);
@@ -210,7 +211,7 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
         _currentEnvironment->defineVar(moduleName, modules::createGossipModule());
         return Null{};
     }
-    throw std::runtime_error{"Import of unknown module: " + moduleName};
+    throw RuntimeError{RuntimeError::Type::Value, stmt.getSrcRange(), "That thing cannot be summoned"};
 }
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
@@ -262,29 +263,41 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
     const auto& op = expr.getOperator().getType();
     const auto& right = expr.getRight().accept(*this);
 
-    switch (op) {
-        case Token::Type::Equal:
-            LOG_DEBUG << "Found equal operator";
-            return Bool{left == right};
-        case Token::Type::NotEqual:
-            LOG_DEBUG << "Found not equal operator";
-            return Bool{left != right};
-        case Token::Type::Less:
-            LOG_DEBUG << "Found less operator";
-            return Bool{left < right};
-        case Token::Type::Greater:
-            LOG_DEBUG << "Found greater operator";
-            return Bool{left > right};
-        case Token::Type::Plus: {
-            LOG_DEBUG << "Found plus operator";
-            return applyMath(left, right, [](auto&& a, auto&& b) { return a + b; });
+    try {
+        switch (op) {
+            case Token::Type::Equal:
+                LOG_DEBUG << "Found equal operator";
+                return Bool{left == right};
+            case Token::Type::NotEqual:
+                LOG_DEBUG << "Found not equal operator";
+                return Bool{left != right};
+            case Token::Type::Less:
+                LOG_DEBUG << "Found less operator";
+                return Bool{left < right};
+            case Token::Type::Greater:
+                LOG_DEBUG << "Found greater operator";
+                return Bool{left > right};
+            case Token::Type::Plus: {
+                LOG_DEBUG << "Found plus operator";
+                return applyMath(left, right, [](auto&& a, auto&& b) { return a + b; });
+            }
+            case Token::Type::Minus: {
+                LOG_DEBUG << "Found minus operator";
+                return applyMath(left, right, [](auto&& a, auto&& b) { return a - b; });
+            }
+            default:
+                throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud: unknown binary operator"};
         }
-        case Token::Type::Minus: {
-            LOG_DEBUG << "Found minus operator";
-            return applyMath(left, right, [](auto&& a, auto&& b) { return a - b; });
-        }
-        default:
-            throw std::runtime_error{"Unknown operator in binary expression"};
+    }
+    catch (const std::invalid_argument& e) {
+        const auto& msg = e.what();
+        LOG_ERROR << "Caught math exception: " << msg;
+        throw RuntimeError{RuntimeError::Type::Math, expr.getSrcRange(), msg};
+    }
+    catch (const std::exception& e) {
+        const auto& msg = e.what();
+        LOG_ERROR << "Caught other exception: " << msg;
+        throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), msg};
     }
 }
 
@@ -300,8 +313,8 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
             return Null{};
         }
         else {
-            // TODO error handling
-            throw std::runtime_error{"Right side of 'pump_it' operator must be a variable"};
+            // TODO maybe chceck it somehow in parser ?
+            throw RuntimeError{RuntimeError::Type::Logic, expr.getSrcRange(), "Can't pump_it into the void!"};
         }
     }
     LOG_WARN << "Unknown unary operator";
@@ -311,14 +324,14 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
 RuntimeValue Interpreter::handleUserDefinedFunctionCall(const VariableExpr& varExpr, const std::vector<std::unique_ptr<Expr>>& callArgs) {
     const auto& name = varExpr.getName().getValue<std::string>();
     if (not _functions.contains(name)) {
-        throw std::runtime_error{"Function does not exist"};
+        throw RuntimeError{RuntimeError::Type::Value, varExpr.getSrcRange(), "That ain't a function"};
     }
 
     const auto& funcStmt = _functions.at(name).get();
     const auto& parameters = funcStmt.getParameters();
     const auto parametersCount = parameters.size();
     if (callArgs.size() != parametersCount) {
-        throw std::runtime_error{"Argument counts do not match"};
+        throw RuntimeError{RuntimeError::Type::Logic, varExpr.getSrcRange(), std::format("We agreed to {} args, got {}!", parametersCount, callArgs.size())};
     }
 
     LOG_DEBUG << "Evaluating arguments";
@@ -376,13 +389,14 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
         return nativeFunc(evaluatedArgs);
     }
 
-    throw std::runtime_error{"Unknown instructions in visitCallExpr"};
+    // TODO investigate a failure scenario
+    throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud"};
 }
 
-RuntimeValue Interpreter::handleModuleCall(const Module& mod, const std::string& rightName) {
+RuntimeValue Interpreter::handleModuleCall(const Module& mod, const std::string& rightName, const DotExpr& expr) {
     auto it = mod->find(rightName);
     if (it == mod->end()) {
-        throw std::runtime_error{std::format("{} not found in module", rightName)};
+        throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), std::format("Module ain't got '{}'", rightName)};
     }
 
     return it->second;
@@ -397,7 +411,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     auto var = _currentEnvironment->getVar(leftName);
     const auto& rightName = expr.getRight().getValue<std::string>();
     if (std::holds_alternative<Module>(var)) {
-        return handleModuleCall(std::get<Module>(var), rightName);
+        return handleModuleCall(std::get<Module>(var), rightName, expr);
     }
     if (std::holds_alternative<Vector>(var)) {
         return callVectorMethod(std::get<Vector>(var), rightName);
@@ -406,7 +420,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
         return callStringMethod(std::get<String>(var), rightName);
     }
 
-    throw std::runtime_error{"Unknown dot expression"};
+    throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), "Can't dot into that"};
 }
 
 RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
@@ -427,7 +441,7 @@ RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
     for (size_t i{0ull}; i < vectorSize; ++i) {
         auto nextValue = initializers[i]->accept(*this);
         if (nextValue.index() != vector->typeId) {
-            throw std::runtime_error{"All items in vector must be of the same type"};
+            throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), "Lineup got mixed vibes - all elements must be the same type"};
         }
         vector->data.push_back(std::move(nextValue));
     }
@@ -457,5 +471,6 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
         return tryAs<Bool>(rightResult);
     }
 
-    throw std::runtime_error{"Unknown logical operator"};
+    // TODO investigate how parser would allow an unknown logical operator here
+    throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud: unknown logical operator"};
 }

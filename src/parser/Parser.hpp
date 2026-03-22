@@ -43,6 +43,10 @@ private:
 
     const Token& consume(Token::Type, const std::string& errorMessage);
 
+    SourceRange makeRange(const Token& start, const Token& end);
+    SourceRange makeRange(const AstNode& start, const AstNode& end);
+    SourceRange makeRange(const Token& start, const AstNode& end);
+
     std::unique_ptr<Stmt> parseStatement();
     std::unique_ptr<Stmt> parseDefinition();
     std::unique_ptr<Stmt> parseFunctionDefinition();

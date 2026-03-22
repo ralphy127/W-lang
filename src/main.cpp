@@ -66,10 +66,10 @@ int main(int argc, const char* argv[]) {
     catch (const ParserCrash& crash) {
         errorReporter.printParserErrors(crash);
     }
-    catch (const std::exception& e) {
-        // TODO handle exceptions
-        std::cerr << std::format("[FATAL ERROR] {}\n", e.what());
-        return -1;
+    catch (const RuntimeError& error) {
+        // TODO! add some info in sourceRange about file or find other way to properly
+        //! get file which something is in, (test after user imports) 
+        errorReporter.printRuntimeError(error, filepath);
     }
 
     return 0;
