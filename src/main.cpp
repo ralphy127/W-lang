@@ -39,7 +39,9 @@ static void run(const std::string& filePath) {
     };
 
     auto mainAst = resolver(filePath);
-    Interpreter interpreter{std::move(mainAst), std::move(resolver)};
+    auto mainFolderPath = filePath.substr(0, filePath.find_last_of('/') + 1);
+    if (mainFolderPath == filePath) mainFolderPath = "./";
+    Interpreter interpreter{std::move(mainAst), std::move(resolver), std::move(mainFolderPath)};
     interpreter.interpret();
 }
 

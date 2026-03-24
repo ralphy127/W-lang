@@ -12,6 +12,7 @@ public:
     void defineVar(const std::string& name, RuntimeValue value);
     void reassignVar(const std::string& name, RuntimeValue newValue);
     RuntimeValue getVar(const std::string& name) const;
+    std::unordered_map<std::string, RuntimeValue> stealAllVariables() { return std::move(_variables); }
 
 private:
     std::unordered_map<std::string, RuntimeValue> _variables{};

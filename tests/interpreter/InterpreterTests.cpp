@@ -23,7 +23,7 @@ struct InterpreterTests : ::testing::Test {
         std::stringstream buffer{};
         auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
         
-        Interpreter interpreter{std::move(statements), astSolver};
+        Interpreter interpreter{std::move(statements), astSolver, ""};
         interpreter.interpret();
         
         std::cout.rdbuf(oldCout);

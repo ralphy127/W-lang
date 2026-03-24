@@ -31,9 +31,13 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&&
 
 }
 
-Interpreter::Interpreter(std::vector<std::unique_ptr<Stmt>> statements, AstResolver astResolver)
+Interpreter::Interpreter(
+    std::vector<std::unique_ptr<Stmt>> statements,
+    AstResolver astResolver,
+    std::string mainFolderPath)
     : _statements{std::move(statements)}
-    , _astResolver{std::move(astResolver)} {
+    , _astResolver{std::move(astResolver)}
+    , _mainFolderPath{std::move(mainFolderPath)} {
 
     for (const auto& stmt : _statements) {
         assert(stmt);
@@ -215,14 +219,32 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     const auto& moduleName = stmt.getModuleName().getValue<std::string>();
 
     if (moduleName == "gossip") {
-        LOG_DEBUG << "Defining module " << moduleName;
+        LOG_DEBUG << "Defining native module " << moduleName;
         _currentEnvironment->defineVar(moduleName, modules::createGossipModule());
         return Null{};
     }
 
-    throw RuntimeError{RuntimeError::Type::Value,
-        stmt.getSrcRange(),
-        "That thing cannot be summoned"};
+    auto userFileName = _mainFolderPath + moduleName + ".weird";
+
+    LOG_DEBUG << std::format("Resolving user module: {} ast", moduleName);
+    auto moduleAst = _astResolver(userFileName);
+    LOG_DEBUG << std::format("Resolved user module: {} ast", moduleName);
+    
+    auto previousEnvironment = _currentEnvironment;
+    _currentEnvironment = std::make_shared<Environment>();
+
+    for (const auto& statement : moduleAst) {
+        statement->accept(*this);
+    }
+    LOG_DEBUG << std::format("Interpreted all statements from user module: {} ast", moduleName);
+
+    // ! TODO instead of stealing resources, consider other Module implementation
+    auto module = Module{std::make_shared<std::unordered_map<std::string, RuntimeValue>>(
+        _currentEnvironment->stealAllVariables())};
+
+    _currentEnvironment = previousEnvironment;
+    _currentEnvironment->defineVar(moduleName, std::move(module));
+    return Null{};
 }
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {

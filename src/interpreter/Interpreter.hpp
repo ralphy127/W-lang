@@ -11,7 +11,10 @@ using AstResolver = std::function<std::vector<std::unique_ptr<Stmt>>(const std::
 
 class Interpreter : public Visitor {
 public:
-    explicit Interpreter(std::vector<std::unique_ptr<Stmt>>, AstResolver);
+    explicit Interpreter(
+        std::vector<std::unique_ptr<Stmt>>,
+        AstResolver,
+        std::string mainFolderPath);
 
     void interpret();
 
@@ -43,6 +46,8 @@ public:
 private:
     const std::vector<std::unique_ptr<Stmt>> _statements;
     AstResolver _astResolver;
+    // TODO! while working on some global file solution, remove this field 
+    std::string _mainFolderPath;
     std::unordered_map<std::string, std::reference_wrapper<const FunctionStmt>> _functions;
     std::shared_ptr<Environment> _globalEnvironment{std::make_shared<Environment>()};
     std::shared_ptr<Environment> _currentEnvironment{_globalEnvironment};
