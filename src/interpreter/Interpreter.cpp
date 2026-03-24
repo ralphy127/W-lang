@@ -52,18 +52,10 @@ void Interpreter::interpret() {
     }
 
     LOG_DEBUG << "Looking for entry point 'macho'";
-    const auto it = _functions.find("macho");
-    if (it == _functions.end()) {
-        LOG_ERROR << "Missing entry point 'gig macho()'";
-        throw RuntimeError{
-            RuntimeError::Type::Logic,
-            SourceRange{{1u, 1u}, {1u, 1u}},
-            "I don't know where to begin: add gig macho()"};
-    }
-
-    LOG_DEBUG << "Executing 'macho' function";
     try {
-        it->second.get().getBody().accept(*this);
+        auto mainFunc = tryAs<Function>(_currentEnvironment->getVar("macho"));
+        LOG_DEBUG << "Executing 'macho' function";
+        mainFunc(std::vector<RuntimeValue>{});
     }
     catch (ReturnStatementException) {}
     catch (const std::exception& e) {
@@ -205,7 +197,47 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
     auto funcName = stmt.getName().getValue<std::string>();
 
     LOG_DEBUG << "Registering function: " << funcName;
-    _functions.emplace(funcName, stmt);
+    // TODO make sure stmt always outlives function / refactor just in case
+    auto function = [this, &stmt](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        auto localEnvironment = std::make_shared<Environment>(_globalEnvironment);
+        const auto& argNames = stmt.getParameters();
+        const auto namesCount = argNames.size();
+
+        const auto argsSize = args.size();
+        if (namesCount != argsSize) {
+            throw RuntimeError{
+                RuntimeError::Type::OutOfBounds,
+                stmt.getSrcRange(),
+                std::format("Argument count don't vibe ({} is not {})", argsSize, namesCount)};
+        }
+
+        for (size_t i{0ull}; i < argsSize; ++i) {
+            localEnvironment->defineVar(argNames[i].getValue<std::string>(), args[i]);
+        }
+
+        LOG_DEBUG << "Jumping into local function environemnt";
+        auto previousEnv = _currentEnvironment;
+        _currentEnvironment = localEnvironment;
+
+        try {
+            stmt.getBody().accept(*this);
+        }
+        catch (const ReturnStatementException& ret) {
+            LOG_DEBUG << "Caught return value";
+            _currentEnvironment = previousEnv;
+            return ret.value;
+        }
+        catch (...) {
+            _currentEnvironment = previousEnv;
+            throw;
+        }
+
+        _currentEnvironment = previousEnv;
+        return Null{};
+    };
+
+    _currentEnvironment->defineVar(funcName, Function{std::move(function)});
+        
     return Null{};
 }
 
@@ -241,9 +273,10 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     // ! TODO instead of stealing resources, consider other Module implementation
     auto module = Module{std::make_shared<std::unordered_map<std::string, RuntimeValue>>(
         _currentEnvironment->stealAllVariables())};
-
+        
     _currentEnvironment = previousEnvironment;
     _currentEnvironment->defineVar(moduleName, std::move(module));
+    _importedModuleAsts[moduleName] = std::move(moduleAst);
     return Null{};
 }
     
@@ -362,82 +395,28 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     return Null{};
 }
 
-RuntimeValue Interpreter::handleUserDefinedFunctionCall(
-    const VariableExpr& varExpr,
-    const std::vector<std::unique_ptr<Expr>>& callArgs) {
-    const auto& name = varExpr.getName().getValue<std::string>();
-    if (not _functions.contains(name)) {
-        throw RuntimeError{
-            RuntimeError::Type::Value, varExpr.getSrcRange(), "That ain't a function"};
-    }
-
-    const auto& funcStmt = _functions.at(name).get();
-    const auto& parameters = funcStmt.getParameters();
-    const auto parametersCount = parameters.size();
-    if (callArgs.size() != parametersCount) {
-        throw RuntimeError{
-            RuntimeError::Type::Logic,
-            varExpr.getSrcRange(),
-            std::format("We agreed to {} args, got {}!", parametersCount, callArgs.size())};
-    }
-
-    LOG_DEBUG << "Evaluating arguments";
-    std::vector<RuntimeValue> evaluatedParameters(parametersCount);
-    for (size_t i{0ull}; i < parametersCount; ++i) {
-        evaluatedParameters[i] = callArgs[i]->accept(*this);
-    }
-
-    LOG_DEBUG << "Creating arguments' environment";
-    auto callEnv = std::make_shared<Environment>(_globalEnvironment);
-    for (size_t i{0ull}; i < parametersCount; ++i) {
-        callEnv->defineVar(
-            parameters[i].getValue<std::string>(),
-            std::move(evaluatedParameters[i]));
-    }
-
-    LOG_DEBUG << "Jumping into arguments' environemnt";
-    auto previousEnv = _currentEnvironment;
-    _currentEnvironment = callEnv;
-    try {
-        funcStmt.getBody().accept(*this);
-    }
-    catch (ReturnStatementException ret) {
-        LOG_DEBUG << "Caught return value";
-        _currentEnvironment = previousEnv;
-        return ret.value;
-    }
-    catch (...) {
-        _currentEnvironment = previousEnv;
-        throw;
-    }
-
-    _currentEnvironment = previousEnv;
-    return Null{};
-}
-
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Visiting CallExpr";
-    if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getCallee())) {
-        return handleUserDefinedFunctionCall(*varExpr, expr.getArgs());
-    }
-
     auto calleeValue = expr.getCallee().accept(*this);
-    if (is<NativeFunction>(calleeValue)) {
-        LOG_DEBUG << "Executing NativeFunction";
-        
-        const auto& nativeFunc = std::get<NativeFunction>(calleeValue);
-        const auto& callArgs = expr.getArgs();
-        std::vector<RuntimeValue> evaluatedArgs{};
-        evaluatedArgs.reserve(callArgs.size());
-        
-        for (const auto& arg : callArgs) {
-            evaluatedArgs.push_back(arg->accept(*this));
-        }
-        return nativeFunc(evaluatedArgs);
+
+    if (not is<Function>(calleeValue)) {
+        // TODO investigate a failure scenario
+        throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud"};
+    }
+    LOG_DEBUG << "Executing Function";
+            
+    const auto& callArgs = expr.getArgs();
+    std::vector<RuntimeValue> evaluatedArgs{};
+    evaluatedArgs.reserve(callArgs.size());
+            
+    for (const auto& arg : callArgs) {
+        evaluatedArgs.push_back(arg->accept(*this));
     }
 
-    // TODO investigate a failure scenario
-    throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud"};
+    LOG_DEBUG << std::format("Successfully valuated {} parameters", evaluatedArgs.size());
+
+    const auto& function = as<Function>(calleeValue);
+    return function(evaluatedArgs);
 }
 
 RuntimeValue Interpreter::handleModuleCall(

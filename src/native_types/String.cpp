@@ -16,7 +16,7 @@ namespace {
 
 RuntimeValue callStringMethod(const String& string, const std::string& name) {
     if (name == "to_solid") {
-        return NativeFunction{[string](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[string](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "String:to_solid called";
             expectArgsSize(args, 0ull);    
             

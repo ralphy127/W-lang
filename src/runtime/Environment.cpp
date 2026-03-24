@@ -6,6 +6,8 @@
 Environment::Environment(std::shared_ptr<Environment> outerScope)
     : _outerScope{std::move(outerScope)} {}
 
+// TODO error handling
+
 void Environment::defineVar(const std::string& name, RuntimeValue value) {
     if (_variables.contains(name)) {
         throw std::runtime_error{std::format("Variable {} already exists", name)};

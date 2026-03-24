@@ -55,7 +55,7 @@ namespace {
 RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
     // TODO change strings to enums + switch stmt
     if (name == "yoink") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:yoink called";
             expectArgsSize(args, 1ull);    
             auto index = toIndex(args[0]);
@@ -67,7 +67,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
     if (name == "patch") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:patch called";
             expectNotEmpty(vector);
             expectArgsSize(args, 2ull);
@@ -84,7 +84,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
     if (name == "shove") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:shove called";
             expectArgsSize(args, 1ull);
             auto& value = args[0];
@@ -96,7 +96,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
     if (name == "kick") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:kick called";
             expectNotEmpty(vector);
             expectArgsSize(args, 0ull);
@@ -109,7 +109,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
     if (name == "vibe_check") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:vibe_check called";
             expectArgsSize(args, 0ull);
 
@@ -118,7 +118,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
     if (name == "vibe_count") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:vibe_count called";
             expectArgsSize(args, 0ull);
 
@@ -127,7 +127,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
     if (name == "reset_the_vibe") {
-        return NativeFunction{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
             LOG_DEBUG << "Vector:reset_the_vibe called";
             expectArgsSize(args, 0ull);
 

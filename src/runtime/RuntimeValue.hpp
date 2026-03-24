@@ -15,8 +15,7 @@ using Null = std::monostate;
 using Int = std::int32_t;
 using Bool = bool;
 using Float = double;
-// TODO ? change functions in interpretor to global Function type
-using NativeFunction = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
+using Function = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
 using Module = std::shared_ptr<std::unordered_map<std::string, RuntimeValue>>;
 
 using RuntimeValueBase = std::variant<
@@ -26,7 +25,7 @@ using RuntimeValueBase = std::variant<
     Bool,
     Float,
     Vector,
-    NativeFunction,
+    Function,
     Module>;
 struct RuntimeValue : RuntimeValueBase {
     using RuntimeValueBase::variant;
@@ -42,7 +41,7 @@ inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
-            if constexpr (std::is_same_v<T, NativeFunction>) {
+            if constexpr (std::is_same_v<T, Function>) {
                 throw std::runtime_error{"Cannot compare functions"};
             }
             else {
@@ -64,7 +63,7 @@ inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
-            if constexpr (std::is_same_v<T, NativeFunction>) {
+            if constexpr (std::is_same_v<T, Function>) {
                 throw std::runtime_error{"Cannot compare functions"};
             }
             else {
