@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "core/SourceLocation.hpp"
+#include "core/SourceRange.hpp"
 
 struct RuntimeError {
     enum class Type {

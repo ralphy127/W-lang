@@ -4,7 +4,7 @@
 
 struct ParserTestFixture : public ::testing::Test {
     ParserResult parseSource(const std::string& source) {
-        Lexer lexer{source};
+        Lexer lexer{source, 0ull};
         auto lexerResult = lexer.tokenize();
         EXPECT_TRUE(lexerResult.errors.empty());
         

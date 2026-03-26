@@ -9,7 +9,7 @@ struct InterpreterTests : ::testing::Test {
     };
 
     ParserResult parseSource(const std::string& source) {
-        Lexer lexer{source};
+        Lexer lexer{source, 0ull};
         auto lexerResult = lexer.tokenize();
         EXPECT_TRUE(lexerResult.errors.empty());
         
@@ -24,7 +24,13 @@ struct InterpreterTests : ::testing::Test {
         auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
         
         Interpreter interpreter{std::move(statements), astSolver, ""};
-        interpreter.interpret();
+        try {
+            interpreter.interpret();
+        }
+        catch (...) {
+            std::cout.rdbuf(oldCout);
+            throw;
+        }
         
         std::cout.rdbuf(oldCout);
         
@@ -1102,6 +1108,5 @@ TEST_F(InterpreterTests, ScopedImportModulesTest) {
             invalidPrint()...
         }
     )";
-    
-    expectOutput(source, "Hello\n");
+    EXPECT_ANY_THROW(expectOutput(source, "Hello\n"));
 }

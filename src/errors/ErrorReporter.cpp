@@ -120,7 +120,7 @@ void ErrorReporter::printParserErrors(const ParserCrash& crash) {
     std::cerr << '\n';
 }
 
-void ErrorReporter::printRuntimeError(const RuntimeError& error, const std::string& fileName) {
+void ErrorReporter::printRuntimeError(const RuntimeError& error, const SourceManager& sourceManager) {
     std::cerr << '\n';
     // TODO different handling of these errors
     // TODO what with multi line errors
@@ -132,6 +132,13 @@ void ErrorReporter::printRuntimeError(const RuntimeError& error, const std::stri
 
         length = error.srcRange.end.column - error.srcRange.start.column;
     }
-    printError(fileName, error.srcRange.start.line, error.srcRange.start.column, length, msg);
+    std::string filePath{"<unknown-file>"};
+    try {
+        filePath = sourceManager.getFilePath(error.srcRange.fileId);
+    }
+    catch (const std::out_of_range&) {
+    }
+
+    printError(filePath, error.srcRange.start.line, error.srcRange.start.column, length, msg);
     std::cerr << '\n';
 }

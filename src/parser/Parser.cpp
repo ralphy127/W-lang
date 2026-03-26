@@ -169,15 +169,16 @@ const Token& Parser::consume(
 }
 
 SourceRange Parser::makeRange(const Token& start, const Token& end) {
-    return {{start.getLine(), start.getColumn()}, {end.getLine(), end.getColumn()}};
+    return {start.getFileId(), {start.getLine(), start.getColumn()}, {end.getLine(), end.getColumn()}};
 }
 
 SourceRange Parser::makeRange(const AstNode& start, const AstNode& end) {
-    return {start.getSrcRange().start, end.getSrcRange().end};
+    const auto& startRange = start.getSrcRange();
+    return {startRange.fileId, startRange.start, end.getSrcRange().end};
 }
 
 SourceRange Parser::makeRange(const Token& start, const AstNode& end) {
-    return {{start.getLine(), start.getColumn()}, end.getSrcRange().end};
+    return {start.getFileId(), {start.getLine(), start.getColumn()}, end.getSrcRange().end};
 }
 
 std::unique_ptr<Stmt> Parser::parseStatement() {
@@ -332,7 +333,7 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
         LOG_DEBUG << "Return statement with no value (implicit null)";
         return std::make_unique<ReturnStmt>(
             std::make_unique<LiteralExpr>(
-                Token{Token::Type::Null, nextToken.getLine(), nextToken.getColumn()},
+                Token{Token::Type::Null, nextToken.getFileId(), nextToken.getLine(), nextToken.getColumn()},
                 makeRange(nextToken, nextToken)),
             makeRange(returnToken, nextToken));
     }

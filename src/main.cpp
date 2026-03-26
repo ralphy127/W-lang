@@ -8,6 +8,7 @@
 #include "interpreter/Interpreter.hpp"
 #include "utils/Logging.hpp"
 #include "errors/ErrorReporter.hpp"
+#include "core/SourceManager.hpp"
 
 static std::string readFile(const std::string& filepath) {
     const std::ifstream file(filepath);
@@ -21,9 +22,10 @@ static std::string readFile(const std::string& filepath) {
     return buffer.str();
 }
 
-static void run(const std::string& filePath) {
-    AstResolver resolver = [](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
-        Lexer lexer{readFile(filePath)};
+static void run(const std::string& filePath, SourceManager& srcManager) {
+    AstResolver resolver = [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
+        const auto currentFileId = srcManager.registerFile(filePath);
+        Lexer lexer{readFile(filePath), currentFileId};
         auto lexerResult = lexer.tokenize();
         if (not lexerResult.errors.empty()) {
             throw LexerCrash{filePath, std::move(lexerResult.errors)};
@@ -58,9 +60,10 @@ int main(int argc, const char* argv[]) {
 
     const auto filepath = argv[1];
     ErrorReporter errorReporter{};
+    SourceManager sourceManager{};
 
     try {
-        run(std::move(filepath));
+        run(std::move(filepath), sourceManager);
     }
     catch (const LexerCrash& crash) {
         errorReporter.printLexerErrors(crash);
@@ -69,9 +72,7 @@ int main(int argc, const char* argv[]) {
         errorReporter.printParserErrors(crash);
     }
     catch (const RuntimeError& error) {
-        // TODO! add some info in sourceRange about file or find other way to properly
-        //! get file which something is in, (test after user imports) 
-        errorReporter.printRuntimeError(error, filepath);
+        errorReporter.printRuntimeError(error, sourceManager);
     }
 
     return 0;

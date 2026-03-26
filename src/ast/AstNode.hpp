@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/SourceLocation.hpp"
+#include "core/SourceRange.hpp"
 
 class AstNode {
 public:

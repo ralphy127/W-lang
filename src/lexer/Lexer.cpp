@@ -2,8 +2,9 @@
 #include <cctype>
 #include <utils/Logging.hpp>
 
-Lexer::Lexer(std::string source)
+Lexer::Lexer(std::string source, FileId fileId)
     : _source{std::move(source)}
+    , _fileId{fileId}
 {}
 
 LexerResult Lexer::tokenize() {
@@ -342,7 +343,7 @@ std::expected<Token, LexerError> Lexer::getTokenAndAdvance() {
         return std::unexpected{skipResult.error()};
     }
 
-    Token token{Token::Type::Unknown, _line, _col};
+    Token token{Token::Type::Unknown, _fileId, _line, _col};
     char ch = getChar();
 
     if (tryTokenizeSingleChar(token, ch)) {

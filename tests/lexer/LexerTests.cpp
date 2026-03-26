@@ -7,7 +7,7 @@ struct LexerTests : public ::testing::Test {
     std::unique_ptr<Lexer> sut;
 
     std::unique_ptr<Lexer> makeSut(std::string source) {
-        return std::make_unique<Lexer>(std::move(source));
+        return std::make_unique<Lexer>(std::move(source), 0ull);
     }
 };
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <core/types.hpp>
 
 template<typename T, typename V>
 concept VariantAlternative =
@@ -72,12 +73,15 @@ public:
 
     explicit Token(
         Type type,
+        FileId fileId,
         std::uint32_t line,
         std::uint32_t column,
         Value val = std::monostate{});
 
     Type getType() const noexcept { return _type; }
     void setType(Type type) noexcept { _type = type; }
+
+    FileId getFileId() const { return _fileId; }
 
     std::uint32_t getLine() const noexcept { return _line; }
     std::uint32_t getColumn() const noexcept { return _column; }
@@ -99,6 +103,7 @@ public:
 
 private:
     Value _value;
+    FileId _fileId;
     Type _type;
     std::uint32_t _line;
     std::uint32_t _column;

@@ -26,7 +26,7 @@ struct LexerResult {
 
 class Lexer {
 public:
-    Lexer(std::string source);
+    Lexer(std::string source, FileId);
 
     LexerResult tokenize();
 
@@ -49,6 +49,7 @@ private:
     bool matchAndAdvanceIfNeeded(std::string_view expected);
 
     const std::string _source;
+    FileId _fileId;
     std::uint64_t _pos{0ull};
     std::uint32_t _line{1u};
     std::uint32_t _col{1u};

@@ -59,8 +59,9 @@ void Interpreter::interpret() {
     }
     catch (ReturnStatementException) {}
     catch (const std::exception& e) {
-        // TODO error handling
         LOG_ERROR << "[FATAL] Caught unexpected error: " << e.what();
+        // TODO somehow get range and fileid
+        throw RuntimeError{RuntimeError::Type::Undefined, {0u, {0u, 0u}, {0u, 0u}}, e.what()};
     }
     LOG_DEBUG << "Interpretation completed";
 }

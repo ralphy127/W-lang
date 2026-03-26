@@ -1,0 +1,3 @@
+gig trigger_parser_error() {
+    stash value about 1
+}
