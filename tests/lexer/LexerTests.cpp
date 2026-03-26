@@ -32,7 +32,31 @@ struct LexerTests : public ::testing::Test {
         EXPECT_TRUE(result.tokens.empty());
     }
 
-    void expectTypes(const std::vector<Token>& tokens, std::initializer_list<Token::Type> expectedTypes) {
+    void expectSingleError(const LexerResult& result, LexerErrorType expectedType) {
+        ASSERT_EQ(result.errors.size(), 1);
+        EXPECT_EQ(result.errors[0].type, expectedType);
+    }
+
+    void expectErrorAt(
+        const LexerResult& result,
+        size_t index,
+        LexerErrorType expectedType,
+        std::uint32_t expectedLine,
+        std::uint32_t expectedColumn,
+        std::uint32_t expectedLength) {
+    
+        ASSERT_LT(index, result.errors.size());
+        const auto& error = result.errors[index];
+        EXPECT_EQ(error.type, expectedType);
+        EXPECT_EQ(error.line, expectedLine);
+        EXPECT_EQ(error.column, expectedColumn);
+        EXPECT_EQ(error.length, expectedLength);
+    }
+
+    void expectTypes(
+        const std::vector<Token>& tokens,
+        std::initializer_list<Token::Type> expectedTypes) {
+
         ASSERT_EQ(tokens.size(), expectedTypes.size());
 
         size_t index = 0;
@@ -213,13 +237,72 @@ TEST_F(LexerTests, ColonSingleCharTokenizing) {
 
 TEST_F(LexerTests, EmptySourceProducesError) {
     const auto result = tokenize("");
-    expectHasErrors(result);
+    expectSingleError(result, LexerErrorType::EmptySource);
+    expectErrorAt(result, 0ull, LexerErrorType::EmptySource, 1u, 1u, 1u);
     expectNoTokens(result);
 }
 
 TEST_F(LexerTests, WhitespaceOnlySourceProducesError) {
     const auto result = tokenize("  \t\n\n   \t");
+    expectSingleError(result, LexerErrorType::EmptySource);
+    expectErrorAt(result, 0ull, LexerErrorType::EmptySource, 1u, 1u, 1u);
+    expectNoTokens(result);
+}
+
+TEST_F(LexerTests, CommentsOnlySourceProducesEmptySourceError) {
+    const auto result = tokenize(
+        "psst: hello\n"
+        "   \n"
+        "rant_stop\n"
+        "ignored\n"
+        "rant_start\n"
+        "\t"
+    );
+
+    expectSingleError(result, LexerErrorType::EmptySource);
+    expectNoTokens(result);
+}
+
+TEST_F(LexerTests, UnterminatedStringBeforeNewLineProducesError) {
+    const auto result = tokenize("\"hello\nstash x about 1...");
+
     expectHasErrors(result);
+    expectErrorAt(result, 0ull, LexerErrorType::UnterminatedString, 1u, 2u, 5u);
+    ASSERT_FALSE(result.tokens.empty());
+    EXPECT_EQ(result.tokens[0].getType(), Token::Type::Var);
+}
+
+TEST_F(LexerTests, UnterminatedStringAtEndProducesError) {
+    const auto result = tokenize("\"hello");
+
+    expectSingleError(result, LexerErrorType::UnterminatedString);
+    expectNoTokens(result);
+}
+
+TEST_F(LexerTests, UnterminatedBlockCommentProducesError) {
+    const auto result = tokenize("rant_stop\nthis never ends");
+
+    ASSERT_EQ(result.errors.size(), 2);
+    expectErrorAt(result, 0ull, LexerErrorType::UnterminatedBlockComment, 1u, 1u, 9u);
+    expectErrorAt(result, 1ull, LexerErrorType::EmptySource, 1u, 1u, 1u);
+    expectNoTokens(result);
+}
+
+TEST_F(LexerTests, UnknownTokenProducesErrorAndContinuesLexing) {
+    const auto result = tokenize("@ stash x about 1...");
+
+    expectHasErrors(result);
+    expectErrorAt(result, 0ull, LexerErrorType::UnknownToken, 1u, 1u, 1u);
+    ASSERT_FALSE(result.tokens.empty());
+    EXPECT_EQ(result.tokens[0].getType(), Token::Type::Var);
+}
+
+TEST_F(LexerTests, MultipleUnknownTokensProduceMultipleErrors) {
+    const auto result = tokenize("@#");
+
+    ASSERT_EQ(result.errors.size(), 2);
+    expectErrorAt(result, 0ull, LexerErrorType::UnknownToken, 1u, 1u, 1u);
+    expectErrorAt(result, 1ull, LexerErrorType::UnknownToken, 1u, 2u, 1u);
     expectNoTokens(result);
 }
 
