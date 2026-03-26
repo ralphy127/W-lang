@@ -12,6 +12,26 @@ LexerResult Lexer::tokenize() {
     std::vector<LexerError> errors{};
 
     while (not tokenizedAll()) {
+        if (skipWhitespaces()) {
+            continue;
+        }
+        const auto beforePos = _pos;
+        if (const auto res = skipComments(); not res.has_value()) {
+            errors.push_back(res.error());
+            continue;
+        }
+        if (_pos != beforePos) {
+            continue;
+        }
+        break;
+    }
+
+    if (tokenizedAll()) {
+        errors.push_back(LexerError{1u, 1u, 1u, LexerErrorType::EmptySource});
+        return {std::move(tokens), std::move(errors)};
+    }
+
+    while (not tokenizedAll()) {
         auto result = getTokenAndAdvance();
 
         if (result.has_value()) {
@@ -396,14 +416,21 @@ char Lexer::getCharAndAdvance() {
     return ch;
 }
 
-void Lexer::skipWhitespaces() {
-    for (;;) {
-        char ch = getChar();
-        if (not std::isspace(static_cast<unsigned char>(ch))) {
+bool Lexer::skipWhitespaces() {
+    char ch = getChar();
+    if (not std::isspace(static_cast<int>(ch))) {
+        return false;
+    }
+    
+    while (not tokenizedAll()) {
+        advance(ch);
+        ch = getChar();
+        if (not std::isspace(static_cast<int>(ch))) {
             break;
         }
-        advance(ch);
     }
+
+    return true;
 }
 
 bool Lexer::skipMultilineComment() {

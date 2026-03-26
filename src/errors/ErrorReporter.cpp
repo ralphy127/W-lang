@@ -101,6 +101,7 @@ void ErrorReporter::printLexerErrors(const LexerCrash& crash) {
             case LexerErrorType::UnterminatedString: msg = "Yap has no end quote!"; break;
             case LexerErrorType::UnterminatedBlockComment: msg = "Ranting never ends!"; break;
             case LexerErrorType::UnknownToken: msg = "What the heck is this character?"; break;
+            case LexerErrorType::EmptySource: msg = "You sure this does anything?"; break;
         }
         printError(crash.fileName, error.line, error.column, error.length, msg);
     }

@@ -1,4 +1,5 @@
 #include <memory>
+#include <initializer_list>
 #include <vector>
 #include <gtest/gtest.h>
 #include <lexer/Lexer.hpp>
@@ -7,580 +8,242 @@ struct LexerTests : public ::testing::Test {
     std::unique_ptr<Lexer> sut;
 
     std::unique_ptr<Lexer> makeSut(std::string source) {
-        return std::make_unique<Lexer>(std::move(source), 0ull);
+        constexpr FileId dummyFileId{0ull};
+        return std::make_unique<Lexer>(std::move(source), dummyFileId);
+    }
+
+    LexerResult tokenize(std::string source) {
+        sut = makeSut(std::move(source));
+        return sut->tokenize();
+    }
+
+    std::vector<Token> tokenizeOk(std::string source) {
+        const auto result = tokenize(std::move(source));
+        EXPECT_TRUE(result.errors.empty());
+
+        return result.tokens;
+    }
+
+    void expectHasErrors(const LexerResult& result) {
+        EXPECT_FALSE(result.errors.empty());
+    }
+
+    void expectNoTokens(const LexerResult& result) {
+        EXPECT_TRUE(result.tokens.empty());
+    }
+
+    void expectTypes(const std::vector<Token>& tokens, std::initializer_list<Token::Type> expectedTypes) {
+        ASSERT_EQ(tokens.size(), expectedTypes.size());
+
+        size_t index = 0;
+        for (const auto expectedType : expectedTypes) {
+            EXPECT_EQ(tokens[index].getType(), expectedType) << "Token mismatch at index: " << index;
+            ++index;
+        }
+    }
+
+    void expectTypes(std::string source, std::initializer_list<Token::Type> expectedTypes) {
+        expectTypes(tokenizeOk(std::move(source)), expectedTypes);
+    }
+
+    template <typename TValue>
+    void expectValue(const std::vector<Token>& tokens, size_t index, const TValue& expectedValue) {
+        ASSERT_LT(index, tokens.size());
+        EXPECT_TRUE(tokens[index].valueIs<TValue>());
+        EXPECT_EQ(tokens[index].getValue<TValue>(), expectedValue);
     }
 };
 
 TEST_F(LexerTests, MainFunc) {
-    sut = makeSut(
-        "gig macho() {\n"
-        "    yeet 0...\n"
-        "}"
-    );
+    const auto tokens = tokenizeOk("gig macho() { yeet 0... }");
 
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    ASSERT_EQ(tokens.size(), 9);
-
-    EXPECT_EQ(tokens[0].getType(), Token::Type::Func);      // gig
-    EXPECT_EQ(tokens[1].getType(), Token::Type::Ident);     // macho
-    EXPECT_EQ(tokens[2].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[3].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[4].getType(), Token::Type::LBrace);    // {
-    EXPECT_EQ(tokens[5].getType(), Token::Type::Return);    // yeet
-    EXPECT_EQ(tokens[6].getType(), Token::Type::Int);       // 0
-    EXPECT_EQ(tokens[7].getType(), Token::Type::Semi);      // ...
-    EXPECT_EQ(tokens[8].getType(), Token::Type::RBrace);    // }
-
-    EXPECT_TRUE(tokens[6].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[6].getValue<std::int32_t>(), 0);
+    expectTypes(tokens, {
+        Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::RParen,
+        Token::Type::LBrace, Token::Type::Return, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
+    });
+    expectValue<std::int32_t>(tokens, 6, 0);
 }
 
 TEST_F(LexerTests, DotTokenizing) {
-    sut = makeSut("gossip.spill_tea(\"Hello\")...");
+    const auto tokens = tokenizeOk("gossip.spill_tea(\"Hello\")...");
 
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    ASSERT_EQ(tokens.size(), 7);
-
-    EXPECT_EQ(tokens[0].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[1].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[2].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[3].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[4].getType(), Token::Type::String);    // "Hello"
-    EXPECT_EQ(tokens[5].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[6].getType(), Token::Type::Semi);      // ...
-
-    EXPECT_TRUE(tokens[0].valueIs<std::string>());
-    EXPECT_EQ(tokens[0].getValue<std::string>(), "gossip");
-    
-    EXPECT_TRUE(tokens[2].valueIs<std::string>());
-    EXPECT_EQ(tokens[2].getValue<std::string>(), "spill_tea");
-    
-    EXPECT_TRUE(tokens[4].valueIs<std::string>());
-    EXPECT_EQ(tokens[4].getValue<std::string>(), "Hello");
+    expectTypes(tokens, {
+        Token::Type::Ident, Token::Type::Dot, Token::Type::Ident, Token::Type::LParen,
+        Token::Type::String, Token::Type::RParen, Token::Type::Semi
+    });
+    expectValue<std::string>(tokens, 0, "gossip");
+    expectValue<std::string>(tokens, 2, "spill_tea");
+    expectValue<std::string>(tokens, 4, "Hello");
 }
 
 TEST_F(LexerTests, ImportModule) {
-    sut = makeSut("summon gossip...");
+    const auto tokens = tokenizeOk("summon gossip...");
 
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    ASSERT_EQ(tokens.size(), 3);
-
-    EXPECT_EQ(tokens[0].getType(), Token::Type::Import); // summon
-    EXPECT_EQ(tokens[1].getType(), Token::Type::Ident);  // gossip
-    EXPECT_EQ(tokens[2].getType(), Token::Type::Semi);   // ...
-
-    EXPECT_TRUE(tokens[1].valueIs<std::string>());
-    EXPECT_EQ(tokens[1].getValue<std::string>(), "gossip");
+    expectTypes(tokens, {Token::Type::Import, Token::Type::Ident, Token::Type::Semi});
+    expectValue<std::string>(tokens, 1, "gossip");
 }
 
 TEST_F(LexerTests, VectorDefinition) {
-    sut = makeSut("stash list about [11, 22, 33]...");
+    const auto tokens = tokenizeOk("stash list about [11, 22, 33]...");
 
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    ASSERT_EQ(tokens.size(), 11);
-
-    EXPECT_EQ(tokens[0].getType(), Token::Type::Var);       // stash
-    EXPECT_EQ(tokens[1].getType(), Token::Type::Ident);     // list
-    EXPECT_EQ(tokens[2].getType(), Token::Type::Assign);    // about
-    EXPECT_EQ(tokens[3].getType(), Token::Type::LBracket);  // [
-    EXPECT_EQ(tokens[4].getType(), Token::Type::Int);       // 11
-    EXPECT_EQ(tokens[5].getType(), Token::Type::Comma);     // ,
-    EXPECT_EQ(tokens[6].getType(), Token::Type::Int);       // 22
-    EXPECT_EQ(tokens[7].getType(), Token::Type::Comma);     // ,
-    EXPECT_EQ(tokens[8].getType(), Token::Type::Int);       // 33
-    EXPECT_EQ(tokens[9].getType(), Token::Type::RBracket);  // ]
-    EXPECT_EQ(tokens[10].getType(), Token::Type::Semi);     // ...
-
-    EXPECT_TRUE(tokens[1].valueIs<std::string>());
-    EXPECT_EQ(tokens[1].getValue<std::string>(), "list");
-
-    EXPECT_TRUE(tokens[4].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[4].getValue<std::int32_t>(), 11);
-
-    EXPECT_TRUE(tokens[6].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[6].getValue<std::int32_t>(), 22);
-
-    EXPECT_TRUE(tokens[8].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[8].getValue<std::int32_t>(), 33);
+    expectTypes(tokens, {
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::LBracket,
+        Token::Type::Int, Token::Type::Comma, Token::Type::Int, Token::Type::Comma,
+        Token::Type::Int, Token::Type::RBracket, Token::Type::Semi
+    });
+    expectValue<std::string>(tokens, 1, "list");
+    expectValue<std::int32_t>(tokens, 4, 11);
+    expectValue<std::int32_t>(tokens, 6, 22);
+    expectValue<std::int32_t>(tokens, 8, 33);
 }
 
 TEST_F(LexerTests, AndAlso) {
-    sut = makeSut("also");
-
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    ASSERT_EQ(tokens.size(), 1);
-
-    EXPECT_EQ(tokens[0].getType(), Token::Type::And);   // also
+    expectTypes("also", {Token::Type::And});
 }
 
 TEST_F(LexerTests, OrEither) {
-    sut = makeSut("either");
-
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    ASSERT_EQ(tokens.size(), 1);
-
-    EXPECT_EQ(tokens[0].getType(), Token::Type::Or);    // either
+    expectTypes("either", {Token::Type::Or});
 }
 
-// TODO refactor this to short uts
-TEST_F(LexerTests, LanguagePrototype) {
-    sut = makeSut(
-        "psst: very useful thingy\n"
-        "gig calculate_stuff (x, y) {\n"
-        "    yeet 2 with 2 without 2...\n"
-        "}\n"
-        "\n"
-        "psst: This is the start of the mess\n"
-        "gig macho() {\n"
-        "    stash number about 10...\n"
-        "    stash isNumberTen about number looks_like 11...\n"
-        "\n" // line 10
-        "    perhaps (isNumberTen looks_like totally) {\n"
-        "        gossip.spill_tea(\"The number is is ten\")...\n"
-        "    }\n"
-        "    or_whatever (isNumberTen looks_like nah) {\n"
-        "        gossip.spill_tea(\"The number is not ten\")...\n"
-        "    }\n"
-        "    screw_it {\n"
-        "        gossip.spill_tea(\"How the fck did I get here\")...\n"
-        "    }\n"
-        "\n" // line 20
-        "    stash floatingNumber about 11.0...\n"
-        "    perhaps (floatingNumber looks_like 10.0) {\n"
-        "        gossip.spill_tea(\"The floatingNumber is ten\")...\n"
-        "    }\n"
-        "    or_whatever (floatingNumber kinda_sus 20.0) {\n"
-        "        gossip.spill_tea(\"The floatingNumber is not 20\")...\n"
-        "    }\n"
-        "    or_whatever (floatingNumber tiny_ish 5.0) {\n"
-        "        gossip.spill_tea(\"The floatingNumber is smaller than 5\")...\n"
-        "    }\n" // line 30
-        "    screw_it {\n"
-        "        gossip.spill_tea(\"This language is so weird\")...\n"
-        "    }\n"
-        "\n"
-        "    stash counter about 0...\n"
-        "    do_until_bored {\n"
-        "        gossip.spill_tea(counter)...\n"
-        "        pump_it counter...\n"
-        "\n"
-        "        perhaps (counter bigger_ish 3) {\n" // line 40
-        "            rage_quit!!!\n"
-        "        }\n"
-        "    }\n"
-        "\n"
-        "    stash n about calculate_stuff(10, 20)...\n"
-        "    spin_around (n) {\n"
-        "        gossip.spill_tea(\"Spinnin\")...\n"
-        "    }\n"
-        "\n"
-        "    yeet ghosted...\n" // line 50
-        "}\n"
-        "\n"
+TEST_F(LexerTests, PrototypeCommentsAreSkipped) {
+    expectTypes("psst: useful\ngig macho() { yeet 0... }", {
+        Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::RParen,
+        Token::Type::LBrace, Token::Type::Return, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
+    });
+}
+
+TEST_F(LexerTests, PrototypeBlockCommentIsSkipped) {
+    expectTypes("stash x about 1...\nrant_stop\nignored text\nrant_start\nstash y about 2...", {
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi,
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi
+    });
+}
+
+TEST_F(LexerTests, PrototypeFunctionWithMathOperators) {
+    const auto tokens = tokenizeOk("gig calculate_stuff(x, y) { yeet 2 with 2 without 2... }");
+
+    expectTypes(tokens, {
+        Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::Ident, Token::Type::Comma,
+        Token::Type::Ident, Token::Type::RParen, Token::Type::LBrace, Token::Type::Return, Token::Type::Int,
+        Token::Type::Plus, Token::Type::Int, Token::Type::Minus, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
+    });
+    expectValue<std::int32_t>(tokens, 9, 2);
+    expectValue<std::int32_t>(tokens, 11, 2);
+    expectValue<std::int32_t>(tokens, 13, 2);
+}
+
+TEST_F(LexerTests, PrototypeConditionalChainTokens) {
+    expectTypes("perhaps (isNumberTen looks_like totally) {} or_whatever (isNumberTen looks_like nah) {} screw_it {}", {
+        Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::Equal, Token::Type::True,
+        Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace,
+        Token::Type::Elif, Token::Type::LParen, Token::Type::Ident, Token::Type::Equal, Token::Type::False,
+        Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace,
+        Token::Type::Else, Token::Type::LBrace, Token::Type::RBrace
+    });
+}
+
+TEST_F(LexerTests, PrototypeFloatAssignmentTokenAndValue) {
+    const auto tokens = tokenizeOk("stash floatingNumber about 11.0...");
+    expectTypes(tokens, {Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Float, Token::Type::Semi});
+    expectValue<double>(tokens, 3, 11.0);
+}
+
+TEST_F(LexerTests, PrototypeNotEqualComparisonTokenAndValue) {
+    const auto tokens = tokenizeOk("perhaps (floatingNumber kinda_sus 20.0) {}");
+    expectTypes(tokens, {
+        Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::NotEqual,
+        Token::Type::Float, Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace
+    });
+    expectValue<double>(tokens, 4, 20.0);
+}
+
+TEST_F(LexerTests, PrototypeLessComparisonTokenAndValue) {
+    const auto tokens = tokenizeOk("perhaps (floatingNumber tiny_ish 5.0) {}");
+    expectTypes(tokens, {
+        Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::Less,
+        Token::Type::Float, Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace
+    });
+    expectValue<double>(tokens, 4, 5.0);
+}
+
+TEST_F(LexerTests, PrototypeLoopIncrAndBreakTokens) {
+    expectTypes("do_until_bored { pump_it counter... perhaps (counter bigger_ish 3) { rage_quit!!! } }", {
+        Token::Type::Loop, Token::Type::LBrace,
+        Token::Type::Incr, Token::Type::Ident, Token::Type::Semi,
+        Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::Greater, Token::Type::Int,
+        Token::Type::RParen, Token::Type::LBrace, Token::Type::Break, Token::Type::BrSemi,
+        Token::Type::RBrace, Token::Type::RBrace
+    });
+}
+
+TEST_F(LexerTests, PrototypeFunctionCallAssignmentValues) {
+    const auto tokens = tokenizeOk("stash n about calculate_stuff(10, 20)...");
+    expectTypes(tokens, {
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Ident,
+        Token::Type::LParen, Token::Type::Int, Token::Type::Comma, Token::Type::Int,
+        Token::Type::RParen, Token::Type::Semi
+    });
+    expectValue<std::int32_t>(tokens, 5, 10);
+    expectValue<std::int32_t>(tokens, 7, 20);
+}
+
+TEST_F(LexerTests, PrototypeRepeatLoopAndCallTokens) {
+    expectTypes("spin_around (n) { gossip.spill_tea(\"Spinnin\")... }", {
+        Token::Type::Repeat, Token::Type::LParen, Token::Type::Ident, Token::Type::RParen,
+        Token::Type::LBrace, Token::Type::Ident, Token::Type::Dot, Token::Type::Ident,
+        Token::Type::LParen, Token::Type::String, Token::Type::RParen, Token::Type::Semi, Token::Type::RBrace
+    });
+}
+
+TEST_F(LexerTests, PrototypeNullReturnTokens) {
+    expectTypes("yeet ghosted...", {Token::Type::Return, Token::Type::Null, Token::Type::Semi});
+}
+
+TEST_F(LexerTests, ReassignKeywordTokenizing) {
+    expectTypes("x might_be 42...", {
+        Token::Type::Ident, Token::Type::Reassign, Token::Type::Int, Token::Type::Semi
+    });
+}
+
+TEST_F(LexerTests, ColonSingleCharTokenizing) {
+    expectTypes("foo: bar", {
+        Token::Type::Ident, Token::Type::Colon, Token::Type::Ident
+    });
+}
+
+TEST_F(LexerTests, EmptySourceProducesError) {
+    const auto result = tokenize("");
+    expectHasErrors(result);
+    expectNoTokens(result);
+}
+
+TEST_F(LexerTests, WhitespaceOnlySourceProducesError) {
+    const auto result = tokenize("  \t\n\n   \t");
+    expectHasErrors(result);
+    expectNoTokens(result);
+}
+
+TEST_F(LexerTests, MixedWhitespaceBetweenStatements) {
+    expectTypes("\tstash a about 1...\r\n  stash b about 2...", {
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi,
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi
+    });
+}
+
+TEST_F(LexerTests, SequentialCommentsAreSkipped) {
+    expectTypes(
+        "psst: first\n"
+        "psst: second\n"
         "rant_stop\n"
-        "    Output:\n"
-        "    \n"
-        "    THE NUMBER IS NOT TEN!!!\n"
-        "    THE FLOATINGNUMBER IS NOT 20!!!\n"
-        "    0!!!\n"
-        "    1!!!\n"
-        "    2!!!\n" // line 60
-        "    3!!!\n"
-        "    4!!!\n"
-        "    SPINNIN!!!\n"
-        "    SPINNIN!!!\n"
-        "\n"
-        "    Syntax:\n"
-        "        Every statement must end with an ellipsis (...) to indicate hesitation.\n"
-        "    Comments:\n"
-        "        Single-line comments use 'psst:',\n"
-        "        block comments are between 'rant_stop' and 'rant_start'.\n" // line 70
-        "    Variables:\n"
-        "        Declared using 'stash [name] about [value]' (dynamic typing).\n"
-        "    Assignment:\n"
-        "        Variable updates use 'might_be' instead of 'about'.\n"
-        "    Types:\n"
-        "        Booleans are 'totally' (true), 'nah' (false)\n"
-        "        null is 'ghosted'.\n"
-        "    Functions:\n"
-        "        Defined using the 'gig' keyword and return values using 'yeet'.\n"
-        "    Output:\n"
-        "        'gossip.spill_tea' prints arguments to console in UPPERCASE with appended '!!!'.\n"
-        "    Conditionals:\n"
-        "        Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).\n"
-        "    Loops:\n"
-        "        Iteration implemented via 'do_until_bored' (while) and 'spin_around' (for).\n"
-        "    Flow Control:\n"
-        "        Loops are terminated aggressively using the 'rage_quit!!!' command.\n"
-        "    Equality:\n"
-        "        Comparisons use 'looks_like' (==) and 'kinda_sus' (!=).\n"
-        "    Relational:\n"
-        "        Size comparisons use 'bigger_ish' (>) and 'tiny_ish' (<).\n"
-        "    Math:\n"
-        "        Arithmetic uses 'with' (+) and 'without' (-)\n"
-        "        The 'pump_it' operator is used for incrementing values.\n"
+        "ignored\n"
         "rant_start\n"
+        "psst: third\n"
+        "stash x about 1...",
+        {Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi}
     );
+}
 
-    const auto result = sut->tokenize();
-    const auto& tokens = result.tokens;
-    const auto& errors = result.errors;
-
-    EXPECT_TRUE(errors.empty());
-
-    // Line 1: psst: very useful thingy (comment - skipped)
-    // Line 2: gig calculate_stuff (x, y) {
-    size_t i = 0;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Func);      // gig
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // calculate_stuff
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // x
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Comma);     // ,
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // y
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 3: yeet 2 with 2 without 2...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Return);    // yeet
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 2
-    const auto idxInt2v1 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Plus);      // with
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 2
-    const auto idxInt2v2 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Minus);     // without
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 2
-    const auto idxInt2v3 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 4: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 6: psst: This is the start of the mess (comment - skipped)
-    // Line 7: gig macho() {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Func);      // gig
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // macho
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 8: stash number about 10...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // number
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 10
-    const auto idxInt10 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 9: stash isNumberTen about number looks_like 11...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // isNumberTen
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // number
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 11
-    const auto idxInt11 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 11: perhaps (isNumberTen looks_like totally) {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::If);        // perhaps
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // isNumberTen
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::True);     // totally
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 12: gossip.spill_tea("The number is is ten")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The number is is ten"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 13: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 14: or_whatever (isNumberTen looks_like nah) {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Elif);      // or_whatever
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // isNumberTen
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::False);     // nah
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 15: gossip.spill_tea("The number is not ten")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The number is not ten"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 16: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 17: screw_it {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Else);      // screw_it
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 18: gossip.spill_tea("How the fck did I get here")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "How the fck did I get here"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 19: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 21: stash floatingNumber about 11.0...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 11.0
-    const auto idxFloat11 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 22: perhaps (floatingNumber looks_like 10.0) {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::If);        // perhaps
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Equal);     // looks_like
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 10.0
-    const auto idxFloat10 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 23: gossip.spill_tea("The floatingNumber is ten")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is ten"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 24: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 25: or_whatever (floatingNumber kinda_sus 20.0) {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Elif);      // or_whatever
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::NotEqual);  // kinda_sus
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 20.0
-    const auto idxFloat20 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 26: gossip.spill_tea("The floatingNumber is not 20")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "The floatingNumber is not 20"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 27: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 28: or_whatever (floatingNumber tiny_ish 5.0) {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Elif);      // or_whatever
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // floatingNumber
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Less);      // tiny_ish
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Float);       // 5.0
-    const auto idxFloat5 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 29: gossip.spill_tea("The floatingNumber is smaller than 5")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    // "The floatingNumber is smaller than 5"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 30: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 31: screw_it {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Else);      // screw_it
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 32: gossip.spill_tea("This language is so weird")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "This language is so weird"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 33: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 35: stash counter about 0...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 0
-    const auto idxInt0 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 36: do_until_bored {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Loop);      // do_until_bored
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 37: gossip.spill_tea(counter)...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 38: pump_it counter...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Incr);      // pump_it
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 40: perhaps (counter bigger_ish 3) {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::If);        // perhaps
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // counter
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Greater);   // bigger_ish
-    EXPECT_EQ(tokens[i].getType(), Token::Type::Int);         // 3
-    const auto idxInt3 = i++;
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 41: rage_quit!!!
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Break);     // rage_quit
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::BrSemi);    // !!!
-    
-    // Line 42: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 43: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 45: stash n about calculate_stuff(10, 20)...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Var);       // stash
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // n
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Assign);    // about
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // calculate_stuff
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Int);       // 10
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Comma);     // ,
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Int);       // 20
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 46: spin_around (n) times {
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Repeat);    // spin_around
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // n
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LBrace);    // {
-    
-    // Line 47: gossip.spill_tea("Spinnin")...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // gossip
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Dot);       // .
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Ident);     // spill_tea
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::LParen);    // (
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::String);    // "Spinnin"
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RParen);    // )
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 48: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    // Line 50: yeet ghosted...
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Return);    // yeet
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Null);      // ghosted
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Semi);      // ...
-    
-    // Line 51: }
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::RBrace);    // }
-    
-    EXPECT_EQ(tokens[i++].getType(), Token::Type::Eof);       // \0
-
-    // Block comment (rant_stop ... rant_start) - skipped
-    
-    EXPECT_EQ(i, tokens.size()) << "Expected " << i << " tokens, but got " << tokens.size();
-
-    EXPECT_TRUE(tokens[idxInt2v1].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt2v1].getValue<std::int32_t>(), 2);
-    
-    EXPECT_TRUE(tokens[idxInt2v2].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt2v2].getValue<std::int32_t>(), 2);
-    
-    EXPECT_TRUE(tokens[idxInt2v3].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt2v3].getValue<std::int32_t>(), 2);
-    
-    EXPECT_TRUE(tokens[idxInt10].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt10].getValue<std::int32_t>(), 10);
-    
-    EXPECT_TRUE(tokens[idxInt11].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt11].getValue<std::int32_t>(), 11);
-    
-    EXPECT_TRUE(tokens[idxFloat10].valueIs<double>());
-    EXPECT_EQ(tokens[idxFloat10].getValue<double>(), 10.0);
-    
-    EXPECT_TRUE(tokens[idxFloat11].valueIs<double>());
-    EXPECT_EQ(tokens[idxFloat11].getValue<double>(), 11.0);
-    
-    EXPECT_TRUE(tokens[idxFloat20].valueIs<double>());
-    EXPECT_EQ(tokens[idxFloat20].getValue<double>(), 20.0);
-    
-    EXPECT_TRUE(tokens[idxFloat5].valueIs<double>());
-    EXPECT_EQ(tokens[idxFloat5].getValue<double>(), 5.0);
-    
-    EXPECT_TRUE(tokens[idxInt0].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt0].getValue<std::int32_t>(), 0);
-    
-    EXPECT_TRUE(tokens[idxInt3].valueIs<std::int32_t>());
-    EXPECT_EQ(tokens[idxInt3].getValue<std::int32_t>(), 3);
+TEST_F(LexerTests, ExplicitNullCharTokenizesToEof) {
+    const auto tokens = tokenizeOk(std::string("\0", 1));
+    expectTypes(tokens, {Token::Type::Eof});
 }

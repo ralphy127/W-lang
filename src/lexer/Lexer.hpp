@@ -10,6 +10,7 @@ enum class LexerErrorType {
     UnterminatedString,
     UnterminatedBlockComment,
     UnknownToken,
+    EmptySource,
 };
 
 struct LexerError {
@@ -42,7 +43,7 @@ private:
     char getChar() const;
     void advance(char ch);
     char getCharAndAdvance();
-    void skipWhitespaces();
+    bool skipWhitespaces();
     bool skipMultilineComment();
     std::expected<void, LexerError> skipComments();
     bool match(char expected);
