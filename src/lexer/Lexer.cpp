@@ -4,6 +4,7 @@
 
 Lexer::Lexer(std::string source, FileId fileId)
     : _source{std::move(source)}
+    , _sourceLength(_source.size())
     , _fileId{fileId}
 {}
 
@@ -103,8 +104,7 @@ bool Lexer::tryTokenizeSingleChar(Token& token, char ch) {
             LOG_DEBUG << "Tokenized ',' to Token::Type::Comma";
             return true;
         case '.':
-            // TODO refactor the loookahead
-            if (_pos + 1 < _source.size() and _source[_pos + 1] != '.') {
+            if (matchLookahead('.')) {
                 advance(ch);
                 token.setType(Token::Type::Dot);
                 LOG_DEBUG << "Tokenized '.' to Token::Type::Dot";
@@ -275,7 +275,10 @@ bool Lexer::tryTokenizeNumber(Token& token, char ch) {
         digit = getChar();
     } while (std::isdigit(digit));
 
-    if (digit == '.' and not tokenizedAll() and std::isdigit(_source[_pos+1])) {
+    if (digit == '.' and not tokenizedAll() and
+        _pos + 1ull < _sourceLength and
+        std::isdigit(_source[_pos + 1ull])) {
+
         advance(digit);
         isFloat = true;
         buffer += digit;
@@ -403,7 +406,6 @@ char Lexer::getChar() const {
     return _source[_pos];
 }
 
-// TODO make sure there is no possibility of overflowing and eof is safe
 void Lexer::advance(char ch) {
     ++_pos;
     if (ch == '\n') {
@@ -483,6 +485,10 @@ std::expected<void, LexerError> Lexer::skipComments() {
 
 bool Lexer::match(char expected) {
     return _source[_pos] == expected;
+}
+
+bool Lexer::matchLookahead(char expected) {
+    return _pos + 1ull < _sourceLength and _source[_pos + 1ull] != expected;
 }
 
 bool Lexer::matchAndAdvanceIfNeeded(std::string_view expected) {

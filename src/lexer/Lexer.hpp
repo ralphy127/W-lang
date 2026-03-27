@@ -47,11 +47,13 @@ private:
     bool skipMultilineComment();
     std::expected<void, LexerError> skipComments();
     bool match(char expected);
+    bool matchLookahead(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);
 
     const std::string _source;
-    FileId _fileId;
-    std::uint64_t _pos{0ull};
+    const size_t _sourceLength;
+    const FileId _fileId;
+    size_t _pos{0ull};
     std::uint32_t _line{1u};
     std::uint32_t _col{1u};
 };
