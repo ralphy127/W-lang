@@ -255,12 +255,17 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
 }
 
 bool Lexer::tryTokenizeNumber(Token& token, char ch) {
-    // TODO add negative numbers
+    bool isNegative{false};
+    if (ch == '-') {
+        isNegative = true;
+        advance(ch);
+        ch = getChar();
+    }
     if (not std::isdigit(ch) and ch != '-') {
         return false;
     }
 
-    std::string buffer;
+    auto buffer = isNegative ? std::string{"-"} : std::string{};
     bool isFloat{false};
     
     char digit = getChar();

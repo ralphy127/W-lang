@@ -107,6 +107,20 @@ TEST_F(LexerTests, ImportModule) {
     expectValue<std::string>(tokens, 1, "gossip");
 }
 
+TEST_F(LexerTests, NegativeInteger) {
+    const auto tokens = tokenizeOk("stash neg about -1...");
+    expectTypes(tokens, {Token::Type::Var, Token::Type::Ident, Token::Type::Assign,
+                         Token::Type::Int, Token::Type::Semi});
+    expectValue<std::int32_t>(tokens, 3, -1);
+}
+
+TEST_F(LexerTests, NegativeFloat) {
+    const auto tokens = tokenizeOk("stash neg about -1.0...");
+    expectTypes(tokens, {Token::Type::Var, Token::Type::Ident, Token::Type::Assign,
+                         Token::Type::Float, Token::Type::Semi});
+    expectValue<double>(tokens, 3, -1.);
+}
+
 TEST_F(LexerTests, VectorDefinition) {
     const auto tokens = tokenizeOk("stash list about [11, 22, 33]...");
 
