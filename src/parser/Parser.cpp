@@ -29,8 +29,7 @@ ParserResult Parser::parse() {
                 LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
             }
             else {
-                // TODO still not ideal, make sure it's not possible to receive null here
-                LOG_WARN << "parseDefinition() returned nullptr, stopping parse loop";
+                LOG_WARN << "parseDefinition() returned null, synchronizing";
                 errors.emplace_back(getToken(), "Mystery statement");
                 synchronize();
             }
@@ -113,8 +112,8 @@ void Parser::synchronize() {
 }
 
 const Token& Parser::getPreviousToken() const {
-    assert(_current > 0u);
-    return _tokens[_current - 1u];
+    assert(_current > 0ull);
+    return _tokens[_current - 1ull];
 }
 
 const Token& Parser::getToken() const {
@@ -129,8 +128,8 @@ const Token& Parser::getTokenAndAdvance() {
 
 bool Parser::matchLookahead(Token::Type curr, Token::Type next) {
     return match(curr) and
-        _current + 1 < _tokens.size() and
-        next == _tokens[_current + 1].getType();
+        _current + 1ull < _tokens.size() and
+        next == _tokens[_current + 1ull].getType();
 }
 
 bool Parser::matchAndAdvanceIfNeeded(Token::Type type) {
@@ -183,11 +182,6 @@ SourceRange Parser::makeRange(const Token& start, const AstNode& end) {
 
 std::unique_ptr<Stmt> Parser::parseStatement() {
     LOG_DEBUG << "parseStatement() called at token index: " << _current;
-    if (parsedAll()) {
-        LOG_DEBUG << "No more tokens to parse";
-        return nullptr;
-    }
-
     if (matchAndAdvanceIfNeeded(Token::Type::If)) { 
         LOG_DEBUG << "Detected If statement";
         return parseIf();
@@ -214,7 +208,6 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected Return statement";
         return parseReturn();
     }
-    // TODO refactor ident + lookahead
     if (matchLookahead(Token::Type::Ident, Token::Type::Reassign)) {        
         return parseReassign();
     }
@@ -233,11 +226,6 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
 
 std::unique_ptr<Stmt> Parser::parseDefinition() {
     LOG_DEBUG << "parseDefinition() called at token index: " << _current;
-    if (parsedAll()) {
-        LOG_DEBUG << "No more tokens to parse";
-        return nullptr;
-    }
-
     if (matchAndAdvanceIfNeeded(Token::Type::Func)) {
         return parseFunctionDefinition();
     }

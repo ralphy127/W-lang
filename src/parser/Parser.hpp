@@ -70,5 +70,5 @@ private:
     std::unique_ptr<Expr> parseUnary();
 
     const std::vector<Token> _tokens;
-    std::uint32_t _current{0u};
+    size_t _current{0ull};
 };
