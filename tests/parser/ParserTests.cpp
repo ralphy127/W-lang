@@ -36,6 +36,27 @@ TEST_F(ParserTestFixture, ParseFunctionWithReturnIntStatement) {
     EXPECT_EQ(returnToken.getValue<std::int32_t>(), 0);
 }
 
+TEST_F(ParserTestFixture, ParseFunctionWithImplicitNullReturnStatement) {
+    auto parserResult = parseSource(
+        "gig macho() {\n"
+        "    yeet...\n"
+        "}\n");
+
+    ASSERT_TRUE(parserResult.errors.empty());
+    ASSERT_EQ(parserResult.statements.size(), 1);
+
+    const auto* funcStmt = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
+    EXPECT_EQ(funcStmt->getName().getValue<std::string>(), "macho");
+
+    const auto& blockStmt = dynamic_cast<const BlockStmt&>(funcStmt->getBody());
+    ASSERT_EQ(blockStmt.getStatements().size(), 1);
+
+    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(blockStmt.getStatements()[0].get());
+
+    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
+    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Null);
+}
+
 TEST_F(ParserTestFixture, ParseVarDefinitionWithInt) {
     auto parserResult = parseSource(
         "stash integer about 1...");

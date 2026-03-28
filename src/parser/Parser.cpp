@@ -318,14 +318,13 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
     const auto& returnToken = consume(Token::Type::Return, "Expected return token");
     LOG_DEBUG << "Parsing return statement at token index: " << _current;
     if (match(Token::Type::Semi)) {
-        // TODO why not eat semi?
-        const auto& nextToken = getToken();
+        const auto& semiToken = getTokenAndAdvance();
         LOG_DEBUG << "Return statement with no value (implicit null)";
         return std::make_unique<ReturnStmt>(
             std::make_unique<LiteralExpr>(
-                Token{Token::Type::Null, nextToken.getFileId(), nextToken.getLine(), nextToken.getColumn()},
-                makeRange(nextToken, nextToken)),
-            makeRange(returnToken, nextToken));
+                Token{Token::Type::Null, semiToken.getFileId(), semiToken.getLine(), semiToken.getColumn()},
+                makeRange(semiToken, semiToken)),
+            makeRange(returnToken, semiToken));
     }
 
     LOG_DEBUG << "Parsing return value expression";
