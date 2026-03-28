@@ -1,6 +1,7 @@
 #include "Lexer.hpp"
 #include <cctype>
 #include <utils/Logging.hpp>
+#include <format>
 
 Lexer::Lexer(std::string source, FileId fileId)
     : _source{std::move(source)}
@@ -12,34 +13,29 @@ LexerResult Lexer::tokenize() {
     std::vector<Token> tokens{};
     std::vector<LexerError> errors{};
 
-    while (not tokenizedAll()) {
-        if (skipWhitespaces()) {
-            continue;
-        }
-        const auto beforePos = _pos;
-        if (const auto res = skipComments(); not res.has_value()) {
-            errors.push_back(res.error());
-            continue;
-        }
-        if (_pos != beforePos) {
-            continue;
-        }
-        break;
+    LOG_DEBUG << "Tokenizing source with fileId: " << _fileId;
+    LOG_DEBUG << "Skipping whitespaces and comments at the beggining";
+
+    if (const auto skipRes = skipWhitespacesAndComments(); not skipRes.has_value()) {
+        errors.insert(errors.end(), skipRes.error().begin(), skipRes.error().end());
     }
 
-    if (tokenizedAll()) {
-        errors.push_back(LexerError{1u, 1u, 1u, LexerErrorType::EmptySource});
+    if (tokenizedAll() or match('\0')) {
+        LOG_WARN << "Source has no valid tokens";
         return {std::move(tokens), std::move(errors)};
     }
 
+    LOG_DEBUG << "Start of proper tokenization of the source";
     while (not tokenizedAll()) {
+        if (const auto skipRes = skipWhitespacesAndComments(); not skipRes.has_value()) {
+            errors.insert(errors.end(), skipRes.error().begin(), skipRes.error().end());
+        }
         auto result = getTokenAndAdvance();
 
         if (result.has_value()) {
             Token token = std::move(result.value());
             
             if (token.getType() == Token::Type::Eof) {
-                tokens.push_back(std::move(token));
                 break;
             }
             
@@ -50,6 +46,9 @@ LexerResult Lexer::tokenize() {
         }
     }
 
+    LOG_DEBUG << std::format(
+        "Tokenized the source with fileId: {}, tokens: {}, errors: {}",
+        _fileId, tokens.size(), errors.size());
     return {std::move(tokens), std::move(errors)};
 }
 
@@ -365,11 +364,11 @@ void Lexer::tokenizeIdentifier(Token& token) {
 }
 
 std::expected<Token, LexerError> Lexer::getTokenAndAdvance() {
-    skipWhitespaces();
-    const auto skipResult = skipComments();
-    if (not skipResult.has_value()) {
-        return std::unexpected{skipResult.error()};
-    }
+    // skipWhitespaces();
+    // const auto skipResult = skipComments();
+    // if (not skipResult.has_value()) {
+    //     return std::unexpected{skipResult.error()};
+    // }
 
     Token token{Token::Type::Unknown, _fileId, _line, _col};
     char ch = getChar();
@@ -448,16 +447,17 @@ bool Lexer::skipMultilineComment() {
             break;
         }
 
-        if (getCharAndAdvance() == '\0') {
+        const char ch = getChar();
+        if (ch == '\0') {
             break;
         }
+        advance(ch);
     }
     return foundEnd;
 }
 
 std::expected<void, LexerError> Lexer::skipComments() {
     for (;;) {
-        skipWhitespaces();
         if (matchAndAdvanceIfNeeded("psst:")) {
             while (not tokenizedAll() and getCharAndAdvance() != '\n') {}
             LOG_DEBUG << "skipped one line comment";
@@ -472,7 +472,6 @@ std::expected<void, LexerError> Lexer::skipComments() {
                     LexerError{startLine, startCol, 9u, LexerErrorType::UnterminatedBlockComment}};
             }
             LOG_DEBUG << "skipped block comment";
-            skipWhitespaces();
             continue;
         }
 
@@ -482,8 +481,29 @@ std::expected<void, LexerError> Lexer::skipComments() {
     return {};
 }
 
+std::expected<void, std::vector<LexerError>> Lexer::skipWhitespacesAndComments() {
+    std::vector<LexerError> errors{};
+    while (not tokenizedAll()) {
+        if (skipWhitespaces()) {
+            continue;
+        }
+        const auto beforePos = _pos;
+        if (const auto res = skipComments(); not res.has_value()) {
+            errors.push_back(std::move(res.error()));
+            continue;
+        }
+        if (_pos != beforePos) {
+            continue;
+        }
+        break;
+    }
+    if (not errors.empty()) {
+        return std::unexpected{errors};
+    }
+    return {};
+}
 
-bool Lexer::match(char expected) {
+bool Lexer::match(char expected) const {
     return _source[_pos] == expected;
 }
 

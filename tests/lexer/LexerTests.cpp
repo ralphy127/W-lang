@@ -28,6 +28,10 @@ struct LexerTests : public ::testing::Test {
         EXPECT_FALSE(result.errors.empty());
     }
 
+    void expectNoErrors(const LexerResult& result) {
+        EXPECT_TRUE(result.errors.empty());
+    }
+
     void expectNoTokens(const LexerResult& result) {
         EXPECT_TRUE(result.tokens.empty());
     }
@@ -249,21 +253,17 @@ TEST_F(LexerTests, ColonSingleCharTokenizing) {
     });
 }
 
-TEST_F(LexerTests, EmptySourceProducesError) {
+TEST_F(LexerTests, EmptySourceDoesNotProduceErrorNorTokens) {
     const auto result = tokenize("");
-    expectSingleError(result, LexerErrorType::EmptySource);
-    expectErrorAt(result, 0ull, LexerErrorType::EmptySource, 1u, 1u, 1u);
     expectNoTokens(result);
 }
 
-TEST_F(LexerTests, WhitespaceOnlySourceProducesError) {
+TEST_F(LexerTests, WhitespaceOnlySourceDoesNotProduceErrorNorTokens) {
     const auto result = tokenize("  \t\n\n   \t");
-    expectSingleError(result, LexerErrorType::EmptySource);
-    expectErrorAt(result, 0ull, LexerErrorType::EmptySource, 1u, 1u, 1u);
     expectNoTokens(result);
 }
 
-TEST_F(LexerTests, CommentsOnlySourceProducesEmptySourceError) {
+TEST_F(LexerTests, CommentsOnlySourceDoesNotProduceErrorNorTokens) {
     const auto result = tokenize(
         "psst: hello\n"
         "   \n"
@@ -273,7 +273,6 @@ TEST_F(LexerTests, CommentsOnlySourceProducesEmptySourceError) {
         "\t"
     );
 
-    expectSingleError(result, LexerErrorType::EmptySource);
     expectNoTokens(result);
 }
 
@@ -296,9 +295,8 @@ TEST_F(LexerTests, UnterminatedStringAtEndProducesError) {
 TEST_F(LexerTests, UnterminatedBlockCommentProducesError) {
     const auto result = tokenize("rant_stop\nthis never ends");
 
-    ASSERT_EQ(result.errors.size(), 2);
+    ASSERT_EQ(result.errors.size(), 1);
     expectErrorAt(result, 0ull, LexerErrorType::UnterminatedBlockComment, 1u, 1u, 9u);
-    expectErrorAt(result, 1ull, LexerErrorType::EmptySource, 1u, 1u, 1u);
     expectNoTokens(result);
 }
 
@@ -340,7 +338,8 @@ TEST_F(LexerTests, SequentialCommentsAreSkipped) {
     );
 }
 
-TEST_F(LexerTests, ExplicitNullCharTokenizesToEof) {
-    const auto tokens = tokenizeOk(std::string("\0", 1));
-    expectTypes(tokens, {Token::Type::Eof});
+TEST_F(LexerTests, ExplicitNullDoesNotTokenizeAndResultsInNoErrors) {
+    const auto result = tokenize(std::string{"\0"});
+    expectNoTokens(result);
+    expectNoErrors(result);
 }

@@ -29,9 +29,10 @@ ParserResult Parser::parse() {
                 LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
             }
             else {
-                // TODO handle it somehow
+                // TODO still not ideal, make sure it's not possible to receive null here
                 LOG_WARN << "parseDefinition() returned nullptr, stopping parse loop";
-                break;
+                errors.emplace_back(getToken(), "Mystery statement");
+                synchronize();
             }
         }
         catch(ParserError error) {
@@ -152,7 +153,6 @@ bool Parser::matchAndAdvanceIfNeeded(const std::vector<Token::Type>& types) {
     return true;
 }
 
-// TODO redundant?
 void Parser::throwParserError(const std::string& errorMessage) {
     throw ParserError{getToken(), errorMessage};
 }

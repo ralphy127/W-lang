@@ -39,14 +39,15 @@ private:
     std::expected<void, LexerError> tryTokenizeString(Token& token);
     void tokenizeIdentifier(Token& token);
     std::expected<Token, LexerError> getTokenAndAdvance();
-    bool tokenizedAll() const { return _pos >= _source.size(); }
+    bool tokenizedAll() const { return _pos >= _source.size() and not match('\0'); }
     char getChar() const;
     void advance(char ch);
     char getCharAndAdvance();
     bool skipWhitespaces();
     bool skipMultilineComment();
     std::expected<void, LexerError> skipComments();
-    bool match(char expected);
+    std::expected<void, std::vector<LexerError>> skipWhitespacesAndComments();
+    bool match(char expected) const;
     bool matchLookahead(char expected);
     bool matchAndAdvanceIfNeeded(std::string_view expected);
 
