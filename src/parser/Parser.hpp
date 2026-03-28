@@ -42,6 +42,7 @@ private:
     void throwParserError(const std::string& errorMessage);
 
     const Token& consume(Token::Type, const std::string& errorMessage);
+    const Token& consumeIdent(Token::Type, const std::string& errorMessage);
 
     SourceRange makeRange(const Token& start, const Token& end);
     SourceRange makeRange(const AstNode& start, const AstNode& end);

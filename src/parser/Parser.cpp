@@ -167,6 +167,14 @@ const Token& Parser::consume(
     return getTokenAndAdvance();
 }
 
+const Token& Parser::consumeIdent(Token::Type type, const std::string& errorMessage) {
+    const auto& identToken = consume(type, errorMessage);
+    if (not identToken.valueIs<std::string>()) {
+        throwParserError("Not yapping when supposed to");
+    }
+    return identToken;
+}
+
 SourceRange Parser::makeRange(const Token& start, const Token& end) {
     return {start.getFileId(), {start.getLine(), start.getColumn()}, {end.getLine(), end.getColumn()}};
 }
@@ -239,12 +247,7 @@ std::unique_ptr<Stmt> Parser::parseDefinition() {
 std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
     LOG_DEBUG << "Parsing function definition starting at token index: " << _current;
     const auto& gigToken = getPreviousToken();
-    // TODO consumeIdent which checks for string
-    const auto& nameToken = consume(Token::Type::Ident, "Expected function name after 'gig'");
-    if (not nameToken.valueIs<std::string>()) {
-        throwParserError("Expected string as a function name");
-    }
-
+    const auto& nameToken = consumeIdent(Token::Type::Ident, "Expected function name after 'gig'");
     const auto& name = nameToken.getValue<std::string>();
     LOG_DEBUG << "Function name: " << name;
 
@@ -274,10 +277,9 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
 std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     LOG_DEBUG << "Parsing variable definition starting at token index: " << _current;
     const auto& stashToken = getPreviousToken();
-    const auto& nameToken = consume(Token::Type::Ident, "Expected variable name after 'stash'");
-    if (not nameToken.valueIs<std::string>()) {
-        throwParserError("Expected string as a function name");
-    }
+    const auto& nameToken = consumeIdent(
+        Token::Type::Ident,
+        "Expected variable name after 'stash'");
 
     std::unique_ptr<Expr> initializer{nullptr};
     
@@ -505,7 +507,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     if (match(Token::Type::Ident)) {
         const auto& nameToken = getTokenAndAdvance();
         if (not nameToken.valueIs<std::string>()) {
-            throwParserError("Ident should have a proper name");
+            throwParserError("This is the moment to start yapping");
         }
 
         std::unique_ptr<Expr> expr = std::make_unique<VariableExpr>(
