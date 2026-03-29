@@ -3,12 +3,18 @@
 #include <sstream>
 #include <string>
 #include <exception>
+#include <functional>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
 #include "utils/Logging.hpp"
 #include "errors/ErrorReporter.hpp"
 #include "core/SourceManager.hpp"
+#include "utils/AstPrinter.hpp"
+
+struct RunOptions {
+    bool dumpAst{false};
+};
 
 static std::string readFile(const std::string& filepath) {
     const std::ifstream file(filepath);
@@ -22,7 +28,7 @@ static std::string readFile(const std::string& filepath) {
     return buffer.str();
 }
 
-static void run(const std::string& filePath, SourceManager& srcManager) {
+static void run(const std::string& filePath, SourceManager& srcManager, RunOptions options) {
     AstResolver resolver = [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
         const auto currentFileId = srcManager.registerFile(filePath);
         Lexer lexer{readFile(filePath), currentFileId};
@@ -41,6 +47,11 @@ static void run(const std::string& filePath, SourceManager& srcManager) {
     };
 
     auto mainAst = resolver(filePath);
+
+    if (options.dumpAst) {
+        AstPrinter{}.print(mainAst);
+    }
+
     auto mainFolderPath = filePath.substr(0, filePath.find_last_of('/') + 1);
     if (mainFolderPath == filePath) mainFolderPath = "./";
     Interpreter interpreter{std::move(mainAst), std::move(resolver), std::move(mainFolderPath)};
@@ -52,10 +63,26 @@ int main(int argc, const char* argv[]) {
 
     if (argc < 2) {
         std::cerr << "Usage: ./wlang <filepath>\n";
-        return -1;
+        return 1;
     }
-    if (argc == 3 and strcmp(argv[2], "--debug") == 0) {
-        ::logLevel = logLevelDebug;
+
+    RunOptions options{};
+    for (int i{2}; i < argc; ++i) {
+        bool matched{false};
+        const char* flag = argv[i];
+        if (strcmp(flag, "--debug") == 0) {
+            ::logLevel = logLevelDebug;
+            matched = true;
+        }
+        else if (strcmp(flag, "--dump_ast") == 0) {
+            options.dumpAst = true;
+            matched = true;
+        }
+
+        if (not matched) {
+            std::cerr << "Unknown flag: " << flag << std::endl;
+            return 1;
+        }
     }
 
     const auto filepath = argv[1];
@@ -63,7 +90,8 @@ int main(int argc, const char* argv[]) {
     SourceManager sourceManager{};
 
     try {
-        run(std::move(filepath), sourceManager);
+        run(std::move(filepath), sourceManager, options);
+        return 0;
     }
     catch (const LexerCrash& crash) {
         errorReporter.printLexerErrors(crash);
@@ -74,6 +102,9 @@ int main(int argc, const char* argv[]) {
     catch (const RuntimeError& error) {
         errorReporter.printRuntimeError(error, sourceManager);
     }
+    catch (const std::exception& e) {
+        std::cout << "Error: " << e.what() << std::endl;
+    }
 
-    return 0;
+    return 1;
 }

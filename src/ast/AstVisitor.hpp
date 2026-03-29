@@ -23,9 +23,9 @@ class DotExpr;
 class VectorExpr;
 class LogicalExpr;
 
-class Visitor {
+class AstVisitor {
 public:
-    virtual ~Visitor() = default;
+    virtual ~AstVisitor() = default;
 
     virtual RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) = 0;
     virtual RuntimeValue visitReassignStmt(const ReassignStmt&) = 0;

@@ -4,14 +4,14 @@
 #include <memory>
 #include <vector>
 #include "AstNode.hpp"
-#include "Visitor.hpp"
+#include "AstVisitor.hpp"
 #include "token/Token.hpp"
 #include "runtime/RuntimeValue.hpp"
 
 class Expr : public AstNode {
 public:
     Expr(SourceRange srcRange) : AstNode{srcRange} {}
-    virtual RuntimeValue accept(Visitor&) const = 0;
+    virtual RuntimeValue accept(AstVisitor&) const = 0;
 };
 
 class LiteralExpr : public Expr {
@@ -19,7 +19,7 @@ public:
     explicit LiteralExpr(Token, SourceRange);
 
     const Token& getLiteral() const { return _literal; }
-    RuntimeValue accept(Visitor& v) const override { return v.visitLiteralExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitLiteralExpr(*this); }
 
 private:
     Token _literal;
@@ -30,7 +30,7 @@ public:
     explicit VariableExpr(Token, SourceRange);
 
     const Token& getName() const { return _variableName; }
-    RuntimeValue accept(Visitor& v) const override { return v.visitVariableExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitVariableExpr(*this); }
 
 private:
     Token _variableName;
@@ -46,7 +46,7 @@ public:
     const Token& getOperator() const { return _operator; }
     const Expr& getLeft() const { return *_left; }
     const Expr& getRight() const { return *_right; }
-    RuntimeValue accept(Visitor& v) const override { return v.visitBinaryExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitBinaryExpr(*this); }
 
 private:
     Token _operator;
@@ -60,7 +60,7 @@ public:
 
     const Token& getOperator() const { return _operator; }
     const Expr& getRight() const;
-    RuntimeValue accept(Visitor& v) const override { return v.visitUnaryExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitUnaryExpr(*this); }
 
 private:
     Token _operator;
@@ -76,7 +76,7 @@ public:
 
     const Expr& getCallee() const { return *_callee; }
     const std::vector<std::unique_ptr<Expr>>& getArgs() const { return _args; }
-    RuntimeValue accept(Visitor& v) const override { return v.visitCallExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitCallExpr(*this); }
 
 private:
     std::unique_ptr<Expr> _callee;
@@ -89,7 +89,7 @@ public:
 
     const Expr& getLeft() const { return *_left; }
     const Token& getRight() const { return _right; }
-    RuntimeValue accept(Visitor& v) const override { return v.visitDotExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitDotExpr(*this); }
 
 private:
     std::unique_ptr<Expr> _left;
@@ -102,7 +102,7 @@ public:
 
     const std::vector<std::unique_ptr<Expr>>& getInitializers() const { return _initializers; }
 
-    RuntimeValue accept(Visitor& v) const override { return v.visitVectorExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitVectorExpr(*this); }
 
 private:
     std::vector<std::unique_ptr<Expr>> _initializers;
@@ -118,7 +118,7 @@ public:
     const Token& getOperator() const { return _operator; }
     const Expr& getLeft() const { return *_left; }
     const Expr& getRight() const { return *_right; }
-    RuntimeValue accept(Visitor& v) const override { return v.visitLogicalExpr(*this); }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitLogicalExpr(*this); }
 
 private:
     Token _operator;
