@@ -1,4 +1,10 @@
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <initializer_list>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "utils/AstPrinter.hpp"
@@ -146,6 +152,54 @@ struct ParserTests : public ::testing::Test {
         const auto& logExpr = expectLogicalExpr(varStmt.getInitializer(), opType);
         expectLiteral(logExpr.getLeft(), leftType);
         expectLiteral(logExpr.getRight(), rightType);
+    }
+
+    static std::string joinErrorMessages(const std::vector<ParserError>& errors) {
+        std::ostringstream out;
+        for (const auto& err : errors) {
+            out << "- (" << err.badToken.getLine() << ":" << err.badToken.getColumn() << ") "
+                << err.msg << "\n";
+        }
+        return out.str();
+    }
+
+    static void expectHasErrorContaining(const ParserResult& result, std::string_view needle) {
+        ASSERT_FALSE(result.errors.empty())
+            << "Expected at least one parser error.";
+
+        const bool found = std::any_of(result.errors.begin(), result.errors.end(), [&](const ParserError& err) {
+            return err.msg.find(needle) != std::string::npos;
+        });
+
+        ASSERT_TRUE(found)
+            << "Missing error containing: " << needle << "\n"
+            << "Errors were:\n" << joinErrorMessages(result.errors);
+    }
+
+    static void expectNoErrorContaining(const ParserResult& result, std::string_view needle) {
+        const bool found = std::any_of(result.errors.begin(), result.errors.end(), [&](const ParserError& err) {
+            return err.msg.find(needle) != std::string::npos;
+        });
+
+        ASSERT_FALSE(found)
+            << "Unexpected error containing: " << needle << "\n"
+            << "Errors were:\n" << joinErrorMessages(result.errors);
+    }
+
+    static void expectErrorMessagesEq(
+        const ParserResult& result,
+        std::initializer_list<std::string_view> expectedMessages) {
+
+        ASSERT_EQ(result.errors.size(), expectedMessages.size())
+            << "Errors were:\n" << joinErrorMessages(result.errors);
+
+        std::size_t idx = 0;
+        for (const auto expected : expectedMessages) {
+            EXPECT_EQ(result.errors[idx].msg, expected)
+                << "Mismatch at error index " << idx << "\n"
+                << "Errors were:\n" << joinErrorMessages(result.errors);
+            ++idx;
+        }
     }
 
     std::vector<std::unique_ptr<Stmt>> ast{};
@@ -891,4 +945,218 @@ TEST_F(ParserTests, Structural_FloatComparisonsInIfElseChain) {
     
     const auto& thenRet = expectReturn(thenBlock, 0);
     expectLiteral(thenRet.getValue(), Token::Type::Null);
+}
+
+TEST_F(ParserTests, Failure_MysteryStatement_OnUnexpectedToken) {
+    const auto result = parse(",");
+    expectHasErrorContaining(result, "Mystery statement");
+}
+
+TEST_F(ParserTests, Failure_Break_RequiresBangSemi) {
+    const auto result = parse("do_until_bored { rage_quit... }");
+    expectHasErrorContaining(result, "Expected '!!!' after 'rage_quit'");
+}
+
+TEST_F(ParserTests, Failure_ExpressionStmt_RequiresEllipsis) {
+    const auto result = parse("gossip.spill_tea(1) stash x about 1...");
+    expectHasErrorContaining(result, "Expected '...' after expression");
+}
+
+TEST_F(ParserTests, Failure_Function_RequiresNameAfterGig) {
+    const auto result = parse("gig (x) { yeet 1... }");
+    expectHasErrorContaining(result, "Expected function name after 'gig'");
+}
+
+TEST_F(ParserTests, Failure_Function_RequiresLeftParenAfterName) {
+    const auto result = parse("gig macho { yeet 1... }");
+    expectHasErrorContaining(result, "Expected '(' after function name");
+}
+
+TEST_F(ParserTests, Failure_Function_RequiresRightParenAfterParameters) {
+    const auto result = parse("gig macho(x y) { yeet 1... }");
+    expectHasErrorContaining(result, "Expected ')' after function parameters");
+}
+
+TEST_F(ParserTests, Failure_Function_RequiresParameterNameAfterComma) {
+    const auto result = parse("gig macho(x,) { yeet 1... }");
+    expectHasErrorContaining(result, "Expected function parameter name");
+}
+
+TEST_F(ParserTests, Failure_Function_RequiresBlockAfterSignature) {
+    const auto result = parse("gig macho() yeet 1...");
+    expectHasErrorContaining(result, "Expected '{' opening block");
+}
+
+TEST_F(ParserTests, Failure_VarDefinition_RequiresNameAfterStash) {
+    const auto result = parse("stash about 1...");
+    expectHasErrorContaining(result, "Expected variable name after 'stash'");
+}
+
+TEST_F(ParserTests, Failure_VarDefinition_MissingAbout) {
+    const auto result = parse("stash x 1...");
+    expectHasErrorContaining(result, "Missing 'about' in variable definition");
+}
+
+TEST_F(ParserTests, Failure_VarDefinition_RequiresEllipsisAfterDefinition) {
+    const auto result = parse("stash x about 1 stash y about 2...");
+    expectHasErrorContaining(result, "Expected '...' after variable definition");
+}
+
+TEST_F(ParserTests, Failure_Return_RequiresExpressionWhenNotImplicitNull) {
+    const auto result = parse("gig macho() { yeet } stash x about 1...");
+    expectHasErrorContaining(result, "Expected an expression after 'yeet'");
+}
+
+TEST_F(ParserTests, Failure_Return_RequiresEllipsisAfterValue) {
+    const auto result = parse("gig macho() { yeet 1 } stash x about 1...");
+    expectHasErrorContaining(result, "Expected '...' after return value");
+}
+
+TEST_F(ParserTests, Failure_If_RequiresLeftParenAfterPerhaps) {
+    const auto result = parse("perhaps totally) { yeet 1... }");
+    expectHasErrorContaining(result, "Expected '(' after 'perhaps'");
+}
+
+TEST_F(ParserTests, Failure_If_RequiresRightParenAfterCondition) {
+    const auto result = parse("perhaps (totally { yeet 1... }");
+    expectHasErrorContaining(result, "Expected ')' after 'perhaps' condition");
+}
+
+TEST_F(ParserTests, Failure_Elif_RequiresLeftParenAfterOrWhatever) {
+    const auto result = parse("perhaps (totally) { yeet 1... } or_whatever totally) { yeet 2... }");
+    expectHasErrorContaining(result, "Expected '(' after 'or_whatever'");
+}
+
+TEST_F(ParserTests, Failure_Elif_RequiresRightParenAfterCondition) {
+    const auto result = parse("perhaps (totally) { yeet 1... } or_whatever (nah { yeet 2... }");
+    expectHasErrorContaining(result, "Expected ')' after 'or_whatever' condition");
+}
+
+TEST_F(ParserTests, Failure_Repeat_RequiresLeftParen) {
+    const auto result = parse("spin_around 5) { yeet 1... }");
+    expectHasErrorContaining(result, "Expected '(' after 'repeat'");
+}
+
+TEST_F(ParserTests, Failure_Repeat_RequiresCountExpressionInsideParens) {
+    const auto result = parse("spin_around () { yeet 1... }");
+    expectHasErrorContaining(result, "Expected loop count expression inside '()'");
+}
+
+TEST_F(ParserTests, Failure_Repeat_RequiresRightParenAfterCountExpression) {
+    const auto result = parse("spin_around (5 { yeet 1... }");
+    expectHasErrorContaining(result, "Expected ')' after loop count expression");
+}
+
+TEST_F(ParserTests, Failure_Import_RequiresModuleName) {
+    const auto result = parse("summon ...");
+    expectHasErrorContaining(result, "Expected module name after 'summon'");
+}
+
+TEST_F(ParserTests, Failure_Import_RequiresEllipsis) {
+    const auto result = parse("summon gossip stash x about 1...");
+    expectHasErrorContaining(result, "Expected '...' after module import");
+}
+
+TEST_F(ParserTests, Failure_Reassign_RequiresEllipsis) {
+    const auto result = parse("counter might_be 1 stash x about 1...");
+    expectHasErrorContaining(result, "Expected '...' after reassignment");
+}
+
+TEST_F(ParserTests, Failure_BinaryExpr_RequiresRightOperand_Term) {
+    const auto result = parse("stash x about 1 with ...");
+    expectHasErrorContaining(result, "Expected right operand after");
+}
+
+TEST_F(ParserTests, Failure_LogicalExpr_RequiresRightOperand) {
+    const auto result = parse("stash x about totally also ...");
+    expectHasErrorContaining(result, "Expected right operand after");
+}
+
+TEST_F(ParserTests, Failure_EqualityExpr_RequiresRightOperand) {
+    const auto result = parse("stash x about 1 looks_like ...");
+    expectHasErrorContaining(result, "Expected right operand after");
+}
+
+TEST_F(ParserTests, Failure_ComparisonExpr_RequiresRightOperand) {
+    const auto result = parse("stash x about 1 bigger_ish ...");
+    expectHasErrorContaining(result, "Expected right operand after");
+}
+
+TEST_F(ParserTests, Failure_DotExpr_RequiresPropertyNameAfterDot) {
+    const auto result = parse("gossip.(1)...");
+    expectHasErrorContaining(result, "Expected property name after '.'");
+}
+
+TEST_F(ParserTests, Failure_GroupedExpr_RequiresClosingParen) {
+    const auto result = parse("stash x about (1 with 2...\nstash y about 3...");
+    expectHasErrorContaining(result, "Expected ) after expression");
+}
+
+TEST_F(ParserTests, Failure_VectorExpr_RequiresClosingBracket) {
+    const auto result = parse("stash xs about [1, 2...\nstash y about 3...");
+    expectHasErrorContaining(result, "Expected ']' at the end of a vector");
+}
+
+TEST_F(ParserTests, Failure_CallExpr_RequiresClosingParen) {
+    const auto result = parse("print(1, 2... stash x about 1...");
+    expectHasErrorContaining(result, "Expected ')' after arguments");
+}
+
+TEST_F(ParserTests, Failure_ParserInvariant_ConsumeIdentRequiresStringValue) {
+    std::vector<Token> tokens;
+    tokens.emplace_back(Token::Type::Func, 0ull, 1u, 1u);
+    tokens.emplace_back(Token::Type::Ident, 0ull, 1u, 5u, std::int32_t{123});
+    tokens.emplace_back(Token::Type::LParen, 0ull, 1u, 6u);
+    tokens.emplace_back(Token::Type::RParen, 0ull, 1u, 7u);
+    tokens.emplace_back(Token::Type::LBrace, 0ull, 1u, 9u);
+    tokens.emplace_back(Token::Type::RBrace, 0ull, 1u, 10u);
+
+    Parser parser{std::move(tokens)};
+    const auto result = parser.parse();
+    expectHasErrorContaining(result, "Not yapping when supposed to");
+}
+
+TEST_F(ParserTests, Failure_ParserInvariant_IdentTokenRequiresStringValueInPrimary) {
+    std::vector<Token> tokens;
+    tokens.emplace_back(Token::Type::Ident, 0ull, 1u, 1u, std::int32_t{42});
+    tokens.emplace_back(Token::Type::Semi, 0ull, 1u, 2u);
+
+    Parser parser{std::move(tokens)};
+    const auto result = parser.parse();
+    expectHasErrorContaining(result, "This is the moment to start yapping");
+}
+
+TEST_F(ParserTests, Failure_MultipleErrors_TwoVarDefsMissingAbout) {
+    const auto result = parse("stash x 1...\nstash y 2...");
+    expectErrorMessagesEq(result, {
+        "Missing 'about' in variable definition",
+        "Missing 'about' in variable definition",
+    });
+}
+
+TEST_F(ParserTests, Failure_MultipleErrors_TwoBadTerms) {
+    const auto result = parse("stash x about 1 with ...\nstash y about 2 without ...");
+    expectErrorMessagesEq(result, {
+        "Expected right operand after 'with'",
+        "Expected right operand after 'without'",
+    });
+}
+
+TEST_F(ParserTests, Failure_MultipleErrors_MixedIfAndVar) {
+    const auto result = parse(
+        "perhaps totally) { yeet 1... }\n"
+        "stash x 1..."
+    );
+
+    expectErrorMessagesEq(result, {
+        "Expected '(' after 'perhaps'",
+        "Missing 'about' in variable definition",
+    });
+}
+
+TEST_F(ParserTests, Failure_SynchronizeCanSkipNextError) {
+    const auto result = parse("gossip.spill_tea(1) stash about 1...");
+    ASSERT_EQ(result.errors.size(), 1u) << joinErrorMessages(result.errors);
+    expectHasErrorContaining(result, "Expected '...' after expression");
+    expectNoErrorContaining(result, "Expected variable name after 'stash'");
 }

@@ -257,7 +257,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
     if (not match(Token::Type::RParen)) {
         LOG_DEBUG << "Parsing function parameters";
         do {
-            parameters.push_back(consume(Token::Type::Ident, "Expected  function parameter name"));
+            parameters.push_back(consume(Token::Type::Ident, "Expected function parameter name"));
             LOG_DEBUG << "Added function parameter: " << parameters.back().getValue<std::string>();
         }
         while (matchAndAdvanceIfNeeded(Token::Type::Comma));
