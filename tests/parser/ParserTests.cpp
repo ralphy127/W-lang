@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
+#include "utils/AstPrinter.hpp"
 
-struct ParserTestFixture : public ::testing::Test {
-    ParserResult parseSource(const std::string& source) {
+struct ParserTests : public ::testing::Test {
+    static ParserResult parse(const std::string& source) {
         Lexer lexer{source, 0ull};
         auto lexerResult = lexer.tokenize();
         EXPECT_TRUE(lexerResult.errors.empty());
@@ -11,405 +12,353 @@ struct ParserTestFixture : public ::testing::Test {
         Parser parser{std::move(lexerResult.tokens)};
         return parser.parse();
     }
+
+    void parseOk(const std::string& source) {
+        auto parserResult = parse(source);
+        EXPECT_TRUE(parserResult.errors.empty());
+        ast = std::move(parserResult.statements);
+    }
+
+    std::string printAst() {
+        std::ostringstream out;
+        AstPrinter{out}.print(ast);
+        return out.str();
+    }
+
+    void expectPrintedInOrder(
+        std::initializer_list<std::string_view> needles) {
+        
+        const auto output = printAst();
+        std::size_t pos = 0;
+        for (const auto needle : needles) {
+            const auto found = output.find(needle, pos);
+            ASSERT_NE(found, std::string::npos) << "Missing (after pos=" << pos << "): " << needle;
+            pos = found + needle.size();
+        }
+    }
+
+    void expectNumberOfStatements(size_t n) {
+        EXPECT_EQ(ast.size(), n);
+    }
+
+    template <typename T>
+    const T* expectStmt(size_t index) {
+        if (index >= ast.size()) {
+            ADD_FAILURE() << "Index " << index << " out of bounds (size: " << ast.size() << ")";
+            throw std::out_of_range("AST index out of bounds");
+        }
+        const T* stmt = dynamic_cast<const T*>(ast[index].get());
+        if (!stmt) {
+            ADD_FAILURE() << "Failed to cast statement at index " << index;
+            throw std::runtime_error("Bad AST cast");
+        }
+        return stmt;
+    }
+
+    template <typename T, typename Base>
+    const T& expectCast(const Base& base) {
+        const T* casted = dynamic_cast<const T*>(&base);
+        if (!casted) {
+            ADD_FAILURE() << "Failed to cast expression/statement";
+            throw std::runtime_error("Bad AST cast");
+        }
+        return *casted;
+    }
+
+    const VarDefinitionStmt& expectVarDef(size_t index, const std::string& expectedName) {
+        const auto* stmt = expectStmt<VarDefinitionStmt>(index);
+        EXPECT_NE(stmt, nullptr);
+        EXPECT_EQ(stmt->getName().getValue<std::string>(), expectedName);
+        return *stmt;
+    }
+
+    const ReassignStmt& expectReassign(size_t index, const std::string& expectedName) {
+        const auto* stmt = expectStmt<ReassignStmt>(index);
+        EXPECT_NE(stmt, nullptr);
+        EXPECT_EQ(stmt->getName().getValue<std::string>(), expectedName);
+        return *stmt;
+    }
+
+    const FunctionStmt& expectFunction(size_t index, const std::string& expectedName) {
+        const auto* stmt = expectStmt<FunctionStmt>(index);
+        EXPECT_NE(stmt, nullptr);
+        EXPECT_EQ(stmt->getName().getValue<std::string>(), expectedName);
+        return *stmt;
+    }
+
+    const ReturnStmt& expectReturn(const BlockStmt& block, size_t index) {
+        EXPECT_LT(index, block.getStatements().size());
+        const auto* ret = dynamic_cast<const ReturnStmt*>(block.getStatements()[index].get());
+        EXPECT_NE(ret, nullptr) << "Expected ReturnStmt at block index " << index;
+        return *ret;
+    }
+
+    const LiteralExpr& expectLiteral(const Expr& expr, Token::Type expectedType) {
+        const auto& literalExpr = expectCast<LiteralExpr>(expr);
+        EXPECT_EQ(literalExpr.getLiteral().getType(), expectedType);
+        return literalExpr;
+    }
+
+    template <typename V>
+    void expectLiteralValue(const Expr& expr, Token::Type expectedType, const V& expectedValue) {
+        const auto& literalExpr = expectLiteral(expr, expectedType);
+        if constexpr (std::is_floating_point_v<V>) {
+            EXPECT_FLOAT_EQ(literalExpr.getLiteral().getValue<V>(), expectedValue);
+        }
+        else {
+            EXPECT_EQ(literalExpr.getLiteral().getValue<V>(), expectedValue);
+        }
+    }
+
+    const BinaryExpr& expectBinaryExpr(const Expr& expr, Token::Type expectedOp) {
+        const auto& binExpr = expectCast<BinaryExpr>(expr);
+        EXPECT_EQ(binExpr.getOperator().getType(), expectedOp);
+        return binExpr;
+    }
+
+    const LogicalExpr& expectLogicalExpr(const Expr& expr, Token::Type expectedOp) {
+        const auto& logExpr = expectCast<LogicalExpr>(expr);
+        EXPECT_EQ(logExpr.getOperator().getType(), expectedOp);
+        return logExpr;
+    }
+
+    const UnaryExpr& expectUnaryExpr(const Expr& expr, Token::Type expectedOp) {
+        const auto& unaryExpr = expectCast<UnaryExpr>(expr);
+        EXPECT_EQ(unaryExpr.getOperator().getType(), expectedOp);
+        return unaryExpr;
+    }
+
+    const VariableExpr& expectVariableExpr(const Expr& expr, const std::string& expectedName) {
+        const auto& varExpr = expectCast<VariableExpr>(expr);
+        EXPECT_EQ(varExpr.getName().getValue<std::string>(), expectedName);
+        return varExpr;
+    }
+
+    void expectVarDefBinOpLits(const std::string& varName, Token::Type opType, Token::Type litType, std::int32_t leftVal, std::int32_t rightVal) {
+        const auto& varStmt = expectVarDef(0, varName);
+        const auto& binExpr = expectBinaryExpr(varStmt.getInitializer(), opType);
+        expectLiteralValue<std::int32_t>(binExpr.getLeft(), litType, leftVal);
+        expectLiteralValue<std::int32_t>(binExpr.getRight(), litType, rightVal);
+    }
+
+    void expectVarDefLogOpLits(const std::string& varName, Token::Type opType, Token::Type leftType, Token::Type rightType) {
+        const auto& varStmt = expectVarDef(0, varName);
+        const auto& logExpr = expectLogicalExpr(varStmt.getInitializer(), opType);
+        expectLiteral(logExpr.getLeft(), leftType);
+        expectLiteral(logExpr.getRight(), rightType);
+    }
+
+    std::vector<std::unique_ptr<Stmt>> ast{};
 };
 
-TEST_F(ParserTestFixture, ParseFunctionWithReturnIntStatement) {
-    auto parserResult = parseSource(
+TEST_F(ParserTests, Snapshot_FunctionWithReturnIntStatement) {
+    parseOk(
         "gig macho() {\n"
         "    yeet 0...\n"
         "}\n");
-
-    ASSERT_EQ(parserResult.statements.size(), 1);
+    expectNumberOfStatements(1ull);
     
-    auto* funcStmt = dynamic_cast<FunctionStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(funcStmt->getName().getValue<std::string>(), "macho");
-    EXPECT_EQ(funcStmt->getParameters().size(), 0);
-    
-    const auto& blockStmt = dynamic_cast<const BlockStmt&>(funcStmt->getBody());
-    ASSERT_EQ(blockStmt.getStatements().size(), 1);
-    
-    auto* returnStmt = dynamic_cast<ReturnStmt*>(blockStmt.getStatements()[0].get());
-    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
-    const auto& returnToken = returnValue.getLiteral();
-    ASSERT_EQ(returnToken.getType(), Token::Type::Int);
-    EXPECT_EQ(returnToken.getValue<std::int32_t>(), 0);
+    expectPrintedInOrder({
+        "FunctionStmt Ident (macho)",
+        "params:",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (0)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseFunctionWithImplicitNullReturnStatement) {
-    auto parserResult = parseSource(
+TEST_F(ParserTests, Snapshot_FunctionWithImplicitNullReturnStatement) {
+    parseOk(
         "gig macho() {\n"
         "    yeet...\n"
         "}\n");
-
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    const auto* funcStmt = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(funcStmt->getName().getValue<std::string>(), "macho");
-
-    const auto& blockStmt = dynamic_cast<const BlockStmt&>(funcStmt->getBody());
-    ASSERT_EQ(blockStmt.getStatements().size(), 1);
-
-    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(blockStmt.getStatements()[0].get());
-
-    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
-    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Null);
+    expectNumberOfStatements(1ull);
+    
+    expectPrintedInOrder({
+        "FunctionStmt Ident (macho)",
+        "params:",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Null",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithInt) {
-    auto parserResult = parseSource(
-        "stash integer about 1...");
+TEST_F(ParserTests, Structural_VarDefinitionWithInt) {
+    parseOk("stash integer about 1...");
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
-
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "integer");
-
-    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
-    const auto& literal = initializer.getLiteral();
-    EXPECT_EQ(literal.getType(), Token::Type::Int);
-    EXPECT_EQ(literal.getValue<std::int32_t>(), 1);
+    const auto& varStmt = expectVarDef(0, "integer");
+    expectLiteralValue<std::int32_t>(varStmt.getInitializer(), Token::Type::Int, 1);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithFloat) {
-    auto parserResult = parseSource("stash float about 1.0...");
-    
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "float");
-    
-    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
-    const auto& literal = initializer.getLiteral();
-    
-    EXPECT_EQ(literal.getType(), Token::Type::Float);
-    EXPECT_FLOAT_EQ(literal.getValue<double>(), 1.0);
+TEST_F(ParserTests, Structural_VarDefinitionWithFloat) {
+    parseOk("stash float about 1.0...");
+    expectNumberOfStatements(1ull);
+
+    const auto& varStmt = expectVarDef(0, "float");
+    expectLiteralValue<double>(varStmt.getInitializer(), Token::Type::Float, 1.0);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithTrue) {
-    auto parserResult = parseSource("stash truth about totally...");
+TEST_F(ParserTests, Structural_VarDefinitionWithTrue) {
+    parseOk("stash truth about totally...");
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "truth");
-    
-    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
-    const auto& literal = initializer.getLiteral();
-    
-    EXPECT_EQ(literal.getType(), Token::Type::True);
+    const auto& varStmt = expectVarDef(0, "truth");
+    expectLiteral(varStmt.getInitializer(), Token::Type::True);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithFalse) {
-    auto parserResult = parseSource("stash truth about nah...");
-    
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "truth");
-    
-    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
-    const auto& literal = initializer.getLiteral();
-    
-    EXPECT_EQ(literal.getType(), Token::Type::False);
+TEST_F(ParserTests, Structural_VarDefinitionWithFalse) {
+    parseOk("stash truth about nah...");
+    expectNumberOfStatements(1ull);    
+
+    const auto& varStmt = expectVarDef(0, "truth");
+    expectLiteral(varStmt.getInitializer(), Token::Type::False);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithEqualityExpression) {
-    auto parserResult = parseSource("stash comparison about 10 looks_like 10...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
-    
-    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Equal);
-    
-    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
-    
-    const auto& leftToken = left.getLiteral();
-    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
-    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 10);
-    
-    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
-    
-    const auto& rightToken = right.getLiteral();
-    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
-    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
+TEST_F(ParserTests, Structural_VarDefinitionWithEqualityExpression) {
+    parseOk("stash comparison about 10 looks_like 10...");
+    expectNumberOfStatements(1ull);
+    expectVarDefBinOpLits("comparison", Token::Type::Equal, Token::Type::Int, 10, 10);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithPlainTrue) {
-    auto parserResult = parseSource("stash true about totally...");
+TEST_F(ParserTests, Structural_VarDefinitionWithPlainTrue) {
+    parseOk("stash true about totally...");
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    auto* varStmt = dynamic_cast<VarDefinitionStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "true");
-    
-    const auto& initializer = dynamic_cast<const LiteralExpr&>(varStmt->getInitializer());
-    const auto& literal = initializer.getLiteral();
-    
-    EXPECT_EQ(literal.getType(), Token::Type::True);
+    const auto& varStmt = expectVarDef(0, "true");
+    expectLiteral(varStmt.getInitializer(), Token::Type::True);
 }
 
-TEST_F(ParserTestFixture, PrintBoolVariable) {
-    auto parserResult = parseSource(
+TEST_F(ParserTests, Snapshot_PrintBoolVariable) {
+    parseOk(
         "stash true about totally...\n"
         "gossip.spill_tea(true)...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 2);
-    
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "true");
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[1].get());
-    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
-    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
-    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
-    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
-    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+    expectNumberOfStatements(2ull);
 
-    const auto& args = callExpr.getArgs();
-    ASSERT_EQ(args.size(), 1);
-
-    const auto& varExpr = dynamic_cast<const VariableExpr&>(*args[0]);
-    EXPECT_EQ(varExpr.getName().getValue<std::string>(), "true");
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (true)",
+        "initializer:",
+        "LiteralExpr True",
+        "ExpressionStmt",
+        "CallExpr",
+        "callee:",
+        "DotExpr",
+        "left:",
+        "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
+        "args:",
+        "VariableExpr Ident (true)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseSummonAndVectorPrintWithVariableElement) {
-    auto parserResult = parseSource(
-        "stash list about [11, x, 33]...");
+TEST_F(ParserTests, Structural_SummonAndVectorPrintWithVariableElement) {
+    parseOk("stash list about [11, x, 33]...");
+    expectNumberOfStatements(1ull);
 
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
+    const auto& listVarStmt = expectVarDef(0, "list");
+    const auto& vectorExpr = expectCast<VectorExpr>(listVarStmt.getInitializer());
+    ASSERT_EQ(vectorExpr.getInitializers().size(), 3);
 
-    const auto* listVarStmt = dynamic_cast<const VarDefinitionStmt*>(
-        parserResult.statements[0].get());
-    EXPECT_EQ(listVarStmt->getName().getValue<std::string>(), "list");
-
-    const auto* vectorExpr = dynamic_cast<const VectorExpr*>(&listVarStmt->getInitializer());
-    ASSERT_EQ(vectorExpr->getInitializers().size(), 3);
-
-    const auto* firstItem = dynamic_cast<const LiteralExpr*>(
-        vectorExpr->getInitializers()[0].get());
-    ASSERT_NE(firstItem, nullptr);
-    EXPECT_EQ(firstItem->getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(firstItem->getLiteral().getValue<std::int32_t>(), 11);
-
-    const auto* secondItem = dynamic_cast<const VariableExpr*>(
-        vectorExpr->getInitializers()[1].get());
-    EXPECT_EQ(secondItem->getName().getValue<std::string>(), "x");
-
-    const auto* thirdItem = dynamic_cast<const LiteralExpr*>(
-        vectorExpr->getInitializers()[2].get());
-    EXPECT_EQ(thirdItem->getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(thirdItem->getLiteral().getValue<std::int32_t>(), 33);
+    expectLiteralValue<std::int32_t>(*vectorExpr.getInitializers()[0], Token::Type::Int, 11);
+    expectVariableExpr(*vectorExpr.getInitializers()[1], "x");
+    expectLiteralValue<std::int32_t>(*vectorExpr.getInitializers()[2], Token::Type::Int, 33);
 }
 
-TEST_F(ParserTestFixture, ImportModule) {
-    auto parserResult = parseSource("summon gossip...");
+TEST_F(ParserTests, Structural_ImportModule) {
+    parseOk("summon gossip...");
+    expectNumberOfStatements(1ull);
 
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    const auto* importStmt = dynamic_cast<const ImportStmt*>(parserResult.statements[0].get());
-
-    const auto& moduleToken = importStmt->getModuleName();
-    EXPECT_EQ(moduleToken.getType(), Token::Type::Ident);
-    EXPECT_EQ(moduleToken.getValue<std::string>(), "gossip");
+    const auto* importStmt = expectStmt<ImportStmt>(0);
+    EXPECT_EQ(importStmt->getModuleName().getType(), Token::Type::Ident);
+    EXPECT_EQ(importStmt->getModuleName().getValue<std::string>(), "gossip");
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithNotEqualExpression) {
-    auto parserResult = parseSource("stash comparison about 10 kinda_sus 5...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
-    
-    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::NotEqual);
-    
-    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
-    const auto& leftToken = left.getLiteral();
-    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
-    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 10);
-    
-    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
-    const auto& rightToken = right.getLiteral();
-    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
-    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 5);
+TEST_F(ParserTests, Structural_VarDefinitionWithNotEqualExpression) {
+    parseOk("stash comparison about 10 kinda_sus 5...");
+    expectNumberOfStatements(1ull);
+    expectVarDefBinOpLits("comparison", Token::Type::NotEqual, Token::Type::Int, 10, 5);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithGreaterExpression) {
-    auto parserResult = parseSource("stash comparison about 20 bigger_ish 10...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
-    
-    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Greater);
-    
-    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
-    const auto& leftToken = left.getLiteral();
-    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
-    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 20);
-    
-    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
-    const auto& rightToken = right.getLiteral();
-    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
-    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
+TEST_F(ParserTests, Structural_VarDefinitionWithGreaterExpression) {
+    parseOk("stash comparison about 20 bigger_ish 10...");
+    expectNumberOfStatements(1ull);
+    expectVarDefBinOpLits("comparison", Token::Type::Greater, Token::Type::Int, 20, 10);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithLessExpression) {
-    auto parserResult = parseSource("stash comparison about 5 tiny_ish 10...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "comparison");
-    
-    const auto& initializer = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Less);
-    
-    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
-    const auto& leftToken = left.getLiteral();
-    EXPECT_EQ(leftToken.getType(), Token::Type::Int);
-    EXPECT_EQ(leftToken.getValue<std::int32_t>(), 5);
-    
-    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
-    const auto& rightToken = right.getLiteral();
-    EXPECT_EQ(rightToken.getType(), Token::Type::Int);
-    EXPECT_EQ(rightToken.getValue<std::int32_t>(), 10);
+TEST_F(ParserTests, Structural_VarDefinitionWithLessExpression) {
+    parseOk("stash comparison about 5 tiny_ish 10...");
+    expectNumberOfStatements(1ull);
+    expectVarDefBinOpLits("comparison", Token::Type::Less, Token::Type::Int, 5, 10);
 }
 
-TEST_F(ParserTestFixture, ParsePrecedenceEqualityAndAddition) {
-    auto parserResult = parseSource("stash result about 2 with 2 looks_like 4...");
+TEST_F(ParserTests, Structural_PrecedenceEqualityAndAddition) {
+    parseOk("stash result about 2 with 2 looks_like 4...");
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.errors.size(), 0);
+    const auto& varStmt = expectVarDef(0, "result");
     
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "result");
+    const auto& equalityExpr = expectBinaryExpr(varStmt.getInitializer(), Token::Type::Equal);
+    const auto& additionExpr = expectBinaryExpr(equalityExpr.getLeft(), Token::Type::Plus);
     
-    const auto& equalityExpr = dynamic_cast<const BinaryExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(equalityExpr.getOperator().getType(), Token::Type::Equal); 
-    
-    const auto& additionExpr = dynamic_cast<const BinaryExpr&>(equalityExpr.getLeft());
-    EXPECT_EQ(additionExpr.getOperator().getType(), Token::Type::Plus);
-    
-    const auto& addLeft = dynamic_cast<const LiteralExpr&>(additionExpr.getLeft());
-    EXPECT_EQ(addLeft.getLiteral().getValue<std::int32_t>(), 2);
-    
-    const auto& addRight = dynamic_cast<const LiteralExpr&>(additionExpr.getRight());
-    EXPECT_EQ(addRight.getLiteral().getValue<std::int32_t>(), 2);
-    
-    const auto& equalityRight = dynamic_cast<const LiteralExpr&>(equalityExpr.getRight());
-    EXPECT_EQ(equalityRight.getLiteral().getValue<std::int32_t>(), 4);
+    expectLiteralValue<std::int32_t>(additionExpr.getLeft(), Token::Type::Int, 2);
+    expectLiteralValue<std::int32_t>(additionExpr.getRight(), Token::Type::Int, 2);
+    expectLiteralValue<std::int32_t>(equalityExpr.getRight(), Token::Type::Int, 4);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithAndExpression) {
-    auto parserResult = parseSource("stash result about totally also nah...");
-
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    ASSERT_NE(varStmt, nullptr);
-
-    const auto& initializer = dynamic_cast<const LogicalExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::And);
-
-    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
-    EXPECT_EQ(left.getLiteral().getType(), Token::Type::True);
-
-    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
-    EXPECT_EQ(right.getLiteral().getType(), Token::Type::False);
+TEST_F(ParserTests, Structural_VarDefinitionWithAndExpression) {
+    parseOk("stash result about totally also nah...");
+    expectNumberOfStatements(1ull);
+    expectVarDefLogOpLits("result", Token::Type::And, Token::Type::True, Token::Type::False);
 }
 
-TEST_F(ParserTestFixture, ParseVarDefinitionWithOrExpression) {
-    auto parserResult = parseSource("stash result about nah either totally...");
-
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(parserResult.statements[0].get());
-    ASSERT_NE(varStmt, nullptr);
-
-    const auto& initializer = dynamic_cast<const LogicalExpr&>(varStmt->getInitializer());
-    EXPECT_EQ(initializer.getOperator().getType(), Token::Type::Or);
-
-    const auto& left = dynamic_cast<const LiteralExpr&>(initializer.getLeft());
-    EXPECT_EQ(left.getLiteral().getType(), Token::Type::False);
-
-    const auto& right = dynamic_cast<const LiteralExpr&>(initializer.getRight());
-    EXPECT_EQ(right.getLiteral().getType(), Token::Type::True);
+TEST_F(ParserTests, Structural_VarDefinitionWithOrExpression) {
+    parseOk("stash result about nah either totally...");
+    expectNumberOfStatements(1ull);
+    expectVarDefLogOpLits("result", Token::Type::Or, Token::Type::False, Token::Type::True);
 }
 
-TEST_F(ParserTestFixture, ParsePerhapsWithMixedAndOrCondition) {
-    auto parserResult = parseSource("perhaps (totally also nah either totally) { yeet 1... }");
+TEST_F(ParserTests, Snapshot_PerhapsWithMixedAndOrCondition) {
+    parseOk("perhaps (totally also nah either totally) { yeet 1... }");
+    expectNumberOfStatements(1ull);
 
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
-    ASSERT_NE(ifStmt, nullptr);
-
-    const auto& condition = dynamic_cast<const LogicalExpr&>(ifStmt->getCondition());
-    EXPECT_EQ(condition.getOperator().getType(), Token::Type::Or);
-
-    const auto& left = dynamic_cast<const LogicalExpr&>(condition.getLeft());
-    EXPECT_EQ(left.getOperator().getType(), Token::Type::And);
-
-    const auto& leftLeft = dynamic_cast<const LiteralExpr&>(left.getLeft());
-    EXPECT_EQ(leftLeft.getLiteral().getType(), Token::Type::True);
-
-    const auto& leftRight = dynamic_cast<const LiteralExpr&>(left.getRight());
-    EXPECT_EQ(leftRight.getLiteral().getType(), Token::Type::False);
-
-    const auto& right = dynamic_cast<const LiteralExpr&>(condition.getRight());
-    EXPECT_EQ(right.getLiteral().getType(), Token::Type::True);
+    expectPrintedInOrder({
+        "IfStmt",
+        "condition:",
+        "LogicalExpr Or",
+        "left:",
+        "LogicalExpr And",
+        "left:",
+        "LiteralExpr True",
+        "right:",
+        "LiteralExpr False",
+        "right:",
+        "LiteralExpr True",
+        "then:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (1)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseSimpleIfStatement) {
-    auto parserResult = parseSource("perhaps (totally) { yeet 1... }");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
-    
-    const auto& conditionExpr = dynamic_cast<const LiteralExpr&>(ifStmt->getCondition());
-    EXPECT_EQ(conditionExpr.getLiteral().getType(), Token::Type::True);
-    
-    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
-    const auto& thenStatements = thenBlock.getStatements();
-    ASSERT_EQ(thenStatements.size(), 1);
-    
-    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(thenStatements[0].get());
-    
-    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
-    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
-    
-    EXPECT_TRUE(ifStmt->getElseIfClauses().empty());
+TEST_F(ParserTests, Snapshot_SimpleIfStatement) {
+    parseOk("perhaps (totally) { yeet 1... }");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "IfStmt",
+        "condition:",
+        "LiteralExpr True",
+        "then:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (1)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseFullIfElseChain) {
-    auto source = R"(
+TEST_F(ParserTests, Snapshot_FullIfElseChain) {
+    parseOk(R"(
         perhaps (1) {
             yeet 1...
         }
@@ -422,109 +371,90 @@ TEST_F(ParserTestFixture, ParseFullIfElseChain) {
         screw_it {
             yeet 4...
         }
-    )";
-    auto parserResult = parseSource(source);
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
-    
-    const auto& mainCond = dynamic_cast<const LiteralExpr&>(ifStmt->getCondition());
-    EXPECT_EQ(mainCond.getLiteral().getValue<std::int32_t>(), 1);
-    
-    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
-    ASSERT_EQ(thenBlock.getStatements().size(), 1);
-    
-    const auto& elifs = ifStmt->getElseIfClauses();
-    ASSERT_EQ(elifs.size(), 2);
-    
-    const auto& elif1Cond = dynamic_cast<const LiteralExpr&>(*elifs[0].condition);
-    EXPECT_EQ(elif1Cond.getLiteral().getValue<std::int32_t>(), 2);
-    
-    const auto* elif1Body = dynamic_cast<const BlockStmt*>(elifs[0].body.get());
-    ASSERT_EQ(elif1Body->getStatements().size(), 1);
-    
-    const auto& elif2Cond = dynamic_cast<const LiteralExpr&>(*elifs[1].condition);
-    EXPECT_EQ(elif2Cond.getLiteral().getValue<std::int32_t>(), 3);
-    
-    const auto* elif2Body = dynamic_cast<const BlockStmt*>(elifs[1].body.get());
-    ASSERT_EQ(elif2Body->getStatements().size(), 1);
-    
-    const auto& elseBlock = dynamic_cast<const BlockStmt&>(ifStmt->getElseBlock());
-    ASSERT_EQ(elseBlock.getStatements().size(), 1);
-    
-    const auto* elseReturnStmt = dynamic_cast<const ReturnStmt*>(
-        elseBlock.getStatements()[0].get());
-    
-    const auto& elseReturnValue = dynamic_cast<const LiteralExpr&>(elseReturnStmt->getValue());
-    EXPECT_EQ(elseReturnValue.getLiteral().getValue<std::int32_t>(), 4);
+    )");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "IfStmt",
+        "condition:",
+        "LiteralExpr Int (1)",
+        "then:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (1)",
+        "ElseIf",
+        "condition:",
+        "LiteralExpr Int (2)",
+        "body:",
+        "ReturnStmt",
+        "LiteralExpr Int (2)",
+        "ElseIf",
+        "condition:",
+        "LiteralExpr Int (3)",
+        "body:",
+        "ReturnStmt",
+        "LiteralExpr Int (3)",
+        "else:",
+        "ReturnStmt",
+        "LiteralExpr Int (4)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseDoUntilBoredStatement) {
-    auto parserResult = parseSource("do_until_bored { yeet 1... }");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
+TEST_F(ParserTests, Snapshot_DoUntilBoredStatement) {
+    parseOk("do_until_bored { yeet 1... }");
+    expectNumberOfStatements(1ull);
 
-    const auto* loopStmt = dynamic_cast<const LoopStmt*>(parserResult.statements[0].get());
-    
-    const auto& bodyBlock = dynamic_cast<const BlockStmt&>(loopStmt->getBody());
-    const auto& bodyStatements = bodyBlock.getStatements();
-    ASSERT_EQ(bodyStatements.size(), 1);
-    
-    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(bodyStatements[0].get());
-    
-    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
-    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
+    expectPrintedInOrder({
+        "LoopStmt",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (1)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseSpinAroundStatement) {
-    auto parserResult = parseSource("spin_around (5) { yeet 1... }");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* repeatStmt = dynamic_cast<const RepeatStmt*>(parserResult.statements[0].get());
-    
-    const auto& countExpr = dynamic_cast<const LiteralExpr&>(repeatStmt->getCount());
-    EXPECT_EQ(countExpr.getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(countExpr.getLiteral().getValue<std::int32_t>(), 5);
-    
-    const auto& bodyBlock = dynamic_cast<const BlockStmt&>(repeatStmt->getBody());
-    const auto& bodyStatements = bodyBlock.getStatements();
-    ASSERT_EQ(bodyStatements.size(), 1);
-    
-    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(bodyStatements[0].get());
-    
-    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
-    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(returnValue.getLiteral().getValue<std::int32_t>(), 1);
+TEST_F(ParserTests, Snapshot_SpinAroundStatement) {
+    parseOk("spin_around (5) { yeet 1... }");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "RepeatStmt",
+        "count:",
+        "LiteralExpr Int (5)",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (1)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseLoopWithRageQuit) {
-    auto parserResult = parseSource("do_until_bored { rage_quit!!! }");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* loopStmt = dynamic_cast<const LoopStmt*>(parserResult.statements[0].get());
-    
-    const auto& bodyBlock = dynamic_cast<const BlockStmt&>(loopStmt->getBody());
-    const auto& bodyStatements = bodyBlock.getStatements();
-    ASSERT_EQ(bodyStatements.size(), 1);
-    
-    const auto* breakStmt = dynamic_cast<const BreakStmt*>(bodyStatements[0].get());
+TEST_F(ParserTests, Snapshot_LoopWithRageQuit) {
+    parseOk("do_until_bored { rage_quit!!! }");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "LoopStmt",
+        "BlockStmt",
+        "BreakStmt",
+    });
 }
 
-TEST_F(ParserTestFixture, ParsePrintStringLiteral) {
-    auto parserResult = parseSource("gossip.spill_tea(\"Hello\")...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
+TEST_F(ParserTests, Hybrid_ParsePrintStringLiteral) {
+    parseOk("gossip.spill_tea(\"Hello\")...");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "ExpressionStmt",
+        "CallExpr",
+        "callee:",
+        "DotExp",
+        "left:",
+        "right Ident (spill_tea)",
+        "args:",
+        "LiteralExpr String (Hello)",
+    });
+
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(ast[0].get());
+
     const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
     const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
     const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
@@ -533,20 +463,26 @@ TEST_F(ParserTestFixture, ParsePrintStringLiteral) {
 
     const auto& args = callExpr.getArgs();
     ASSERT_EQ(args.size(), 1);
-
-    const auto& expr = dynamic_cast<const LiteralExpr&>(*args[0]);
-    
-    EXPECT_EQ(expr.getLiteral().getType(), Token::Type::String);
-    EXPECT_EQ(expr.getLiteral().getValue<std::string>(), "Hello");
 }
 
-TEST_F(ParserTestFixture, ParsePrintIntLiteral) {
-    auto parserResult = parseSource("gossip.spill_tea(42)...");
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
+TEST_F(ParserTests, Hybrid_ParsePrintIntLiteral) {
+    parseOk("gossip.spill_tea(42)...");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "ExpressionStmt",
+        "CallExpr",
+        "callee:",
+        "DotExpr",
+        "left:",
+        "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
+        "args:",
+        "LiteralExpr Int (42)",
+    });
+
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(ast[0].get());
+
     const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
     const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
     const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
@@ -555,25 +491,32 @@ TEST_F(ParserTestFixture, ParsePrintIntLiteral) {
 
     const auto& args = callExpr.getArgs();
     ASSERT_EQ(args.size(), 1);
-
-    const auto& expr = dynamic_cast<const LiteralExpr&>(*args[0]);
-    
-    EXPECT_EQ(expr.getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(expr.getLiteral().getValue<std::int32_t>(), 42);
 }
 
-TEST_F(ParserTestFixture, ParsePrintVariable) {
-    auto source = R"(
+TEST_F(ParserTests, Hybrid_ParsePrintVariable) {
+    parseOk(R"(
         stash x about 10...
         gossip.spill_tea(x)...
-    )";
-    auto parserResult = parseSource(source);
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    
-    ASSERT_EQ(parserResult.statements.size(), 2);
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[1].get());
+    )");
+    expectNumberOfStatements(2ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (x)",
+        "initializer:",
+        "LiteralExpr Int (10)",
+        "ExpressionStmt",
+        "CallExpr",
+        "callee:",
+        "DotExpr",
+        "left:",
+        "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
+        "args:",
+        "VariableExpr Ident (x)",
+    });
+
+    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(ast[1].get());
+
     const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
     const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
     const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
@@ -582,14 +525,10 @@ TEST_F(ParserTestFixture, ParsePrintVariable) {
 
     const auto& args = callExpr.getArgs();
     ASSERT_EQ(args.size(), 1);
-
-    const auto& varExpr = dynamic_cast<const VariableExpr&>(*args[0]);
-    
-    EXPECT_EQ(varExpr.getName().getValue<std::string>(), "x");
 }
 
-TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
-    auto source = R"(
+TEST_F(ParserTests, Snapshot_FunctionDeclarationAndCall) {
+    parseOk(R"(
         gig add(x, y) {
             yeet x with y...
         }
@@ -598,136 +537,91 @@ TEST_F(ParserTestFixture, ParseFunctionDeclarationAndCall) {
             stash number about add(2, 3)...
             yeet ghosted...
         }
-    )";
-    auto parserResult = parseSource(source);
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 2);
-    
-    const auto* addFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
+    )");
+    expectNumberOfStatements(2ull);
 
-    const auto& addBody = dynamic_cast<const BlockStmt&>(addFunc->getBody());
-    ASSERT_EQ(addBody.getStatements().size(), 1);
-    
-    const auto* returnAdd = dynamic_cast<const ReturnStmt*>(addBody.getStatements()[0].get());
-    const auto& addition = dynamic_cast<const BinaryExpr&>(returnAdd->getValue());
-    EXPECT_EQ(addition.getOperator().getType(), Token::Type::Plus); 
+    expectPrintedInOrder({
+        "FunctionStmt Ident (add)",
+        "params: Ident (x), Ident (y)",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "BinaryExpr Plus",
+        "VariableExpr Ident (x)",
+        "VariableExpr Ident (y)",
 
-    const auto* machoFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[1].get());
-    EXPECT_EQ(machoFunc->getName().getValue<std::string>(), "macho");
-    
-    const auto& machoBody = dynamic_cast<const BlockStmt&>(machoFunc->getBody());
-    ASSERT_EQ(machoBody.getStatements().size(), 2);
-    
-    const auto* stashStmt = dynamic_cast<const VarDefinitionStmt*>(
-        machoBody.getStatements()[0].get());
-
-    const auto& callExpr = dynamic_cast<const CallExpr&>(stashStmt->getInitializer());
-
-    const auto& calleeExpr = callExpr.getCallee();
-    const auto* varExpr = dynamic_cast<const VariableExpr*>(&calleeExpr);
-    EXPECT_EQ(varExpr->getName().getValue<std::string>(), "add");
-    const auto& args = callExpr.getArgs();
-    ASSERT_EQ(args.size(), 2);
-    
-    const auto& arg1 = dynamic_cast<const LiteralExpr&>(*(args[0]));
-    EXPECT_EQ(arg1.getLiteral().getValue<std::int32_t>(), 2);
-    
-    const auto* returnGhosted = dynamic_cast<const ReturnStmt*>(machoBody.getStatements()[1].get());
-    const auto& ghostedValue = dynamic_cast<const LiteralExpr&>(returnGhosted->getValue());
-    EXPECT_EQ(ghostedValue.getLiteral().getType(), Token::Type::Null);
+        "FunctionStmt Ident (macho)",
+        "BlockStmt",
+        "VarDefinitionStmt Ident (number)",
+        "CallExpr",
+        "callee:",
+        "VariableExpr Ident (add)",
+        "args:",
+        "LiteralExpr Int (2)",
+        "LiteralExpr Int (3)",
+        "ReturnStmt",
+        "LiteralExpr Null",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseAssignStatement) {
-    auto parserResult = parseSource("counter might_be 42...");
+TEST_F(ParserTests, Structural_AssignStatement) {
+    parseOk("counter might_be 42...");
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* reassignStmt = dynamic_cast<const ReassignStmt*>(parserResult.statements[0].get());
-    
-    EXPECT_EQ(reassignStmt->getName().getValue<std::string>(), "counter");
-
-    const auto& expr = dynamic_cast<const LiteralExpr&>(reassignStmt->getValue());
-    EXPECT_EQ(expr.getLiteral().getType(), Token::Type::Int);
-    EXPECT_EQ(expr.getLiteral().getValue<std::int32_t>(), 42);
+    const auto& reassignStmt = expectReassign(0, "counter");
+    expectLiteralValue<std::int32_t>(reassignStmt.getValue(), Token::Type::Int, 42);
 }
 
-TEST_F(ParserTestFixture, ParseIncAsUnaryExpressionStatement) {
-    auto parserResult = parseSource("pump_it counter...");
+TEST_F(ParserTests, Structural_ParseIncAsUnaryExpressionStatement) {
+    parseOk("pump_it counter...");
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
-    
-    const auto& unaryExpr = dynamic_cast<const UnaryExpr&>(exprStmt->getExpression());
-    
-    EXPECT_EQ(unaryExpr.getOperator().getType(), Token::Type::Incr);
-    
-    const auto& operand = dynamic_cast<const VariableExpr&>(unaryExpr.getRight());
-    
-    EXPECT_EQ(operand.getName().getValue<std::string>(), "counter");
+    const auto* exprStmt = expectStmt<ExpressionStmt>(0);
+    const auto& unaryExpr = expectUnaryExpr(exprStmt->getExpression(), Token::Type::Incr);
+    expectVariableExpr(unaryExpr.getRight(), "counter");
 }
 
-TEST_F(ParserTestFixture, ParseIfWithBoolLiteral) {
-    auto parserResult = parseSource("perhaps (totally) { yeet ghosted... }");
+TEST_F(ParserTests, Snapshot_IfWithBoolLiteral) {
+    parseOk("perhaps (totally) { yeet ghosted... }");
+    expectNumberOfStatements(1ull);
 
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-
-    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
-
-    const auto& conditionExpr = dynamic_cast<const LiteralExpr&>(ifStmt->getCondition());
-    EXPECT_EQ(conditionExpr.getLiteral().getType(), Token::Type::True);
-
-    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
-    const auto& thenStatements = thenBlock.getStatements();
-    ASSERT_EQ(thenStatements.size(), 1);
-
-    const auto* returnStmt = dynamic_cast<const ReturnStmt*>(thenStatements[0].get());
-    const auto& returnValue = dynamic_cast<const LiteralExpr&>(returnStmt->getValue());
-    EXPECT_EQ(returnValue.getLiteral().getType(), Token::Type::Null);
+    expectPrintedInOrder({
+        "IfStmt",
+        "condition:",
+        "LiteralExpr True",
+        "then:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Null",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseVoidFunction) {
-    auto source = R"(
+TEST_F(ParserTests, Snapshot_VoidFunction) {
+    parseOk(R"(
         gig print(x) {
             gossip.spill_tea(x)...
-        })";
-    
-    auto parserResult = parseSource(source);
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* funcStmt = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(funcStmt->getName().getValue<std::string>(), "print");
-    
-    const auto& params = funcStmt->getParameters();
-    ASSERT_EQ(params.size(), 1);
-    EXPECT_EQ(params[0].getValue<std::string>(), "x");
-    
-    const auto& body = dynamic_cast<const BlockStmt&>(funcStmt->getBody());
-    const auto& statements = body.getStatements();
-    ASSERT_EQ(statements.size(), 1);
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(statements[0].get());
-    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
-    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
-    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
-    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
-    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
+        })");
+    expectNumberOfStatements(1ull);
 
-    const auto& args = callExpr.getArgs();
-    ASSERT_EQ(args.size(), 1);
-
-    const auto& printExpr = dynamic_cast<const VariableExpr&>(*args[0]);
-    EXPECT_EQ(printExpr.getName().getValue<std::string>(), "x");
+    expectPrintedInOrder({
+        "FunctionStmt Ident (print)",
+        "params: Ident (x)",
+        "body:",
+        "BlockStmt",
+        "ExpressionStmt",
+        "CallExpr",
+        "callee:",
+        "DotExpr",
+        "left:",
+        "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
+        "args:",
+        "VariableExpr Ident (x)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
-    auto source = R"(
+TEST_F(ParserTests, Snapshot_VoidFunctionCall) {
+    parseOk(R"(
         gig print(x) {
             gossip.spill_tea(x)...
         }
@@ -736,291 +630,265 @@ TEST_F(ParserTestFixture, ParseVoidFunctionCall) {
             stash string about "hello"...
             print(string)...
         }
-    )";
-    
-    auto parserResult = parseSource(source);
-    
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 2);
-    
-    const auto* printFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[0].get());
-    EXPECT_EQ(printFunc->getName().getValue<std::string>(), "print");
-    
-    const auto* machoFunc = dynamic_cast<const FunctionStmt*>(parserResult.statements[1].get());
-    EXPECT_EQ(machoFunc->getName().getValue<std::string>(), "macho");
-    
-    const auto& machoBody = dynamic_cast<const BlockStmt&>(machoFunc->getBody());
-    const auto& machoStatements = machoBody.getStatements();
-    ASSERT_EQ(machoStatements.size(), 2);
-    
-    const auto* varStmt = dynamic_cast<const VarDefinitionStmt*>(machoStatements[0].get());
-    EXPECT_EQ(varStmt->getName().getValue<std::string>(), "string");
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(machoStatements[1].get());
-    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
-    const auto& calleeExpr = callExpr.getCallee();
-    const auto* varExpr = dynamic_cast<const VariableExpr*>(&calleeExpr);
-    EXPECT_EQ(varExpr->getName().getValue<std::string>(), "print");
-    
-    const auto& args = callExpr.getArgs();
-    ASSERT_EQ(args.size(), 1);
-    
-    const auto& arg = dynamic_cast<const VariableExpr&>(*args[0]);
-    EXPECT_EQ(arg.getName().getValue<std::string>(), "string");
+    )");
+    expectNumberOfStatements(2ull);
+
+    expectPrintedInOrder({
+        "FunctionStmt Ident (print)",
+        "params: Ident (x)",
+        "body:",
+        "BlockStmt",
+        "CallExpr",
+        "DotExpr",
+        "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
+        "VariableExpr Ident (x)",
+
+        "FunctionStmt Ident (macho)",
+        "BlockStmt",
+        "VarDefinitionStmt Ident (string)",
+        "LiteralExpr String (hello)",
+        "ExpressionStmt",
+        "CallExpr",
+        "callee:",
+        "VariableExpr Ident (print)",
+        "args:",
+        "VariableExpr Ident (string)",
+    });
 }
 
-TEST_F(ParserTestFixture, ParseModuleVoidFunctionCall) {
-    auto parserResult = parseSource("gossip.spill_tea(\"Hello\")...");
+TEST_F(ParserTests, Structure_ComplexNestedLogicalCondition) {
+    parseOk(
+        "perhaps (((x bigger_ish 0) also (x tiny_ish 4)) also\n"
+        "         ((y bigger_ish 0) also (y tiny_ish 4)) also\n"
+        "         (index looks_like \" \")) {\n"
+        "    yeet 1...\n"
+        "}\n"
+    );
+    expectNumberOfStatements(1ull);
     
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* exprStmt = dynamic_cast<const ExpressionStmt*>(parserResult.statements[0].get());
-    
-    const auto& callExpr = dynamic_cast<const CallExpr&>(exprStmt->getExpression());
-    const auto& dotExpr = dynamic_cast<const DotExpr&>(callExpr.getCallee());
-    const auto& objectExpr = dynamic_cast<const VariableExpr&>(dotExpr.getLeft());
-    EXPECT_EQ(objectExpr.getName().getValue<std::string>(), "gossip");
-    EXPECT_EQ(dotExpr.getRight().getValue<std::string>(), "spill_tea");
-    
-    const auto& args = callExpr.getArgs();
-    ASSERT_EQ(args.size(), 1);
-    
-    const auto& arg = dynamic_cast<const LiteralExpr&>(*args[0]);
-    EXPECT_EQ(arg.getLiteral().getType(), Token::Type::String);
-    EXPECT_EQ(arg.getLiteral().getValue<std::string>(), "Hello");
-}
+    const auto* ifStmt = expectStmt<IfStmt>(0);
+    EXPECT_TRUE(ifStmt->getElseIfClauses().empty());
+    EXPECT_FALSE(ifStmt->hasElseBlock());
 
-TEST_F(ParserTestFixture, ParseComplexNestedLogicalCondition) {
-    auto source = R"(
-        perhaps (((x bigger_ish 0) also (x tiny_ish 4)) also
-                 ((y bigger_ish 0) also (y tiny_ish 4)) also
-                 (index looks_like " ")) {
-            yeet 1...
-        }
-    )";
-    auto parserResult = parseSource(source);
-    
-    ASSERT_TRUE(parserResult.errors.empty());
-    ASSERT_EQ(parserResult.statements.size(), 1);
-    
-    const auto* ifStmt = dynamic_cast<const IfStmt*>(parserResult.statements[0].get());
-    
-    const auto& thenBlock = dynamic_cast<const BlockStmt&>(ifStmt->getThenBlock());
+    const auto& cond0 = expectLogicalExpr(ifStmt->getCondition(), Token::Type::And);
+
+    const auto& indexEq = expectBinaryExpr(cond0.getRight(), Token::Type::Equal);
+    expectVariableExpr(indexEq.getLeft(), "index");
+    expectLiteralValue<std::string>(indexEq.getRight(), Token::Type::String, " ");
+
+    const auto& cond1 = expectLogicalExpr(cond0.getLeft(), Token::Type::And);
+
+    const auto& xGroup = expectLogicalExpr(cond1.getLeft(), Token::Type::And);
+    const auto& xGt = expectBinaryExpr(xGroup.getLeft(), Token::Type::Greater);
+    expectVariableExpr(xGt.getLeft(), "x");
+    expectLiteralValue<std::int32_t>(xGt.getRight(), Token::Type::Int, 0);
+
+    const auto& xLt = expectBinaryExpr(xGroup.getRight(), Token::Type::Less);
+    expectVariableExpr(xLt.getLeft(), "x");
+    expectLiteralValue<std::int32_t>(xLt.getRight(), Token::Type::Int, 4);
+
+    const auto& yGroup = expectLogicalExpr(cond1.getRight(), Token::Type::And);
+    const auto& yGt = expectBinaryExpr(yGroup.getLeft(), Token::Type::Greater);
+    expectVariableExpr(yGt.getLeft(), "y");
+    expectLiteralValue<std::int32_t>(yGt.getRight(), Token::Type::Int, 0);
+
+    const auto& yLt = expectBinaryExpr(yGroup.getRight(), Token::Type::Less);
+    expectVariableExpr(yLt.getLeft(), "y");
+    expectLiteralValue<std::int32_t>(yLt.getRight(), Token::Type::Int, 4);
+
+    const auto& thenBlock = expectCast<BlockStmt>(ifStmt->getThenBlock());
     ASSERT_EQ(thenBlock.getStatements().size(), 1);
+    
+    const auto& ret = expectReturn(thenBlock, 0);
+    expectLiteralValue<std::int32_t>(ret.getValue(), Token::Type::Int, 1);
 }
 
-// TODO refactor this to short uts
-TEST_F(ParserTestFixture, ParseEntirePrototypeMess) {
-    auto parserResult = parseSource(
-        "psst: very useful thingy\n"
-        "gig calculate_stuff (x, y) {\n"
+TEST_F(ParserTests, Snapshot_IgnoresSingleLineComments) {
+    parseOk(
+        "psst: ignore this line\n"
+        "stash x about 1..."
+    );
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (x)",
+        "initializer:",
+        "LiteralExpr Int (1)",
+    });
+}
+
+TEST_F(ParserTests, Snapshot_IgnoresBlockComments) {
+    parseOk(
+        "stash x about 1...\n"
+        "rant_stop\n"
+        "ignored text\n"
+        "rant_start\n"
+        "stash y about 2..."
+    );
+    expectNumberOfStatements(2ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (x)",
+        "LiteralExpr Int (1)",
+        "VarDefinitionStmt Ident (y)",
+        "LiteralExpr Int (2)",
+    });
+}
+
+TEST_F(ParserTests, Structural_ReturnWithPlusMinusNesting) {
+    parseOk(
+        "gig calculate_stuff(x, y) {\n"
         "    yeet 2 with 2 without 2...\n"
         "}\n"
-        "\n"
-        "psst: This is the start of the mess\n"
-        "gig macho() {\n"
-        "    stash number about 10...\n"
-        "    stash isNumberTen about number looks_like 11...\n"
-        "\n" // line 10
-        "    perhaps (isNumberTen looks_like totally) {\n"
-        "        gossip.spill_tea(\"The number is is ten\")...\n"
-        "    }\n"
-        "    or_whatever (isNumberTen looks_like nah) {\n"
-        "        gossip.spill_tea(\"The number is not ten\")...\n"
-        "    }\n"
-        "    screw_it {\n"
-        "        gossip.spill_tea(\"How the fck did I get here\")...\n"
-        "    }\n"
-        "\n" // line 20
-        "    stash floatingNumber about 11.0...\n"
-        "    perhaps (floatingNumber looks_like 10.0) {\n"
-        "        gossip.spill_tea(\"The floatingNumber is ten\")...\n"
-        "    }\n"
-        "    or_whatever (floatingNumber kinda_sus 20.0) {\n"
-        "        gossip.spill_tea(\"The floatingNumber is not 20\")...\n"
-        "    }\n"
-        "    or_whatever (floatingNumber tiny_ish 5.0) {\n"
-        "        gossip.spill_tea(\"The floatingNumber is smaller than 5\")...\n"
-        "    }\n" // line 30
-        "    screw_it {\n"
-        "        gossip.spill_tea(\"This language is so weird\")...\n"
-        "    }\n"
-        "\n"
-        "    stash counter about 0...\n"
-        "    do_until_bored {\n"
-        "        gossip.spill_tea(counter)...\n"
-        "        pump_it counter...\n"
-        "\n"
-        "        perhaps (counter bigger_ish 3) {\n" // line 40
-        "            rage_quit!!!\n"
-        "        }\n"
-        "    }\n"
-        "\n"
-        "    stash n about calculate_stuff(10, 20)...\n"
-        "    spin_around (n) {\n"
-        "        gossip.spill_tea(\"Spinnin\")...\n"
-        "    }\n"
-        "\n"
-        "    yeet ghosted...\n" // line 50
-        "}\n"
-        "\n"
-        "rant_stop\n"
-        "    Output:\n"
-        "    \n"
-        "    THE NUMBER IS NOT TEN!!!\n"
-        "    THE FLOATINGNUMBER IS NOT 20!!!\n"
-        "    0!!!\n"
-        "    1!!!\n"
-        "    2!!!\n" // line 60
-        "    3!!!\n"
-        "    4!!!\n"
-        "    SPINNIN!!!\n"
-        "    SPINNIN!!!\n"
-        "\n"
-        "    Syntax:\n"
-        "        Every statement must end with an ellipsis (...) to indicate hesitation.\n"
-        "    Comments:\n"
-        "        Single-line comments use 'psst:',\n"
-        "        block comments are between 'rant_stop' and 'rant_start'.\n" // line 70
-        "    Variables:\n"
-        "        Declared using 'stash [name] about [value]' (dynamic typing).\n"
-        "    Assignment:\n"
-        "        Variable updates use 'might_be' instead of 'about'.\n"
-        "    Types:\n"
-        "        Booleans are 'totally' (true), 'nah' (false)\n"
-        "        null is 'ghosted'.\n"
-        "    Functions:\n"
-        "        Defined using the 'gig' keyword and return values using 'yeet'.\n"
-        "    Output:\n"
-        "        'gossip.spill_tea' prints arguments to console in UPPERCASE with appended '!!!'.\n"
-        "    Conditionals:\n"
-        "        Logic flow uses 'perhaps' (if), 'or_whatever' (else if), and 'screw_it' (else).\n"
-        "    Loops:\n"
-        "        Iteration implemented via 'do_until_bored' (while) and 'spin_around' (for).\n"
-        "    Flow Control:\n"
-        "        Loops are terminated aggressively using the 'rage_quit!!!' command.\n"
-        "    Equality:\n"
-        "        Comparisons use 'looks_like' (==) and 'kinda_sus' (!=).\n"
-        "    Relational:\n"
-        "        Size comparisons use 'bigger_ish' (>) and 'tiny_ish' (<).\n"
-        "    Math:\n"
-        "        Arithmetic uses 'with' (+) and 'without' (-)\n"
-        "        The 'pump_it' operator is used for incrementing values.\n"
-        "rant_start\n"
     );
+    expectNumberOfStatements(1ull);
+
+    const auto& fn = expectFunction(0, "calculate_stuff");
+    const auto& body = expectCast<BlockStmt>(fn.getBody());
+    ASSERT_EQ(body.getStatements().size(), 1);
+
+    const auto& ret = expectReturn(body, 0);
+    const auto& minus = expectBinaryExpr(ret.getValue(), Token::Type::Minus);
+    const auto& plus = expectBinaryExpr(minus.getLeft(), Token::Type::Plus);
+
+    expectLiteralValue<std::int32_t>(plus.getLeft(), Token::Type::Int, 2);
+    expectLiteralValue<std::int32_t>(plus.getRight(), Token::Type::Int, 2);
+    expectLiteralValue<std::int32_t>(minus.getRight(), Token::Type::Int, 2);
+}
+
+TEST_F(ParserTests, Snapshot_SpinAroundWithVariableCount) {
+    parseOk(
+        "stash n about 3...\n"
+        "spin_around (n) { yeet 1... }"
+    );
+    expectNumberOfStatements(2ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (n)",
+        "initializer:",
+        "LiteralExpr Int (3)",
+        "RepeatStmt",
+        "count:",
+        "VariableExpr Ident (n)",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "LiteralExpr Int (1)",
+    });
+}
+
+TEST_F(ParserTests, Snapshot_DoUntilBoredWithPumpItAndInnerIfBreak) {
+    parseOk(R"(
+        stash counter about 0...
+        do_until_bored {
+            gossip.spill_tea(counter)...
+            pump_it counter...
+            perhaps (counter bigger_ish 3) {
+                rage_quit!!!
+            }
+        }
+    )");
+    expectNumberOfStatements(2ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (counter)",
+        "LiteralExpr Int (0)",
+        "LoopStmt",
+        "BlockStmt",
+        "ExpressionStmt",
+        "CallExpr",
+        "DotExpr",
+        "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
+        "args:",
+        "VariableExpr Ident (counter)",
+        "UnaryExpr Incr",
+        "IfStmt",
+        "BinaryExpr Greater",
+        "LiteralExpr Int (3)",
+        "BreakStmt",
+    });
+}
+
+TEST_F(ParserTests, Snapshot_IfElseChainWithPrintCalls) {
+    parseOk(R"(
+        stash number about 10...
+        stash isNumberTen about number looks_like 11...
+
+        perhaps (isNumberTen looks_like totally) {
+            gossip.spill_tea("TEN")...
+        }
+        or_whatever (isNumberTen looks_like nah) {
+            gossip.spill_tea("NOT TEN")...
+        }
+        screw_it {
+            gossip.spill_tea("WAT")...
+        }
+    )");
+    expectNumberOfStatements(3ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (number)",
+        "LiteralExpr Int (10)",
+        "VarDefinitionStmt Ident (isNumberTen)",
+        "BinaryExpr Equal",
+        "VariableExpr Ident (number)",
+        "LiteralExpr Int (11)",
+        "IfStmt",
+        "condition:",
+        "BinaryExpr Equal",
+        "VariableExpr Ident (isNumberTen)",
+        "LiteralExpr True",
+        "then:",
+        "ExpressionStmt",
+        "LiteralExpr String (TEN)",
+        "ElseIf",
+        "LiteralExpr False",
+        "body:",
+        "ExpressionStmt",
+        "LiteralExpr String (NOT TEN)",
+        "else:",
+        "ExpressionStmt",
+        "LiteralExpr String (WAT)",
+    });
+}
+
+TEST_F(ParserTests, Structural_FloatComparisonsInIfElseChain) {
+    parseOk(R"(
+        stash floatingNumber about 11.0...
+        perhaps (floatingNumber looks_like 10.0) {
+            yeet ghosted...
+        }
+        or_whatever (floatingNumber kinda_sus 20.0) {
+            yeet ghosted...
+        }
+        or_whatever (floatingNumber tiny_ish 5.0) {
+            yeet ghosted...
+        }
+        screw_it {
+            yeet ghosted...
+        }
+    )");
+    expectNumberOfStatements(2ull);
+
+    const auto* ifStmt = expectStmt<IfStmt>(1);
+    ASSERT_EQ(ifStmt->getElseIfClauses().size(), 2);
+    ASSERT_TRUE(ifStmt->hasElseBlock());
+
+    auto assertFloatComparison = [&](const Expr& expr, Token::Type op, double rhs) {
+        const auto& bin = expectBinaryExpr(expr, op);
+        expectVariableExpr(bin.getLeft(), "floatingNumber");
+        expectLiteralValue<double>(bin.getRight(), Token::Type::Float, rhs);
+    };
+
+    assertFloatComparison(ifStmt->getCondition(), Token::Type::Equal, 10.0);
+    assertFloatComparison(*ifStmt->getElseIfClauses()[0].condition, Token::Type::NotEqual, 20.0);
+    assertFloatComparison(*ifStmt->getElseIfClauses()[1].condition, Token::Type::Less, 5.0);
+
+    const auto& thenBlock = expectCast<BlockStmt>(ifStmt->getThenBlock());
+    ASSERT_EQ(thenBlock.getStatements().size(), 1);
     
-    ASSERT_EQ(parserResult.errors.size(), 0);
-    ASSERT_EQ(parserResult.statements.size(), 2);
-
-    // Line 2: gig calculate_stuff (x, y) { ... }
-    const auto& calcFunc = dynamic_cast<const FunctionStmt&>(*parserResult.statements[0]);
-    const auto& calcBody = dynamic_cast<const BlockStmt&>(calcFunc.getBody());
-    const auto& yeetMath = dynamic_cast<const ReturnStmt&>(*calcBody.getStatements()[0]);
-    const auto& mathExpr = dynamic_cast<const BinaryExpr&>(yeetMath.getValue());
-    EXPECT_EQ(mathExpr.getOperator().getType(), Token::Type::Minus);
-
-    const auto& leftMath = dynamic_cast<const BinaryExpr&>(mathExpr.getLeft());
-    EXPECT_EQ(leftMath.getOperator().getType(), Token::Type::Plus);
-
-    // Line 7: gig macho() { ... }
-    const auto& machoFunc = dynamic_cast<const FunctionStmt&>(*parserResult.statements[1]);
-    const auto& machoStatements = dynamic_cast<const BlockStmt&>(
-        machoFunc.getBody()).getStatements();
-    
-    ASSERT_EQ(machoStatements.size(), 10);
-
-    // Line 8: stash number about 10...
-    const auto& stmt0 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[0]);
-    EXPECT_EQ(stmt0.getName().getValue<std::string>(), "number");
-
-    // Line 9: stash isNumberTen about number looks_like 11...
-    const auto& stmt1 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[1]);
-    const auto& looksLikeExpr = dynamic_cast<const BinaryExpr&>(stmt1.getInitializer());
-    EXPECT_EQ(looksLikeExpr.getOperator().getType(), Token::Type::Equal);
-
-    // Line 11: perhaps (isNumberTen looks_like totally) { ... }
-    const auto& stmt2 = dynamic_cast<const IfStmt&>(*machoStatements[2]);
-    const auto& ifCond = dynamic_cast<const BinaryExpr&>(stmt2.getCondition());
-    const auto& trueToken = dynamic_cast<const LiteralExpr&>(ifCond.getRight());
-    EXPECT_EQ(trueToken.getLiteral().getType(), Token::Type::True);
-    
-    // Line 14: or_whatever (isNumberTen looks_like nah) { ... }
-    EXPECT_EQ(stmt2.getElseIfClauses().size(), 1);
-    
-    // Line 17: screw_it { ... }
-    const auto& elseBlock = dynamic_cast<const BlockStmt&>(stmt2.getElseBlock());
-    EXPECT_EQ(elseBlock.getStatements().size(), 1);
-
-    // Line 21: stash floatingNumber about 11.0...
-    const auto& stmt3 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[3]);
-    EXPECT_EQ(stmt3.getName().getValue<std::string>(), "floatingNumber");
-
-    // Line 22: perhaps (floatingNumber looks_like 10.0) { ... }
-    const auto& stmt4 = dynamic_cast<const IfStmt&>(*machoStatements[4]);
-    // Line 25 & 28: 2x or_whatever
-    EXPECT_EQ(stmt4.getElseIfClauses().size(), 2);
-    // Line 31: screw_it
-    EXPECT_EQ(dynamic_cast<const BlockStmt&>(stmt4.getElseBlock()).getStatements().size(), 1);
-
-    // Line 35: stash counter about 0...
-    const auto& stmt5 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[5]);
-    EXPECT_EQ(stmt5.getName().getValue<std::string>(), "counter");
-
-    // Line 36: do_until_bored { ... }
-    const auto& stmt6 = dynamic_cast<const LoopStmt&>(*machoStatements[6]);
-    const auto& doUntilBody = dynamic_cast<const BlockStmt&>(stmt6.getBody()).getStatements();
-    ASSERT_EQ(doUntilBody.size(), 3);
-    
-    // Line 37: gossip.spill_tea(counter)...
-    const auto& loopCallStmt = dynamic_cast<const ExpressionStmt&>(*doUntilBody[0]);
-    const auto& loopCallExpr = dynamic_cast<const CallExpr&>(loopCallStmt.getExpression());
-    const auto& loopDotExpr = dynamic_cast<const DotExpr&>(loopCallExpr.getCallee());
-    const auto& loopObjectExpr = dynamic_cast<const VariableExpr&>(loopDotExpr.getLeft());
-    EXPECT_EQ(loopObjectExpr.getName().getValue<std::string>(), "gossip");
-    EXPECT_EQ(loopDotExpr.getRight().getValue<std::string>(), "spill_tea");
-    ASSERT_EQ(loopCallExpr.getArgs().size(), 1);
-    const auto& loopPrintArg = dynamic_cast<const VariableExpr&>(*loopCallExpr.getArgs()[0]);
-    EXPECT_EQ(loopPrintArg.getName().getValue<std::string>(), "counter");
-    
-    // Line 38: pump_it counter...
-    const auto& loopPumpIt = dynamic_cast<const ExpressionStmt&>(*doUntilBody[1]);
-    const auto& pumpItUnary = dynamic_cast<const UnaryExpr&>(loopPumpIt.getExpression());
-    EXPECT_EQ(pumpItUnary.getOperator().getType(), Token::Type::Incr);
-    
-    // Line 40: perhaps (counter bigger_ish 3) { rage_quit!!! }
-    const auto& loopIf = dynamic_cast<const IfStmt&>(*doUntilBody[2]);
-    const auto& loopIfBody = dynamic_cast<const BlockStmt&>(loopIf.getThenBlock()).getStatements();
-    const auto& rageQuit = dynamic_cast<const BreakStmt&>(*loopIfBody[0]);
-
-    // Line 45: stash n about calculate_stuff(10, 20)...
-    const auto& stmt7 = dynamic_cast<const VarDefinitionStmt&>(*machoStatements[7]);
-    const auto& callExpr = dynamic_cast<const CallExpr&>(stmt7.getInitializer());
-    const auto& calleeExpr = callExpr.getCallee();
-    const auto* varExpr = dynamic_cast<const VariableExpr*>(&calleeExpr);
-    EXPECT_EQ(varExpr->getName().getValue<std::string>(), "calculate_stuff");
-    EXPECT_EQ(callExpr.getArgs().size(), 2);
-
-    // Line 46: spin_around (n) { ... }
-    const auto& stmt8 = dynamic_cast<const RepeatStmt&>(*machoStatements[8]);
-    const auto& repeatCount = dynamic_cast<const VariableExpr&>(stmt8.getCount());
-    EXPECT_EQ(repeatCount.getName().getValue<std::string>(), "n");
-    
-    // Line 47: gossip.spill_tea("Spinnin")...
-    const auto& repeatBody = dynamic_cast<const BlockStmt&>(stmt8.getBody()).getStatements();
-    const auto& repeatCallStmt = dynamic_cast<const ExpressionStmt&>(*repeatBody[0]);
-    const auto& repeatCallExpr = dynamic_cast<const CallExpr&>(repeatCallStmt.getExpression());
-    const auto& repeatDotExpr = dynamic_cast<const DotExpr&>(repeatCallExpr.getCallee());
-    const auto& repeatObjectExpr = dynamic_cast<const VariableExpr&>(repeatDotExpr.getLeft());
-    EXPECT_EQ(repeatObjectExpr.getName().getValue<std::string>(), "gossip");
-    EXPECT_EQ(repeatDotExpr.getRight().getValue<std::string>(), "spill_tea");
-    ASSERT_EQ(repeatCallExpr.getArgs().size(), 1);
-    const auto& repeatArg = dynamic_cast<const LiteralExpr&>(*repeatCallExpr.getArgs()[0]);
-    EXPECT_EQ(repeatArg.getLiteral().getType(), Token::Type::String);
-    EXPECT_EQ(repeatArg.getLiteral().getValue<std::string>(), "Spinnin");
-
-    // Line 50: yeet ghosted...
-    const auto& stmt9 = dynamic_cast<const ReturnStmt&>(*machoStatements[9]);
-    const auto& yeetValue = dynamic_cast<const LiteralExpr&>(stmt9.getValue());
-    EXPECT_EQ(yeetValue.getLiteral().getType(), Token::Type::Null);
+    const auto& thenRet = expectReturn(thenBlock, 0);
+    expectLiteral(thenRet.getValue(), Token::Type::Null);
 }

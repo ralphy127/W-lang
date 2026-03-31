@@ -89,8 +89,10 @@ TEST_F(AstPrinterTests, VisitExpressionStmt_CallDot_FloatLiteral) {
         "ExpressionStmt",
         "CallExpr",
         "callee:",
-        "DotExpr Ident (spill_tea)",
+        "DotExpr",
+        "left:",
         "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
         "args:",
         "LiteralExpr Float (42.42",
     });
@@ -101,8 +103,10 @@ TEST_F(AstPrinterTests, VisitExpressionStmt_CallDot_StringLiteral) {
         "ExpressionStmt",
         "CallExpr",
         "callee:",
-        "DotExpr Ident (spill_tea)",
+        "DotExpr",
+        "left:",
         "VariableExpr Ident (gossip)",
+        "right Ident (spill_tea)",
         "args:",
         "LiteralExpr String (Hello)",
     });

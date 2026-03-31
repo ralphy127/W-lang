@@ -240,10 +240,15 @@ RuntimeValue AstPrinter::visitCallExpr(const CallExpr& expr) {
 }
 
 RuntimeValue AstPrinter::visitDotExpr(const DotExpr& expr) {
-    printLine("DotExpr " + tokenToString(expr.getRight()));
+    printLine("DotExpr");
+
+    printKey("left");
     ++_indent;
     expr.getLeft().accept(*this);
     --_indent;
+
+    printKey("right " + tokenToString(expr.getRight()));
+
     return Null{};
 }
 
