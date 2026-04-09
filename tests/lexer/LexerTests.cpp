@@ -147,6 +147,14 @@ TEST_F(LexerTests, OrEither) {
     expectTypes("either", {Token::Type::Or});
 }
 
+TEST_F(LexerTests, MultiplyTimes) {
+    expectTypes("times", {Token::Type::Multiply});
+}
+
+TEST_F(LexerTests, DivideOver) {
+    expectTypes("over", {Token::Type::Divide});
+}
+
 TEST_F(LexerTests, PrototypeCommentsAreSkipped) {
     expectTypes("psst: useful\ngig macho() { yeet 0... }", {
         Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::RParen,
@@ -172,6 +180,39 @@ TEST_F(LexerTests, PrototypeFunctionWithMathOperators) {
     expectValue<std::int32_t>(tokens, 9, 2);
     expectValue<std::int32_t>(tokens, 11, 2);
     expectValue<std::int32_t>(tokens, 13, 2);
+}
+
+TEST_F(LexerTests, PrototypeExpressionWithMultiplyAndDivide) {
+    const auto tokens = tokenizeOk("yeet 6 times 7 over 2...");
+    expectTypes(tokens, {
+        Token::Type::Return, Token::Type::Int, Token::Type::Multiply, Token::Type::Int,
+        Token::Type::Divide, Token::Type::Int, Token::Type::Semi
+    });
+    expectValue<std::int32_t>(tokens, 1, 6);
+    expectValue<std::int32_t>(tokens, 3, 7);
+    expectValue<std::int32_t>(tokens, 5, 2);
+}
+
+TEST_F(LexerTests, PrototypeExpressionMixingAddSubMulDiv) {
+    const auto tokens = tokenizeOk("yeet 1 with 2 times 3 without 4 over 5 with 6 times 7 without 8 over 9...");
+    expectTypes(tokens, {
+        Token::Type::Return,
+        Token::Type::Int, Token::Type::Plus, Token::Type::Int, Token::Type::Multiply, Token::Type::Int,
+        Token::Type::Minus, Token::Type::Int, Token::Type::Divide, Token::Type::Int,
+        Token::Type::Plus, Token::Type::Int, Token::Type::Multiply, Token::Type::Int,
+        Token::Type::Minus, Token::Type::Int, Token::Type::Divide, Token::Type::Int,
+        Token::Type::Semi
+    });
+
+    expectValue<std::int32_t>(tokens, 1, 1);
+    expectValue<std::int32_t>(tokens, 3, 2);
+    expectValue<std::int32_t>(tokens, 5, 3);
+    expectValue<std::int32_t>(tokens, 7, 4);
+    expectValue<std::int32_t>(tokens, 9, 5);
+    expectValue<std::int32_t>(tokens, 11, 6);
+    expectValue<std::int32_t>(tokens, 13, 7);
+    expectValue<std::int32_t>(tokens, 15, 8);
+    expectValue<std::int32_t>(tokens, 17, 9);
 }
 
 TEST_F(LexerTests, PrototypeConditionalChainTokens) {

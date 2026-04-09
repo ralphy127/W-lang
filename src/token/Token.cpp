@@ -24,6 +24,8 @@ bool Token::isLiteral() const {
 bool Token::isOperator() const {
     return _type == Type::Plus or
            _type == Type::Minus or
+           _type == Type::Multiply or
+           _type == Type::Divide or
            _type == Type::Equal or
            _type == Type::NotEqual or
            _type == Type::Incr or
@@ -86,6 +88,8 @@ std::string toString(Token::Type type) {
         case Token::Type::Incr: return "Incr";
         case Token::Type::Plus: return "Plus";
         case Token::Type::Minus: return "Minus";
+        case Token::Type::Multiply: return "Multiply";
+        case Token::Type::Divide: return "Divide";
         case Token::Type::Import: return "Import";
         default: throw std::logic_error{"Not implemented token type in toString"};
     }
@@ -130,6 +134,8 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Incr: return "pump_it;";
         case Token::Type::Plus: return "with";
         case Token::Type::Minus: return "without";
+        case Token::Type::Multiply: return "times";
+        case Token::Type::Divide: return "over";
         case Token::Type::Import: return "summon";
         default: throw std::logic_error{"Not implemented token type in toSourceString: "
             + std::to_string(std::to_underlying(type))};

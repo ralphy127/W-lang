@@ -610,13 +610,39 @@ std::unique_ptr<Expr> Parser::parseComparison() {
 
 std::unique_ptr<Expr> Parser::parseTerm() {
     LOG_DEBUG << "parseTerm() called at token index: " << _current;
-    auto left = parseUnary();
+    auto left = parseFactor();
 
     while (not parsedAll()) {
         const auto& token = getToken();
         const auto tokenType = token.getType();
         // TODO after adding * and /: add parseFactor() function to resolve priorities
         if (tokenType == Token::Type::Plus or tokenType == Token::Type::Minus) {
+            advance();
+            auto right = parseFactor();
+            if (not right) {
+                throwParserError(
+                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            }
+            auto srcRange = makeRange(*left, *right);
+            left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right), srcRange);
+        }
+        else {
+            break;
+        }
+    }
+
+    LOG_DEBUG << "No term operator matched, returning left operand";
+    return left;
+}
+
+std::unique_ptr<Expr> Parser::parseFactor() {
+    LOG_DEBUG << "parseFactor() called at token index: " << _current;
+    auto left = parseUnary();
+
+    while (not parsedAll()) {
+        const auto& token = getToken();
+        const auto tokenType = token.getType();
+        if (tokenType == Token::Type::Multiply or tokenType == Token::Type::Divide) {
             advance();
             auto right = parseUnary();
             if (not right) {
@@ -631,7 +657,7 @@ std::unique_ptr<Expr> Parser::parseTerm() {
         }
     }
 
-    LOG_DEBUG << "No term operator matched, returning left operand";
+    LOG_DEBUG << "No factor operator matched, returning left operand";
     return left;
 }
 

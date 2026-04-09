@@ -234,6 +234,16 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'with' to Token::Type::Plus";
         return true;
     }
+    if (matchAndAdvanceIfNeeded("times")) {
+        token.setType(Token::Type::Multiply);
+        LOG_DEBUG << "Tokenized 'times' to Token::Type::Multiply";
+        return true;
+    }
+    if (matchAndAdvanceIfNeeded("over")) {
+        token.setType(Token::Type::Divide);
+        LOG_DEBUG << "Tokenized 'over' to Token::Type::Divide";
+        return true;
+    }
 
     if (matchAndAdvanceIfNeeded("do_until_bored")) {
         token.setType(Token::Type::Loop);
@@ -512,18 +522,27 @@ bool Lexer::matchLookahead(char expected) {
 }
 
 bool Lexer::matchAndAdvanceIfNeeded(std::string_view expected) {
-    auto startPos = _pos;
-    auto startLine = _line;
-    auto startCol = _col;
+    const auto startPos = _pos;
+    const auto startLine = _line;
+    const auto startCol = _col;
+
+    auto rollBack = [this, startPos, startLine, startCol]() {
+        _pos = startPos;
+        _line = startLine;
+        _col = startCol;
+    };
     
     for (char ch : expected) {
         if (not match(ch)) {
-            _pos = startPos;
-            _line = startLine;
-            _col = startCol;
+            rollBack();
             return false;
         }
         advance(ch);
+    }
+
+    if (not tokenizedAll() and (std::isalnum(getChar()) or match('_'))) {
+        rollBack();
+        return false;
     }
 
     return true;

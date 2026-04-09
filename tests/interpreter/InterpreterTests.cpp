@@ -664,6 +664,107 @@ TEST_F(InterpreterTests, VariableReassignmentWithArithmetic) {
     expectOutput(source, "10\n15\n12\n");
 }
 
+TEST_F(InterpreterTests, EvaluatesMultiplyTimes) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash result about 6 times 7...
+            gossip.spill_tea(result)...
+        }
+    )";
+
+    expectOutput(source, "42\n");
+}
+
+TEST_F(InterpreterTests, EvaluatesDivideOver) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash result about 8 over 4...
+            gossip.spill_tea(result)...
+        }
+    )";
+
+    expectOutput(source, "2\n");
+}
+
+TEST_F(InterpreterTests, EvaluatesMixedPlusMinusMultiplyDividePrecedence) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash x about 2...
+            stash y about 2...
+            stash result about 1 with x times 3 without 4 over y...
+            gossip.spill_tea(result)...
+        }
+    )";
+
+    expectOutput(source, "5\n");
+}
+
+TEST_F(InterpreterTests, EvaluatesParenthesizedMixedArithmetic) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash x about 2...
+            stash y about 2...
+            stash result about (1 with x) times (3 without 1) over y...
+            gossip.spill_tea(result)...
+        }
+    )";
+
+    expectOutput(source, "3\n");
+}
+
+TEST_F(InterpreterTests, OperatorKeywordsDoNotSplitIdentifiers) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash timesTwo about 1...
+            stash overload about 2...
+            stash withheld about 3...
+            stash withoutX about 4...
+            gossip.spill_tea(timesTwo)...
+            gossip.spill_tea(overload)...
+            gossip.spill_tea(withheld)...
+            gossip.spill_tea(withoutX)...
+        }
+    )";
+
+    expectOutput(source, "1\n2\n3\n4\n");
+}
+
+TEST_F(InterpreterTests, Precedence_MultiplyBindsTighterThanMinus) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash result about 0 without 5 times 2...
+            gossip.spill_tea(result)...
+        }
+    )";
+
+    expectOutput(source, "-10\n");
+}
+
+TEST_F(InterpreterTests, Associativity_DivideIsLeftAssociative) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash result about 8 over 4 over 2...
+            gossip.spill_tea(result)...
+        }
+    )";
+
+    expectOutput(source, "1\n");
+}
+
 TEST_F(InterpreterTests, ComparisonWithNegativeNumbers) {
     auto source = R"(
         summon gossip...

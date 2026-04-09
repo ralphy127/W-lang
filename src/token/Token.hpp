@@ -67,6 +67,8 @@ public:
         Incr,
         Plus,
         Minus,
+        Multiply,
+        Divide
     };
 
     Token() = default;

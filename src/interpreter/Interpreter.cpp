@@ -353,6 +353,14 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
                 LOG_DEBUG << "Found minus operator";
                 return applyMath(left, right, [](auto&& a, auto&& b) { return a - b; });
             }
+            case Token::Type::Multiply: {
+                LOG_DEBUG << "Found Multiply operator";
+                return applyMath(left, right, [](auto&& a, auto&& b) { return a * b; });
+            }
+            case Token::Type::Divide: {
+                LOG_DEBUG << "Found Divide operator";
+                return applyMath(left, right, [](auto&& a, auto&& b) { return a / b; });
+            }
             default:
                 throw RuntimeError{
                     RuntimeError::Type::Undefined,

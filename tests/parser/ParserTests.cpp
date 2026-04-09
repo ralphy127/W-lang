@@ -811,6 +811,52 @@ TEST_F(ParserTests, Structural_ReturnWithPlusMinusNesting) {
     expectLiteralValue<std::int32_t>(minus.getRight(), Token::Type::Int, 2);
 }
 
+TEST_F(ParserTests, Structural_ExpressionStmtWithMultiply) {
+    parseOk("2 times 3...");
+    expectNumberOfStatements(1ull);
+
+    const auto* exprStmt = expectStmt<ExpressionStmt>(0);
+    const auto& mul = expectBinaryExpr(exprStmt->getExpression(), Token::Type::Multiply);
+    expectLiteralValue<std::int32_t>(mul.getLeft(), Token::Type::Int, 2);
+    expectLiteralValue<std::int32_t>(mul.getRight(), Token::Type::Int, 3);
+}
+
+TEST_F(ParserTests, Structural_ExpressionStmtWithDivide) {
+    parseOk("8 over 4...");
+    expectNumberOfStatements(1ull);
+
+    const auto* exprStmt = expectStmt<ExpressionStmt>(0);
+    const auto& div = expectBinaryExpr(exprStmt->getExpression(), Token::Type::Divide);
+    expectLiteralValue<std::int32_t>(div.getLeft(), Token::Type::Int, 8);
+    expectLiteralValue<std::int32_t>(div.getRight(), Token::Type::Int, 4);
+}
+
+TEST_F(ParserTests, Structural_ReturnWithMixedPlusMinusMultiplyDividePrecedence) {
+    parseOk(
+        "gig calculate_stuff(x, y) {\n"
+        "    yeet 1 with x times 3 without 4 over y...\n"
+        "}\n"
+    );
+    expectNumberOfStatements(1ull);
+
+    const auto& fn = expectFunction(0, "calculate_stuff");
+    const auto& body = expectCast<BlockStmt>(fn.getBody());
+    ASSERT_EQ(body.getStatements().size(), 1);
+
+    const auto& ret = expectReturn(body, 0);
+
+    const auto& minus = expectBinaryExpr(ret.getValue(), Token::Type::Minus);
+    const auto& plus = expectBinaryExpr(minus.getLeft(), Token::Type::Plus);
+    const auto& mul = expectBinaryExpr(plus.getRight(), Token::Type::Multiply);
+    const auto& div = expectBinaryExpr(minus.getRight(), Token::Type::Divide);
+
+    expectLiteralValue<std::int32_t>(plus.getLeft(), Token::Type::Int, 1);
+    expectVariableExpr(mul.getLeft(), "x");
+    expectLiteralValue<std::int32_t>(mul.getRight(), Token::Type::Int, 3);
+    expectLiteralValue<std::int32_t>(div.getLeft(), Token::Type::Int, 4);
+    expectVariableExpr(div.getRight(), "y");
+}
+
 TEST_F(ParserTests, Snapshot_SpinAroundWithVariableCount) {
     parseOk(
         "stash n about 3...\n"
