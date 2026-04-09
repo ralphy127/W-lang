@@ -1,7 +1,11 @@
 #include <gtest/gtest.h>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
+#include "runtime/RuntimeErrors.hpp"
 
 struct InterpreterTests : ::testing::Test {
     AstResolver astSolver = [](const std::string&) {
@@ -36,9 +40,78 @@ struct InterpreterTests : ::testing::Test {
         
         return buffer.str();
     }
+
+    std::string executeAndCaptureFailure(const std::string& source) {
+        auto statements = parseSource(source).statements;
+
+        std::stringstream buffer{};
+        auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
+
+        Interpreter interpreter{std::move(statements), astSolver, ""};
+        try {
+            interpreter.interpret();
+        }
+        catch (const RuntimeError& err) {
+            std::cout.rdbuf(oldCout);
+            return err.msg;
+        }
+        catch (...) {
+            std::cout.rdbuf(oldCout);
+            throw;
+        }
+
+        std::cout.rdbuf(oldCout);
+        ADD_FAILURE() << "Expected interpreter to fail, but it succeeded";
+        return "";
+    }
+
+    RuntimeError executeAndCaptureRuntimeError(const std::string& source) {
+        auto statements = parseSource(source).statements;
+
+        std::stringstream buffer{};
+        auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
+
+        Interpreter interpreter{std::move(statements), astSolver, ""};
+        try {
+            interpreter.interpret();
+        }
+        catch (const RuntimeError& err) {
+            std::cout.rdbuf(oldCout);
+            return err;
+        }
+        catch (...) {
+            std::cout.rdbuf(oldCout);
+            throw;
+        }
+
+        std::cout.rdbuf(oldCout);
+        ADD_FAILURE() << "Expected interpreter to throw RuntimeError, but it succeeded";
+        return RuntimeError{RuntimeError::Type::Undefined, {0u, {0u, 0u}, {0u, 0u}}, ""};
+    }
     
     void expectOutput(const std::string& source, const std::string& expectedOutput) {
         EXPECT_EQ(executeAndCaptureOutput(source), expectedOutput);
+    }
+
+    void expectFailure(const std::string& source, const std::string& expectedFailure) {
+        EXPECT_EQ(executeAndCaptureFailure(source), expectedFailure);
+    }
+
+    void expectRuntimeErrorType(const std::string& source, RuntimeError::Type expectedType) {
+        const auto err = executeAndCaptureRuntimeError(source);
+        EXPECT_EQ(err.type, expectedType);
+    }
+
+    void expectRuntimeError(const std::string& source, RuntimeError::Type expectedType, const std::string& expectedMsg) {
+        const auto err = executeAndCaptureRuntimeError(source);
+        EXPECT_EQ(err.type, expectedType);
+        EXPECT_EQ(err.msg, expectedMsg);
+    }
+
+    void expectRuntimeErrorMsgContains(const std::string& source, RuntimeError::Type expectedType, const std::string& needle) {
+        const auto err = executeAndCaptureRuntimeError(source);
+        EXPECT_EQ(err.type, expectedType);
+        EXPECT_NE(err.msg.find(needle), std::string::npos) << "Full message: " << err.msg;
     }
 };
 
@@ -851,6 +924,78 @@ TEST_F(InterpreterTests, FunctionCallWithNullArgumentPrintsGhosted) {
     )";
 
     expectOutput(source, "ghosted\n");
+}
+    TEST_F(InterpreterTests, Failure_PumpItOnNonVariableThrowsLogicRuntimeError) {
+        auto source = R"(
+            gig macho() {
+                pump_it 1...
+            }
+        )";
+
+        expectRuntimeError(source, RuntimeError::Type::Logic, "Can't pump_it into the void!");
+    }
+
+    TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
+        auto source = R"(
+            gig macho() {
+                perhaps (1) {
+                    yeet ghosted...
+                }
+            }
+        )";
+
+        expectRuntimeError(source, RuntimeError::Type::Value, "That check needs Bool vibes only");
+    }
+
+    TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
+        auto source = R"(
+            gig add(x, y) {
+                yeet x with y...
+            }
+
+            gig macho() {
+                add(1)...
+            }
+        )";
+
+        expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Argument count don't vibe");
+    }
+
+    TEST_F(InterpreterTests, Failure_CallingNonFunctionThrowsRuntimeError) {
+        auto source = R"(
+            gig macho() {
+                stash x about 1...
+                x()...
+            }
+        )";
+
+        expectRuntimeError(source, RuntimeError::Type::Undefined, "Call the dev bud");
+    }
+
+    TEST_F(InterpreterTests, Failure_DotIntoNonDotThrowsRuntimeError) {
+        auto source = R"(
+            gig macho() {
+                stash x about 1...
+                x.anything()...
+            }
+        )";
+
+        expectRuntimeError(source, RuntimeError::Type::Value, "Can't dot into that");
+    }
+
+
+TEST_F(InterpreterTests, FunctionCallWithNullArgumentWorksButMathFails) {
+    auto source = R"(
+        gig doSth(x) {
+            yeet 2 with x...
+        }
+
+        gig macho() {
+            doSth(ghosted)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Math, "Math is only mathing on numbers");
 }
 
 TEST_F(InterpreterTests, MultipleFunctionCalls) {
