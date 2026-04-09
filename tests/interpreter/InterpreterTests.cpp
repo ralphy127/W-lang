@@ -837,6 +837,22 @@ TEST_F(InterpreterTests, FunctionCallWithReturnValue) {
     expectOutput(source, "5\n");
 }
 
+TEST_F(InterpreterTests, FunctionCallWithNullArgumentPrintsGhosted) {
+    auto source = R"(
+        summon gossip...
+
+        gig printArg(x) {
+            gossip.spill_tea(x)...
+        }
+
+        gig macho() {
+            printArg(ghosted)...
+        }
+    )";
+
+    expectOutput(source, "ghosted\n");
+}
+
 TEST_F(InterpreterTests, MultipleFunctionCalls) {
     auto source = R"(
         summon gossip...

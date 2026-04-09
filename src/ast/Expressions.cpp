@@ -53,10 +53,6 @@ CallExpr::CallExpr(
     , _args{std::move(args)} {
 
     assert(_callee != nullptr);
-    // TODO why wouldn't you allow nulls?
-    for (const auto& arg : _args) {
-        assert(arg.get());
-    }
 }
 
 DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right, SourceRange srcRange)
