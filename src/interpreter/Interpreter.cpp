@@ -70,7 +70,15 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
     LOG_DEBUG << "Visiting VarDefinitionStmt";
 
     const auto& name = stmt.getName().getValue<std::string>();
-    auto value = stmt.getInitializer().accept(*this);
+    auto initializer = stmt.getInitializer();
+    if (not initializer.has_value()) {
+        // TODO test it? allow decl without right value?
+        throw RuntimeError{
+            RuntimeError::Type::Logic,
+            stmt.getSrcRange(),
+            std::format("Giving no value to {}, sadge", name)};
+    }
+    auto value = initializer->get().accept(*this);
     LOG_DEBUG << std::format("Defining variable {} with {} at scope depth {}",
         name, stringify(value), _scopeDepth);
     _currentEnvironment->defineVar(name, std::move(value));
@@ -139,8 +147,8 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
             return Null{};
         }
     }
-    if (stmt.hasElseBlock()) {
-        stmt.getElseBlock().accept(*this);
+    if (auto elseBlock = stmt.getElseBlock()) {
+        elseBlock->get().accept(*this);
     }
     return Null{};
 }
@@ -179,9 +187,9 @@ RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
 
 RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     LOG_DEBUG << "Visiting ReturnStmt";
-    if (stmt.hasValue()) {
+    if (auto returnValue = stmt.getValue()) {
         LOG_DEBUG << "Returning a value";
-        throw ReturnStatementException{stmt.getValue().accept(*this)};
+        throw ReturnStatementException{returnValue->get().accept(*this)};
     }
     
     LOG_DEBUG << "Returning default value";

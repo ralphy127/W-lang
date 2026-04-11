@@ -49,10 +49,10 @@ void AstPrinter::print(const std::vector<std::unique_ptr<Stmt>>& stmts) {
 
 RuntimeValue AstPrinter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) {
     printLine("VarDefinitionStmt " + tokenToString(stmt.getName()));
-    if (stmt.hasInitializer()) {
+    if (auto initializer = stmt.getInitializer()) {
         printKey("initializer");
         ++_indent;
-        stmt.getInitializer().accept(*this);
+        initializer->get().accept(*this);
         --_indent;
     }
     return Null{};
@@ -103,10 +103,10 @@ RuntimeValue AstPrinter::visitIfStmt(const IfStmt& stmt) {
         _indent -= 2;
     }
 
-    if (stmt.hasElseBlock()) {
+    if (auto elseBlock = stmt.getElseBlock()) {
         printKey("else");
         ++_indent;
-        stmt.getElseBlock().accept(*this);
+        elseBlock->get().accept(*this);
         --_indent;
     }
 
@@ -139,9 +139,9 @@ RuntimeValue AstPrinter::visitRepeatStmt(const RepeatStmt& stmt) {
 
 RuntimeValue AstPrinter::visitReturnStmt(const ReturnStmt& stmt) {
     printLine("ReturnStmt");
-    if (stmt.hasValue()) {
+    if (auto returnValue = stmt.getValue()) {
         ++_indent;
-        stmt.getValue().accept(*this);
+        returnValue->get().accept(*this);
         --_indent;
     }
     return Null{};

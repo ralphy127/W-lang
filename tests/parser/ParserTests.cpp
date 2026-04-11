@@ -142,14 +142,14 @@ struct ParserTests : public ::testing::Test {
 
     void expectVarDefBinOpLits(const std::string& varName, Token::Type opType, Token::Type litType, std::int32_t leftVal, std::int32_t rightVal) {
         const auto& varStmt = expectVarDef(0, varName);
-        const auto& binExpr = expectBinaryExpr(varStmt.getInitializer(), opType);
+        const auto& binExpr = expectBinaryExpr(varStmt.getInitializer()->get(), opType);
         expectLiteralValue<std::int32_t>(binExpr.getLeft(), litType, leftVal);
         expectLiteralValue<std::int32_t>(binExpr.getRight(), litType, rightVal);
     }
 
     void expectVarDefLogOpLits(const std::string& varName, Token::Type opType, Token::Type leftType, Token::Type rightType) {
         const auto& varStmt = expectVarDef(0, varName);
-        const auto& logExpr = expectLogicalExpr(varStmt.getInitializer(), opType);
+        const auto& logExpr = expectLogicalExpr(varStmt.getInitializer()->get(), opType);
         expectLiteral(logExpr.getLeft(), leftType);
         expectLiteral(logExpr.getRight(), rightType);
     }
@@ -244,7 +244,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithInt) {
     expectNumberOfStatements(1ull);
     
     const auto& varStmt = expectVarDef(0, "integer");
-    expectLiteralValue<std::int32_t>(varStmt.getInitializer(), Token::Type::Int, 1);
+    expectLiteralValue<std::int32_t>(varStmt.getInitializer()->get(), Token::Type::Int, 1);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithFloat) {
@@ -252,7 +252,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithFloat) {
     expectNumberOfStatements(1ull);
 
     const auto& varStmt = expectVarDef(0, "float");
-    expectLiteralValue<double>(varStmt.getInitializer(), Token::Type::Float, 1.0);
+    expectLiteralValue<double>(varStmt.getInitializer()->get(), Token::Type::Float, 1.0);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithTrue) {
@@ -260,7 +260,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithTrue) {
     expectNumberOfStatements(1ull);
     
     const auto& varStmt = expectVarDef(0, "truth");
-    expectLiteral(varStmt.getInitializer(), Token::Type::True);
+    expectLiteral(varStmt.getInitializer()->get(), Token::Type::True);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithFalse) {
@@ -268,7 +268,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithFalse) {
     expectNumberOfStatements(1ull);    
 
     const auto& varStmt = expectVarDef(0, "truth");
-    expectLiteral(varStmt.getInitializer(), Token::Type::False);
+    expectLiteral(varStmt.getInitializer()->get(), Token::Type::False);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithEqualityExpression) {
@@ -282,7 +282,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithPlainTrue) {
     expectNumberOfStatements(1ull);
     
     const auto& varStmt = expectVarDef(0, "true");
-    expectLiteral(varStmt.getInitializer(), Token::Type::True);
+    expectLiteral(varStmt.getInitializer()->get(), Token::Type::True);
 }
 
 TEST_F(ParserTests, Snapshot_PrintBoolVariable) {
@@ -312,7 +312,7 @@ TEST_F(ParserTests, Structural_SummonAndVectorPrintWithVariableElement) {
     expectNumberOfStatements(1ull);
 
     const auto& listVarStmt = expectVarDef(0, "list");
-    const auto& vectorExpr = expectCast<VectorExpr>(listVarStmt.getInitializer());
+    const auto& vectorExpr = expectCast<VectorExpr>(listVarStmt.getInitializer()->get());
     ASSERT_EQ(vectorExpr.getInitializers().size(), 3);
 
     expectLiteralValue<std::int32_t>(*vectorExpr.getInitializers()[0], Token::Type::Int, 11);
@@ -353,7 +353,7 @@ TEST_F(ParserTests, Structural_PrecedenceEqualityAndAddition) {
     
     const auto& varStmt = expectVarDef(0, "result");
     
-    const auto& equalityExpr = expectBinaryExpr(varStmt.getInitializer(), Token::Type::Equal);
+    const auto& equalityExpr = expectBinaryExpr(varStmt.getInitializer()->get(), Token::Type::Equal);
     const auto& additionExpr = expectBinaryExpr(equalityExpr.getLeft(), Token::Type::Plus);
     
     expectLiteralValue<std::int32_t>(additionExpr.getLeft(), Token::Type::Int, 2);
@@ -723,7 +723,7 @@ TEST_F(ParserTests, Structure_ComplexNestedLogicalCondition) {
     
     const auto* ifStmt = expectStmt<IfStmt>(0);
     EXPECT_TRUE(ifStmt->getElseIfClauses().empty());
-    EXPECT_FALSE(ifStmt->hasElseBlock());
+    EXPECT_FALSE(ifStmt->getElseBlock().has_value());
 
     const auto& cond0 = expectLogicalExpr(ifStmt->getCondition(), Token::Type::And);
 
@@ -755,7 +755,7 @@ TEST_F(ParserTests, Structure_ComplexNestedLogicalCondition) {
     ASSERT_EQ(thenBlock.getStatements().size(), 1);
     
     const auto& ret = expectReturn(thenBlock, 0);
-    expectLiteralValue<std::int32_t>(ret.getValue(), Token::Type::Int, 1);
+    expectLiteralValue<std::int32_t>(ret.getValue()->get(), Token::Type::Int, 1);
 }
 
 TEST_F(ParserTests, Snapshot_IgnoresSingleLineComments) {
@@ -803,7 +803,7 @@ TEST_F(ParserTests, Structural_ReturnWithPlusMinusNesting) {
     ASSERT_EQ(body.getStatements().size(), 1);
 
     const auto& ret = expectReturn(body, 0);
-    const auto& minus = expectBinaryExpr(ret.getValue(), Token::Type::Minus);
+    const auto& minus = expectBinaryExpr(ret.getValue()->get(), Token::Type::Minus);
     const auto& plus = expectBinaryExpr(minus.getLeft(), Token::Type::Plus);
 
     expectLiteralValue<std::int32_t>(plus.getLeft(), Token::Type::Int, 2);
@@ -845,7 +845,7 @@ TEST_F(ParserTests, Structural_ReturnWithMixedPlusMinusMultiplyDividePrecedence)
 
     const auto& ret = expectReturn(body, 0);
 
-    const auto& minus = expectBinaryExpr(ret.getValue(), Token::Type::Minus);
+    const auto& minus = expectBinaryExpr(ret.getValue()->get(), Token::Type::Minus);
     const auto& plus = expectBinaryExpr(minus.getLeft(), Token::Type::Plus);
     const auto& mul = expectBinaryExpr(plus.getRight(), Token::Type::Multiply);
     const auto& div = expectBinaryExpr(minus.getRight(), Token::Type::Divide);
@@ -974,7 +974,7 @@ TEST_F(ParserTests, Structural_FloatComparisonsInIfElseChain) {
 
     const auto* ifStmt = expectStmt<IfStmt>(1);
     ASSERT_EQ(ifStmt->getElseIfClauses().size(), 2);
-    ASSERT_TRUE(ifStmt->hasElseBlock());
+    ASSERT_TRUE(ifStmt->getElseBlock().has_value());
 
     auto assertFloatComparison = [&](const Expr& expr, Token::Type op, double rhs) {
         const auto& bin = expectBinaryExpr(expr, op);
@@ -990,7 +990,7 @@ TEST_F(ParserTests, Structural_FloatComparisonsInIfElseChain) {
     ASSERT_EQ(thenBlock.getStatements().size(), 1);
     
     const auto& thenRet = expectReturn(thenBlock, 0);
-    expectLiteral(thenRet.getValue(), Token::Type::Null);
+    expectLiteral(thenRet.getValue()->get(), Token::Type::Null);
 }
 
 TEST_F(ParserTests, Failure_MysteryStatement_OnUnexpectedToken) {

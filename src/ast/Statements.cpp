@@ -12,9 +12,8 @@ VarDefinitionStmt::VarDefinitionStmt(
     assert(_name.valueIs<std::string>());
 }
 
-const Expr& VarDefinitionStmt::getInitializer() const {
-    assert(_initializer.get());
-    return *_initializer;
+std::optional<std::reference_wrapper<const Expr>> VarDefinitionStmt::getInitializer() const {
+    return _initializer ? std::optional{std::cref(*_initializer)} : std::nullopt;
 }
 
 ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange srcRange)
@@ -69,9 +68,8 @@ const Stmt& IfStmt::getThenBlock() const {
     return *_thenBlock;
 }
 
-const Stmt& IfStmt::getElseBlock() const {
-    assert(_elseBlock.get());
-    return *_elseBlock;
+std::optional<std::reference_wrapper<const Stmt>> IfStmt::getElseBlock() const {
+    return _elseBlock ? std::optional{std::cref(*_elseBlock)} : std::nullopt;
 }
 
 LoopStmt::LoopStmt(std::unique_ptr<Stmt> body, SourceRange srcRange)
@@ -113,9 +111,8 @@ ReturnStmt::ReturnStmt(std::unique_ptr<Expr> value, SourceRange srcRange)
     , _value{std::move(value)} {
 }
 
-const Expr& ReturnStmt::getValue() const {
-    assert(_value.get());
-    return *_value;
+std::optional<std::reference_wrapper<const Expr>> ReturnStmt::getValue() const {
+    return _value ? std::optional{std::cref(*_value)} : std::nullopt;
 }
 
 FunctionStmt::FunctionStmt(

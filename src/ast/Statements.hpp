@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <optional>
+#include <functional>
 #include "AstNode.hpp"
 #include "Expressions.hpp"
 #include "token/Token.hpp"
@@ -19,8 +21,7 @@ public:
     explicit VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer, SourceRange);
 
     const Token& getName() const { return _name; }
-    bool hasInitializer() const { return _initializer != nullptr; }
-    const Expr& getInitializer() const;
+    std::optional<std::reference_wrapper<const Expr>> getInitializer() const;
     RuntimeValue accept(AstVisitor& v) const override { return v.visitVarDefinitionStmt(*this); }
 
 private:
@@ -70,8 +71,7 @@ public:
     const Expr& getCondition() const;
     const Stmt& getThenBlock() const;
     const std::vector<ElseIfClause>& getElseIfClauses() const { return _elseIfs; }
-    const Stmt& getElseBlock() const;
-    bool hasElseBlock() const { return _elseBlock != nullptr; }
+    std::optional<std::reference_wrapper<const Stmt>> getElseBlock() const;
     RuntimeValue accept(AstVisitor& v) const override { return v.visitIfStmt(*this); }
 
 private:
@@ -109,9 +109,7 @@ class ReturnStmt : public Stmt {
 public:
     explicit ReturnStmt(std::unique_ptr<Expr> value, SourceRange);
 
-    // TODO consider std::optional to avoid hasValue/getValue boilerplate, look at other examples
-    const Expr& getValue() const;
-    bool hasValue() const { return _value != nullptr; }
+    std::optional<std::reference_wrapper<const Expr>> getValue() const;
     RuntimeValue accept(AstVisitor& v) const override { return v.visitReturnStmt(*this); }
 
 private:

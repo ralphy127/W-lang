@@ -559,7 +559,6 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     return nullptr;
 }
 
-// TODO possible refactor of binary expressions parsing
 std::unique_ptr<Expr> Parser::parseEquality() {
     LOG_DEBUG << "parseEquality() called at token index: " << _current;
     auto left = parseComparison();
@@ -615,7 +614,6 @@ std::unique_ptr<Expr> Parser::parseTerm() {
     while (not parsedAll()) {
         const auto& token = getToken();
         const auto tokenType = token.getType();
-        // TODO after adding * and /: add parseFactor() function to resolve priorities
         if (tokenType == Token::Type::Plus or tokenType == Token::Type::Minus) {
             advance();
             auto right = parseFactor();
