@@ -454,21 +454,18 @@ RuntimeValue Interpreter::handleModuleCall(
 
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
-    // TODO do not force variable on the left, blocking e.g. gossip.eavesdrop().to_solid()...
-    const auto& leftName = dynamic_cast<const VariableExpr&>(
-        expr.getLeft()).getName().getValue<std::string>();
 
-    // TODO support nested dot expressions
-    auto var = _currentEnvironment->getVar(leftName);
+    const auto leftValue = expr.getLeft().accept(*this);
     const auto& rightName = expr.getRight().getValue<std::string>();
-    if (is<Module>(var)) {
-        return handleModuleCall(as<Module>(var), rightName, expr);
+
+    if (is<Module>(leftValue)) {
+        return handleModuleCall(as<Module>(leftValue), rightName, expr);
     }
-    if (is<Vector>(var)) {
-        return callVectorMethod(as<Vector>(var), rightName);
+    if (is<Vector>(leftValue)) {
+        return callVectorMethod(as<Vector>(leftValue), rightName);
     }
-    if (is<String>(var)) {
-        return callStringMethod(as<String>(var), rightName);
+    if (is<String>(leftValue)) {
+        return callStringMethod(as<String>(leftValue), rightName);
     }
 
     throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), "Can't dot into that"};
