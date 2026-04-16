@@ -280,19 +280,23 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     const auto& nameToken = consumeIdent(
         Token::Type::Ident,
         "Expected variable name after 'stash'");
+    const auto& name = nameToken.getValue<std::string>();
 
     std::unique_ptr<Expr> initializer{nullptr};
-    
     if (matchAndAdvanceIfNeeded(Token::Type::Assign)) {
+        LOG_DEBUG << "Parsing initializer for variable " << name;
         initializer = parseExpression();
     }
     else {
-        consume(Token::Type::Semi, "Missing 'about' in variable definition");
+        LOG_DEBUG << "Creating default initializer for variable " << name;
+        initializer = std::make_unique<LiteralExpr>(
+            Token{Token::Type::Null, nameToken.getFileId(), nameToken.getLine(), nameToken.getColumn()},
+            makeRange(nameToken, nameToken));
     }
 
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after variable definition");
     LOG_DEBUG << std::format(
-        "Successfully parsed variable definition for '{}'", nameToken.getValue<std::string>());
+        "Successfully parsed variable definition for '{}'", name);
     return std::make_unique<VarDefinitionStmt>(
         nameToken, std::move(initializer), makeRange(stashToken, semiToken));
 }

@@ -21,7 +21,7 @@ public:
     explicit VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer, SourceRange);
 
     const Token& getName() const { return _name; }
-    std::optional<std::reference_wrapper<const Expr>> getInitializer() const;
+    const Expr& getInitializer() const;
     RuntimeValue accept(AstVisitor& v) const override { return v.visitVarDefinitionStmt(*this); }
 
 private:

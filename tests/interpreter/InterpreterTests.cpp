@@ -143,6 +143,21 @@ TEST_F(InterpreterTests, MvpExecutesVariableStashAndScream) {
     expectOutput(source, "10\n");
 }
 
+TEST_F(InterpreterTests, DefaultVarDefinition_InitializesToNullAndCanBeReassigned) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash x...
+            gossip.spill_tea(x)...
+            x might_be 10...
+            gossip.spill_tea(x)...
+        }
+    )";
+
+    expectOutput(source, "ghosted\n10\n");
+}
+
 TEST_F(InterpreterTests, OutputsCorrectBooleanValues) {
     auto source = R"(
         summon gossip...

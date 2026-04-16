@@ -70,19 +70,10 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
     LOG_DEBUG << "Visiting VarDefinitionStmt";
 
     const auto& name = stmt.getName().getValue<std::string>();
-    auto initializer = stmt.getInitializer();
-    if (not initializer.has_value()) {
-        // TODO test it? allow decl without right value?
-        throw RuntimeError{
-            RuntimeError::Type::Logic,
-            stmt.getSrcRange(),
-            std::format("Giving no value to {}, sadge", name)};
-    }
-    auto value = initializer->get().accept(*this);
+    auto value = stmt.getInitializer().accept(*this);
     LOG_DEBUG << std::format("Defining variable {} with {} at scope depth {}",
         name, stringify(value), _scopeDepth);
     _currentEnvironment->defineVar(name, std::move(value));
-
     return Null{};
 }
 

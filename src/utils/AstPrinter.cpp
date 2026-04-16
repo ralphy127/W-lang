@@ -49,12 +49,10 @@ void AstPrinter::print(const std::vector<std::unique_ptr<Stmt>>& stmts) {
 
 RuntimeValue AstPrinter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) {
     printLine("VarDefinitionStmt " + tokenToString(stmt.getName()));
-    if (auto initializer = stmt.getInitializer()) {
-        printKey("initializer");
-        ++_indent;
-        initializer->get().accept(*this);
-        --_indent;
-    }
+    printKey("initializer");
+    ++_indent;
+    stmt.getInitializer().accept(*this);
+    --_indent;
     return Null{};
 }
 

@@ -9,11 +9,12 @@ VarDefinitionStmt::VarDefinitionStmt(
     , _name{std::move(name)}
     , _initializer{std::move(initializer)} {
     
+    assert(_initializer);
     assert(_name.valueIs<std::string>());
 }
 
-std::optional<std::reference_wrapper<const Expr>> VarDefinitionStmt::getInitializer() const {
-    return _initializer ? std::optional{std::cref(*_initializer)} : std::nullopt;
+const Expr& VarDefinitionStmt::getInitializer() const {
+    return *_initializer;
 }
 
 ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange srcRange)

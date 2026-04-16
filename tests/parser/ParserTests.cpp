@@ -142,14 +142,14 @@ struct ParserTests : public ::testing::Test {
 
     void expectVarDefBinOpLits(const std::string& varName, Token::Type opType, Token::Type litType, std::int32_t leftVal, std::int32_t rightVal) {
         const auto& varStmt = expectVarDef(0, varName);
-        const auto& binExpr = expectBinaryExpr(varStmt.getInitializer()->get(), opType);
+        const auto& binExpr = expectBinaryExpr(varStmt.getInitializer(), opType);
         expectLiteralValue<std::int32_t>(binExpr.getLeft(), litType, leftVal);
         expectLiteralValue<std::int32_t>(binExpr.getRight(), litType, rightVal);
     }
 
     void expectVarDefLogOpLits(const std::string& varName, Token::Type opType, Token::Type leftType, Token::Type rightType) {
         const auto& varStmt = expectVarDef(0, varName);
-        const auto& logExpr = expectLogicalExpr(varStmt.getInitializer()->get(), opType);
+        const auto& logExpr = expectLogicalExpr(varStmt.getInitializer(), opType);
         expectLiteral(logExpr.getLeft(), leftType);
         expectLiteral(logExpr.getRight(), rightType);
     }
@@ -244,7 +244,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithInt) {
     expectNumberOfStatements(1ull);
     
     const auto& varStmt = expectVarDef(0, "integer");
-    expectLiteralValue<std::int32_t>(varStmt.getInitializer()->get(), Token::Type::Int, 1);
+    expectLiteralValue<std::int32_t>(varStmt.getInitializer(), Token::Type::Int, 1);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithFloat) {
@@ -252,7 +252,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithFloat) {
     expectNumberOfStatements(1ull);
 
     const auto& varStmt = expectVarDef(0, "float");
-    expectLiteralValue<double>(varStmt.getInitializer()->get(), Token::Type::Float, 1.0);
+    expectLiteralValue<double>(varStmt.getInitializer(), Token::Type::Float, 1.0);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithTrue) {
@@ -260,7 +260,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithTrue) {
     expectNumberOfStatements(1ull);
     
     const auto& varStmt = expectVarDef(0, "truth");
-    expectLiteral(varStmt.getInitializer()->get(), Token::Type::True);
+    expectLiteral(varStmt.getInitializer(), Token::Type::True);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithFalse) {
@@ -268,7 +268,15 @@ TEST_F(ParserTests, Structural_VarDefinitionWithFalse) {
     expectNumberOfStatements(1ull);    
 
     const auto& varStmt = expectVarDef(0, "truth");
-    expectLiteral(varStmt.getInitializer()->get(), Token::Type::False);
+    expectLiteral(varStmt.getInitializer(), Token::Type::False);
+}
+
+TEST_F(ParserTests, Structural_VarDefinitionWithoutInitializer_UsesDefaultValue) {
+    parseOk("stash null...\n");
+    expectNumberOfStatements(1ull);
+
+    const auto& varStmt = expectVarDef(0, "null");
+    expectLiteral(varStmt.getInitializer(), Token::Type::Null);
 }
 
 TEST_F(ParserTests, Structural_VarDefinitionWithEqualityExpression) {
@@ -282,7 +290,7 @@ TEST_F(ParserTests, Structural_VarDefinitionWithPlainTrue) {
     expectNumberOfStatements(1ull);
     
     const auto& varStmt = expectVarDef(0, "true");
-    expectLiteral(varStmt.getInitializer()->get(), Token::Type::True);
+    expectLiteral(varStmt.getInitializer(), Token::Type::True);
 }
 
 TEST_F(ParserTests, Snapshot_PrintBoolVariable) {
@@ -312,7 +320,7 @@ TEST_F(ParserTests, Structural_SummonAndVectorPrintWithVariableElement) {
     expectNumberOfStatements(1ull);
 
     const auto& listVarStmt = expectVarDef(0, "list");
-    const auto& vectorExpr = expectCast<VectorExpr>(listVarStmt.getInitializer()->get());
+    const auto& vectorExpr = expectCast<VectorExpr>(listVarStmt.getInitializer());
     ASSERT_EQ(vectorExpr.getInitializers().size(), 3);
 
     expectLiteralValue<std::int32_t>(*vectorExpr.getInitializers()[0], Token::Type::Int, 11);
@@ -353,7 +361,7 @@ TEST_F(ParserTests, Structural_PrecedenceEqualityAndAddition) {
     
     const auto& varStmt = expectVarDef(0, "result");
     
-    const auto& equalityExpr = expectBinaryExpr(varStmt.getInitializer()->get(), Token::Type::Equal);
+    const auto& equalityExpr = expectBinaryExpr(varStmt.getInitializer(), Token::Type::Equal);
     const auto& additionExpr = expectBinaryExpr(equalityExpr.getLeft(), Token::Type::Plus);
     
     expectLiteralValue<std::int32_t>(additionExpr.getLeft(), Token::Type::Int, 2);
@@ -1038,11 +1046,6 @@ TEST_F(ParserTests, Failure_VarDefinition_RequiresNameAfterStash) {
     expectHasErrorContaining(result, "Expected variable name after 'stash'");
 }
 
-TEST_F(ParserTests, Failure_VarDefinition_MissingAbout) {
-    const auto result = parse("stash x 1...");
-    expectHasErrorContaining(result, "Missing 'about' in variable definition");
-}
-
 TEST_F(ParserTests, Failure_VarDefinition_RequiresEllipsisAfterDefinition) {
     const auto result = parse("stash x about 1 stash y about 2...");
     expectHasErrorContaining(result, "Expected '...' after variable definition");
@@ -1172,14 +1175,6 @@ TEST_F(ParserTests, Failure_ParserInvariant_IdentTokenRequiresStringValueInPrima
     expectHasErrorContaining(result, "This is the moment to start yapping");
 }
 
-TEST_F(ParserTests, Failure_MultipleErrors_TwoVarDefsMissingAbout) {
-    const auto result = parse("stash x 1...\nstash y 2...");
-    expectErrorMessagesEq(result, {
-        "Missing 'about' in variable definition",
-        "Missing 'about' in variable definition",
-    });
-}
-
 TEST_F(ParserTests, Failure_MultipleErrors_TwoBadTerms) {
     const auto result = parse("stash x about 1 with ...\nstash y about 2 without ...");
     expectErrorMessagesEq(result, {
@@ -1196,7 +1191,7 @@ TEST_F(ParserTests, Failure_MultipleErrors_MixedIfAndVar) {
 
     expectErrorMessagesEq(result, {
         "Expected '(' after 'perhaps'",
-        "Missing 'about' in variable definition",
+        "Expected '...' after variable definition",
     });
 }
 
