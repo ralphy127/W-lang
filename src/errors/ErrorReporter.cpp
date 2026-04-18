@@ -79,14 +79,14 @@ std::string runtimeErrorTypeToString(RuntimeError::Type type) {
     switch (type) {
         case RuntimeError::Type::Undefined:
             return "Mystery";
-        case RuntimeError::Type::Value:
-            return "Nope";
         case RuntimeError::Type::Logic:
             return "BrainLag";
         case RuntimeError::Type::Math:
             return "MathOops";
         case RuntimeError::Type::OutOfBounds:
             return "OuttaBounds";
+        case RuntimeError::Type::TypeMismatch:
+            return "Nope";
     }
     return "Unknown";
 }

@@ -960,7 +960,7 @@ TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::Value, "That check needs Bool vibes only");
+    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated vibe instead of solid");
 }
 
 TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
@@ -985,7 +985,7 @@ TEST_F(InterpreterTests, Failure_CallingNonFunctionThrowsRuntimeError) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::Undefined, "Call the dev bud");
+    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated gig instead of solid");
 }
 
 TEST_F(InterpreterTests, Failure_DotIntoNonDotThrowsRuntimeError) {
@@ -996,7 +996,7 @@ TEST_F(InterpreterTests, Failure_DotIntoNonDotThrowsRuntimeError) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::Value, "Can't dot into that");
+    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Can't dot into that");
 }
 
 TEST_F(InterpreterTests, Failure_TypeDoesNotMatchTriggersCppException) {
@@ -1009,7 +1009,7 @@ TEST_F(InterpreterTests, Failure_TypeDoesNotMatchTriggersCppException) {
 
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::Undefined, "bad_variant_access");
+    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated solid instead of yap");
 }
 
 TEST_F(InterpreterTests, FunctionCallWithNullArgumentWorksButMathFails) {

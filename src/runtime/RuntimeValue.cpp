@@ -36,7 +36,7 @@ std::string stringify(const RuntimeValue& value) {
         [](Bool boolean) { return boolean ? std::string{"totally"} : std::string{"nah"}; },
         [](Float f) { return stringifyFloat(f); },
         [](const Vector& vector) { return stringifyVector(vector); },
-        [](const Function&) { return std::string{"function"}; },
-        [](const Module&) { return std::string{"module"}; }
+        [](const Function&) { return std::string{"gig"}; },
+        [](const Module&) { return std::string{"hub"}; }
     }, value);
 }

@@ -1,8 +1,6 @@
 #include "Gossip.hpp"
 #include <iostream>
 
-// TODO error handling
-
 namespace modules {
 namespace gossip {
 

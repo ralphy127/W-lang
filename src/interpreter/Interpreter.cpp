@@ -53,10 +53,17 @@ void Interpreter::interpret() {
 
     LOG_DEBUG << "Looking for entry point 'macho'";
     try {
-        auto mainFunc = tryAs<Function>(_currentEnvironment->getVar("macho"));
+        const auto mainFunc = _currentEnvironment->getVar("macho");
+        if (not is<Function>(mainFunc)) {
+            throw RuntimeError{
+                RuntimeError::Type::TypeMismatch,
+                _currentRange,
+                "macho is not a gig"};
+        }
         LOG_DEBUG << "Executing 'macho' function";
-        mainFunc(std::vector<RuntimeValue>{});
+        asUnsafe<Function>(mainFunc)(std::vector<RuntimeValue>{});
     }
+    // TODO handle main func return value
     catch (ReturnStatementException) {}
     catch (const std::exception& e) {
         LOG_ERROR << "[FATAL] Caught unexpected error: " << e.what();
@@ -65,7 +72,11 @@ void Interpreter::interpret() {
     LOG_DEBUG << "Interpretation completed";
 }
 
-RuntimeValue Interpreter::evaluate(const AstNode& node) {
+EvalProxy Interpreter::evaluate(const AstNode& node) {
+    return EvalProxy{evaluateImpl(node), node.getSrcRange()};
+}
+
+RuntimeValue Interpreter::evaluateImpl(const AstNode& node) {
     auto previousRange = _currentRange; 
     _currentRange = node.getSrcRange(); 
 
@@ -78,7 +89,7 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
     LOG_DEBUG << "Visiting VarDefinitionStmt";
 
     const auto& name = stmt.getName().getValue<std::string>();
-    auto value = evaluate(stmt.getInitializer());
+    RuntimeValue value = evaluate(stmt.getInitializer());
     LOG_DEBUG << std::format("Defining variable {} with {} at scope depth {}",
         name, stringify(value), _scopeDepth);
     _currentEnvironment->defineVar(name, std::move(value));
@@ -89,7 +100,7 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
     LOG_DEBUG << "Visiting ReassignStmt";
 
     const auto& name = stmt.getName().getValue<std::string>();
-    auto newValue = evaluate(stmt.getValue());
+    RuntimeValue newValue = evaluate(stmt.getValue());
     _currentEnvironment->reassignVar(name, std::move(newValue));
 
     LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
@@ -123,25 +134,14 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
 
 RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     LOG_DEBUG << "Visiting IfStmt";
-    const auto condition = evaluate(stmt.getCondition());
-    if (not is<Bool>(condition)) {
-        throw RuntimeError{
-            RuntimeError::Type::Value,
-            stmt.getCondition().getSrcRange(),
-            "That check needs Bool vibes only"};
-    }
-    if (as<Bool>(condition)) {
+    const auto condition = evaluate(stmt.getCondition()).as<Bool>();
+    if (condition) {
         evaluate(stmt.getThenBlock());
         return Null{};
     }
     for (const auto& elseIfClause : stmt.getElseIfClauses()) {
-        const auto elseIfCondition = evaluate(*elseIfClause.condition);
-        if (not is<Bool>(elseIfCondition)) {
-            throw RuntimeError{RuntimeError::Type::Value,
-                elseIfClause.condition->getSrcRange(),
-                "That check needs Bool vibes only"};
-        }
-        if (as<Bool>(elseIfCondition)) {
+        const auto elseIfCondition = evaluate(*elseIfClause.condition).as<Bool>();
+        if (elseIfCondition) {
             evaluate(*elseIfClause.body);
             return Null{};
         }
@@ -169,8 +169,7 @@ RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
 
 RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
     LOG_DEBUG << "Visiting RepeatStmt";
-    // TODO casting to int / error handling
-    const auto count = std::get<std::int32_t>(evaluate(stmt.getCount()));
+    const auto count = evaluate(stmt.getCount()).as<Int>();
     const auto& body = stmt.getBody();
     for (std::int32_t i{0}; i < count; ++i) {
         try {
@@ -188,7 +187,8 @@ RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     LOG_DEBUG << "Visiting ReturnStmt";
     if (auto returnValue = stmt.getValue()) {
         LOG_DEBUG << "Returning a value";
-        throw ReturnStatementException{evaluate(returnValue->get())};
+        RuntimeValue val = evaluate(returnValue->get());
+        throw ReturnStatementException{val};
     }
     
     LOG_DEBUG << "Returning default value";
@@ -334,9 +334,9 @@ RuntimeValue Interpreter::visitVariableExpr(const VariableExpr& expr) {
 
 RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
     LOG_DEBUG << "Visiting BinaryExpr";
-    const auto& left = evaluate(expr.getLeft());
+    const RuntimeValue& left = evaluate(expr.getLeft());
     const auto& op = expr.getOperator().getType();
-    const auto& right = evaluate(expr.getRight());
+    const RuntimeValue& right = evaluate(expr.getRight());
 
     try {
         switch (op) {
@@ -391,9 +391,10 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     LOG_DEBUG << "Visiting UnaryExpr";
     if (expr.getOperator().getType() == Token::Type::Incr) {
         // TODO might make some problems with other types / block to int only
+        // TODO remove dynamic_cast
         if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getRight())) {
             const auto& name = varExpr->getName().getValue<std::string>();
-            auto oldValue = std::get<std::int32_t>(evaluate(*varExpr));
+            auto oldValue = evaluate(*varExpr).as<Int>();
             LOG_DEBUG << std::format(
                 "Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
             _currentEnvironment->reassignVar(name, oldValue + 1);
@@ -413,14 +414,8 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
 
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Visiting CallExpr";
-    auto calleeValue = evaluate(expr.getCallee());
-
-    if (not is<Function>(calleeValue)) {
-        // TODO investigate a failure scenario
-        throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), "Call the dev bud"};
-    }
-    LOG_DEBUG << "Executing Function";
-            
+    auto function = evaluate(expr.getCallee()).as<Function>();
+        
     const auto& callArgs = expr.getArgs();
     std::vector<RuntimeValue> evaluatedArgs{};
     evaluatedArgs.reserve(callArgs.size());
@@ -431,7 +426,6 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
 
     LOG_DEBUG << std::format("Successfully valuated {} parameters", evaluatedArgs.size());
 
-    const auto& function = as<Function>(calleeValue);
     return function(evaluatedArgs);
 }
 
@@ -443,9 +437,9 @@ RuntimeValue Interpreter::handleModuleCall(
     auto it = mod->find(rightName);
     if (it == mod->end()) {
         throw RuntimeError{
-            RuntimeError::Type::Value,
+            RuntimeError::Type::TypeMismatch,
             expr.getSrcRange(),
-            std::format("Module ain't got '{}'", rightName)};
+            std::format("Hub ain't got '{}'", rightName)};
     }
 
     return it->second;
@@ -454,20 +448,28 @@ RuntimeValue Interpreter::handleModuleCall(
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
 
-    const auto leftValue = evaluate(expr.getLeft());
+    const RuntimeValue leftValue = evaluate(expr.getLeft());
     const auto& rightName = expr.getRight().getValue<std::string>();
 
-    if (is<Module>(leftValue)) {
-        return handleModuleCall(as<Module>(leftValue), rightName, expr);
+    try {
+        if (is<Module>(leftValue)) {
+            return handleModuleCall(asUnsafe<Module>(leftValue), rightName, expr);
+        }
+        if (is<Vector>(leftValue)) {
+            return callVectorMethod(asUnsafe<Vector>(leftValue), rightName);
+        }
+        if (is<String>(leftValue)) {
+            return callStringMethod(asUnsafe<String>(leftValue), rightName);
+        }
     }
-    if (is<Vector>(leftValue)) {
-        return callVectorMethod(as<Vector>(leftValue), rightName);
+    catch (const NativeError& e) {
+        throw RuntimeError{e.type, _currentRange, e.what()};
     }
-    if (is<String>(leftValue)) {
-        return callStringMethod(as<String>(leftValue), rightName);
+    catch(...) {
+        throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, "Unexpected crash, sorry"};
     }
 
-    throw RuntimeError{RuntimeError::Type::Value, expr.getSrcRange(), "Can't dot into that"};
+    throw RuntimeError{RuntimeError::Type::TypeMismatch, expr.getSrcRange(), "Can't dot into that"};
 }
 
 RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
@@ -482,14 +484,14 @@ RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
     const auto vectorSize = initializers.size();
     vector->data.reserve(vectorSize);
 
-    auto firstElement = evaluate(*initializers[0]);
+    RuntimeValue firstElement = evaluate(*initializers[0]);
     vector->typeId = firstElement.index();
 
     for (size_t i{0ull}; i < vectorSize; ++i) {
-        auto nextValue = evaluate(*initializers[i]);
+        RuntimeValue nextValue = evaluate(*initializers[i]);
         if (nextValue.index() != vector->typeId) {
             throw RuntimeError{
-                RuntimeError::Type::Value,
+                RuntimeError::Type::TypeMismatch,
                 expr.getSrcRange(),
                 "Lineup got mixed vibes - all elements must be the same type"};
         }
@@ -503,25 +505,21 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
     LOG_DEBUG << "Visiting LogicalExpr";
 
     const auto op = expr.getOperator().getType();
-    const auto leftResult = evaluate(expr.getLeft());
-    const auto leftBool = tryAs<Bool>(leftResult);
+    const auto leftBool = evaluate(expr.getLeft()).as<Bool>();
     if (op == Token::Type::Or) {
         if (leftBool) {
             return Bool{true};
         }
-        const auto rightResult = evaluate(expr.getRight());
-        return tryAs<Bool>(rightResult);
+        return evaluate(expr.getRight()).as<Bool>();
     }
 
     if (op == Token::Type::And) {
         if (not leftBool) {
             return Bool{false};
         }
-        const auto rightResult = evaluate(expr.getRight());
-        return tryAs<Bool>(rightResult);
+        return evaluate(expr.getRight()).as<Bool>();
     }
 
-    // TODO investigate how parser would allow an unknown logical operator here
     throw RuntimeError{
         RuntimeError::Type::Undefined,
         expr.getSrcRange(),

@@ -5,6 +5,7 @@
 #include "ast/AstVisitor.hpp"
 #include "ast/Statements.hpp"
 #include "runtime/Environment.hpp"
+#include "EvalProxy.hpp"
 
 struct ParserError;
 using AstResolver = std::function<std::vector<std::unique_ptr<Stmt>>(const std::string&)>;
@@ -40,7 +41,8 @@ public:
     RuntimeValue visitLogicalExpr(const LogicalExpr&) override;
     
 private:
-    RuntimeValue evaluate(const AstNode&);
+    EvalProxy evaluate(const AstNode&);
+    RuntimeValue evaluateImpl(const AstNode&);
     RuntimeValue handleModuleCall(const Module&, const std::string& rightName, const DotExpr& expr);
     
     const std::vector<std::unique_ptr<Stmt>> _statements;

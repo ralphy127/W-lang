@@ -6,8 +6,10 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <format>
 #include "native_types/Vector.hpp"
 #include "native_types/String.hpp"
+#include "RuntimeErrors.hpp"
 
 struct RuntimeValue;
 
@@ -30,6 +32,34 @@ using RuntimeValueBase = std::variant<
 struct RuntimeValue : RuntimeValueBase {
     using RuntimeValueBase::variant;
 };
+
+namespace {
+
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+template <typename T>
+constexpr std::string_view typeName() {
+    using DecayedT = std::decay_t<T>;
+
+    if constexpr (std::is_same_v<DecayedT, Null>) return "ghosted";
+    else if constexpr (std::is_same_v<DecayedT, String>) return "yap";
+    else if constexpr (std::is_same_v<DecayedT, Int>) return "solid";
+    else if constexpr (std::is_same_v<DecayedT, Bool>) return "vibe";
+    else if constexpr (std::is_same_v<DecayedT, Float>) return "change";
+    else if constexpr (std::is_same_v<DecayedT, Vector>) return "lineup";
+    else if constexpr (std::is_same_v<DecayedT, Function>) return "gig";
+    else if constexpr (std::is_same_v<DecayedT, Module>) return "hub";
+    else return "unknown";
+}
+
+inline std::string typeName(const RuntimeValueBase& value) {
+    return std::visit([](const auto& v) {
+        return std::string{typeName<decltype(v)>()};
+    }, value);
+}
+
+}
 
 inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
     // TODO error handling
@@ -79,9 +109,6 @@ inline bool operator>(const RuntimeValue& lhs, const RuntimeValue& rhs)  { retur
 inline bool operator<=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return !(rhs < lhs); }
 inline bool operator>=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return !(lhs < rhs); }
 
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
 std::string stringify(const RuntimeValue& value);
 
 template<typename T>
@@ -90,29 +117,21 @@ bool is(const RuntimeValueBase& v) {
 }
 
 template<typename T>
-T& as(RuntimeValueBase& v) {
+const T& as(const RuntimeValueBase& v, const SourceRange& srcRange) {
+    if (not is<T>(v)) {
+        throw RuntimeError{
+            RuntimeError::Type::TypeMismatch,
+            srcRange,
+            std::format("Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(v))};
+    }
     return std::get<T>(v);
 }
 
 template<typename T>
-const T& as(const RuntimeValueBase& v) {
+const T& asUnsafe(const RuntimeValue& v) {
+    if (not is<T>(v)) {
+        throw std::runtime_error{std::format(
+            "Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(v))};
+    }
     return std::get<T>(v);
-}
-
-template<typename T>
-T& tryAs(RuntimeValueBase& v) {
-    if (not is<T>(v)) {
-        // TODO TypeError
-        throw std::runtime_error{"Type error"};
-    }
-    return as<T>(v);
-}
-
-template<typename T>
-const T& tryAs(const RuntimeValueBase& v) {
-    if (not is<T>(v)) {
-        // TODO TypeError
-        throw std::runtime_error{"Type error"};
-    }
-    return as<T>(v);
 }

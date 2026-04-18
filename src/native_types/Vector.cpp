@@ -1,40 +1,45 @@
 #include "Vector.hpp"
-#include <format>
 #include "runtime/RuntimeValue.hpp"
 #include "utils/Logging.hpp"
 
+//! TODO spice up user errors - whole repo
+// TODO test methods and failures
+
 namespace {
     size_t toIndex(const RuntimeValue& arg) {
-        const auto& i = tryAs<Int>(arg);
+        const auto& i = asUnsafe<Int>(arg);
 
         if (i <= 0) {
-            throw std::runtime_error{"Index must be >= 1"};
+            throw NativeError{
+                RuntimeError::Type::OutOfBounds,
+                "Lineup place must be bigger than 1 buddy"};
         }
 
         return static_cast<size_t>(i - 1);
     }
 
-    // TODO error handling - global problem
-
     void expectArgsSize(const std::vector<RuntimeValue>& args, size_t expected) {
         if (args.size() != expected) {
-            throw std::runtime_error{
+            throw NativeError{
+                RuntimeError::Type::OutOfBounds, 
                 std::format("Expected {} args, got {}", expected, args.size())};
         }
     }
 
     void expectInBounds(const Vector& vector, size_t index) {
         if (index >= vector->data.size()) {
-            throw std::runtime_error{
-                std::format("Index {} out of bounds (size = {})",
-                            index, vector->data.size())
+            throw NativeError{
+                RuntimeError::Type::OutOfBounds, 
+                std::format("Lineup got only {} places, you wanted {}",
+                            vector->data.size(), index)
             };
         }
     }
 
     void expectNotEmpty(const Vector& vector) {
         if (vector->data.empty()) {
-            throw std::runtime_error{"Vector is empty"};
+            throw NativeError{
+                RuntimeError::Type::Logic, "Lineup is empty"};
         }
     }
 
@@ -46,8 +51,8 @@ namespace {
             return;
         }
         if (vector->typeId != value.index()) {
-            // TODO some ValueError
-            throw std::runtime_error{"Wrong type"};
+            throw NativeError{
+                RuntimeError::Type::TypeMismatch, "Vibes don't match"};
         }
     }
 }
@@ -138,5 +143,7 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
         }};
     }
 
-    throw std::runtime_error{std::format("Vector does not have {} method", name)};
+    throw NativeError{
+        RuntimeError::Type::Logic,
+        std::string{"Lineup cannot do {}"} +  name};
 }

@@ -115,9 +115,9 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Null: return "ghosted";
         case Token::Type::True: return "totally";
         case Token::Type::False: return "nah";
-        case Token::Type::Int: return "Solid";
-        case Token::Type::Float: return "Change";
-        case Token::Type::String: return "Yap";
+        case Token::Type::Int: return "solid";
+        case Token::Type::Float: return "change";
+        case Token::Type::String: return "yap";
         case Token::Type::LParen: return "(";
         case Token::Type::RParen: return ")";
         case Token::Type::LBrace: return "{";
