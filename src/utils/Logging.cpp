@@ -18,9 +18,27 @@ public:
     }
 
 private:
-    LogFileHandler() = default;
+        LogFileHandler() {
+        std::filesystem::path p = std::filesystem::current_path();
+        
+        bool found{false};
+        for (int i = 0; i < 3; ++i) {
+            if (std::filesystem::exists(p / "build")) {
+                p /= "build";
+                found = true;
+                break;
+            }
+            if (p.has_parent_path()) p = p.parent_path();
+        }
+        
+        if (not found) {
+            throw std::logic_error{"File logging error: build folder not found"};
+        }
+        _file.open(p / "logs.txt", std::ios::out | std::ios::trunc);
+        
+    };
 
-    std::ofstream _file{"./logs.txt", std::ios::app};
+    std::ofstream _file{};
 };
 }
 

@@ -13,15 +13,6 @@ ParserResult Parser::parse() {
     std::vector<std::unique_ptr<Stmt>> statements;
     std::vector<ParserError> errors;
 
-    const auto stringifyAllTokens = [&tokens = _tokens, tokensCount]() -> std::string {
-        std::string result{"Tokens to parse: \n"};
-        for (int i{0}; i < tokensCount; ++i) {
-            result += std::format("{} : {}\n", i, toString(tokens[i].getType()));
-        }
-        return result;
-    };
-    LOG_DEBUG << stringifyAllTokens();
-
     while (not parsedAll()) {
         try {
             if (auto statement = parseDefinition()) {
