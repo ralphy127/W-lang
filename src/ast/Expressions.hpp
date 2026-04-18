@@ -11,7 +11,6 @@
 class Expr : public AstNode {
 public:
     Expr(SourceRange srcRange) : AstNode{srcRange} {}
-    virtual RuntimeValue accept(AstVisitor&) const = 0;
 };
 
 class LiteralExpr : public Expr {

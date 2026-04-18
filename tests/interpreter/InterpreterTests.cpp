@@ -940,64 +940,77 @@ TEST_F(InterpreterTests, FunctionCallWithNullArgumentPrintsGhosted) {
 
     expectOutput(source, "ghosted\n");
 }
-    TEST_F(InterpreterTests, Failure_PumpItOnNonVariableThrowsLogicRuntimeError) {
-        auto source = R"(
-            gig macho() {
-                pump_it 1...
+
+TEST_F(InterpreterTests, Failure_PumpItOnNonVariableThrowsLogicRuntimeError) {
+    auto source = R"(
+        gig macho() {
+            pump_it 1...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Logic, "Can't pump_it into the void!");
+}
+
+TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
+    auto source = R"(
+        gig macho() {
+            perhaps (1) {
+                yeet ghosted...
             }
-        )";
+        }
+    )";
 
-        expectRuntimeError(source, RuntimeError::Type::Logic, "Can't pump_it into the void!");
-    }
+    expectRuntimeError(source, RuntimeError::Type::Value, "That check needs Bool vibes only");
+}
 
-    TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
-        auto source = R"(
-            gig macho() {
-                perhaps (1) {
-                    yeet ghosted...
-                }
+TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
+    auto source = R"(
+        gig add(x, y) {
+            yeet x with y...
+        }
+
+        gig macho() {
+            add(1)...
+        }
+    )";
+
+    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Argument count don't vibe");
+}
+
+TEST_F(InterpreterTests, Failure_CallingNonFunctionThrowsRuntimeError) {
+    auto source = R"(
+        gig macho() {
+            stash x about 1...
+            x()...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Undefined, "Call the dev bud");
+}
+
+TEST_F(InterpreterTests, Failure_DotIntoNonDotThrowsRuntimeError) {
+    auto source = R"(
+        gig macho() {
+            stash x about 1...
+            x.anything()...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Value, "Can't dot into that");
+}
+
+TEST_F(InterpreterTests, Failure_TypeDoesNotMatchTriggersCppException) {
+    auto source = R"(
+        gig macho() {
+            spin_around ("not_an_int") {
+                yeet ghosted...
             }
-        )";
+        }
 
-        expectRuntimeError(source, RuntimeError::Type::Value, "That check needs Bool vibes only");
-    }
+    )";
 
-    TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
-        auto source = R"(
-            gig add(x, y) {
-                yeet x with y...
-            }
-
-            gig macho() {
-                add(1)...
-            }
-        )";
-
-        expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Argument count don't vibe");
-    }
-
-    TEST_F(InterpreterTests, Failure_CallingNonFunctionThrowsRuntimeError) {
-        auto source = R"(
-            gig macho() {
-                stash x about 1...
-                x()...
-            }
-        )";
-
-        expectRuntimeError(source, RuntimeError::Type::Undefined, "Call the dev bud");
-    }
-
-    TEST_F(InterpreterTests, Failure_DotIntoNonDotThrowsRuntimeError) {
-        auto source = R"(
-            gig macho() {
-                stash x about 1...
-                x.anything()...
-            }
-        )";
-
-        expectRuntimeError(source, RuntimeError::Type::Value, "Can't dot into that");
-    }
-
+    expectRuntimeError(source, RuntimeError::Type::Undefined, "bad_variant_access");
+}
 
 TEST_F(InterpreterTests, FunctionCallWithNullArgumentWorksButMathFails) {
     auto source = R"(

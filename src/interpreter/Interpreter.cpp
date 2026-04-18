@@ -48,7 +48,7 @@ Interpreter::Interpreter(
 void Interpreter::interpret() {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());
     for (const auto& stmt : _statements) {
-        stmt->accept(*this);
+        evaluate(*stmt);
     }
 
     LOG_DEBUG << "Looking for entry point 'macho'";
@@ -60,17 +60,25 @@ void Interpreter::interpret() {
     catch (ReturnStatementException) {}
     catch (const std::exception& e) {
         LOG_ERROR << "[FATAL] Caught unexpected error: " << e.what();
-        // TODO somehow get range and fileid
-        throw RuntimeError{RuntimeError::Type::Undefined, {0u, {0u, 0u}, {0u, 0u}}, e.what()};
+        throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, e.what()};
     }
     LOG_DEBUG << "Interpretation completed";
+}
+
+RuntimeValue Interpreter::evaluate(const AstNode& node) {
+    auto previousRange = _currentRange; 
+    _currentRange = node.getSrcRange(); 
+
+    RuntimeValue result = node.accept(*this); 
+    _currentRange = previousRange; 
+    return result;
 }
 
 RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) {
     LOG_DEBUG << "Visiting VarDefinitionStmt";
 
     const auto& name = stmt.getName().getValue<std::string>();
-    auto value = stmt.getInitializer().accept(*this);
+    auto value = evaluate(stmt.getInitializer());
     LOG_DEBUG << std::format("Defining variable {} with {} at scope depth {}",
         name, stringify(value), _scopeDepth);
     _currentEnvironment->defineVar(name, std::move(value));
@@ -81,7 +89,7 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
     LOG_DEBUG << "Visiting ReassignStmt";
 
     const auto& name = stmt.getName().getValue<std::string>();
-    auto newValue = stmt.getValue().accept(*this);
+    auto newValue = evaluate(stmt.getValue());
     _currentEnvironment->reassignVar(name, std::move(newValue));
 
     LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
@@ -99,7 +107,7 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
 
     try {
         for (const auto& innerStmt : stmt.getStatements()) {
-            innerStmt->accept(*this);
+            evaluate(*innerStmt);
         }
     }
     catch (const std::exception& e) {
@@ -115,7 +123,7 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
 
 RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
     LOG_DEBUG << "Visiting IfStmt";
-    const auto condition = stmt.getCondition().accept(*this);
+    const auto condition = evaluate(stmt.getCondition());
     if (not is<Bool>(condition)) {
         throw RuntimeError{
             RuntimeError::Type::Value,
@@ -123,23 +131,23 @@ RuntimeValue Interpreter::visitIfStmt(const IfStmt& stmt) {
             "That check needs Bool vibes only"};
     }
     if (as<Bool>(condition)) {
-        stmt.getThenBlock().accept(*this);
+        evaluate(stmt.getThenBlock());
         return Null{};
     }
     for (const auto& elseIfClause : stmt.getElseIfClauses()) {
-        const auto elseIfCondition = elseIfClause.condition->accept(*this);
+        const auto elseIfCondition = evaluate(*elseIfClause.condition);
         if (not is<Bool>(elseIfCondition)) {
             throw RuntimeError{RuntimeError::Type::Value,
                 elseIfClause.condition->getSrcRange(),
                 "That check needs Bool vibes only"};
         }
         if (as<Bool>(elseIfCondition)) {
-            elseIfClause.body->accept(*this);
+            evaluate(*elseIfClause.body);
             return Null{};
         }
     }
     if (auto elseBlock = stmt.getElseBlock()) {
-        elseBlock->get().accept(*this);
+        evaluate(elseBlock->get());
     }
     return Null{};
 }
@@ -149,7 +157,7 @@ RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
     const auto& body = stmt.getBody();
     while (true) {
         try {
-            body.accept(*this);
+            evaluate(body);
         }
         catch (BreakStatementException) {
             LOG_DEBUG << "Caught break exception";
@@ -162,11 +170,11 @@ RuntimeValue Interpreter::visitLoopStmt(const LoopStmt& stmt) {
 RuntimeValue Interpreter::visitRepeatStmt(const RepeatStmt& stmt) {
     LOG_DEBUG << "Visiting RepeatStmt";
     // TODO casting to int / error handling
-    const auto count = std::get<std::int32_t>(stmt.getCount().accept(*this));
+    const auto count = std::get<std::int32_t>(evaluate(stmt.getCount()));
     const auto& body = stmt.getBody();
     for (std::int32_t i{0}; i < count; ++i) {
         try {
-            body.accept(*this);
+            evaluate(body);
         }
         catch (BreakStatementException) {
             LOG_DEBUG << "Caught break exception";
@@ -180,7 +188,7 @@ RuntimeValue Interpreter::visitReturnStmt(const ReturnStmt& stmt) {
     LOG_DEBUG << "Visiting ReturnStmt";
     if (auto returnValue = stmt.getValue()) {
         LOG_DEBUG << "Returning a value";
-        throw ReturnStatementException{returnValue->get().accept(*this)};
+        throw ReturnStatementException{evaluate(returnValue->get())};
     }
     
     LOG_DEBUG << "Returning default value";
@@ -220,7 +228,7 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
         _currentEnvironment = localEnvironment;
 
         try {
-            stmt.getBody().accept(*this);
+            evaluate(stmt.getBody());
         }
         catch (const ReturnStatementException& ret) {
             LOG_DEBUG << "Caught return value";
@@ -243,7 +251,7 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
 
 RuntimeValue Interpreter::visitExpressionStmt(const ExpressionStmt& stmt) {
     LOG_DEBUG << "Visiting ExpressionStmt";
-    return stmt.getExpression().accept(*this);
+    return evaluate(stmt.getExpression());
 }
 
 RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
@@ -266,7 +274,7 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     _currentEnvironment = std::make_shared<Environment>();
 
     for (const auto& statement : moduleAst) {
-        statement->accept(*this);
+        evaluate(*statement);
     }
     LOG_DEBUG << std::format("Interpreted all statements from user module: {} ast", moduleName);
 
@@ -326,9 +334,9 @@ RuntimeValue Interpreter::visitVariableExpr(const VariableExpr& expr) {
 
 RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
     LOG_DEBUG << "Visiting BinaryExpr";
-    const auto& left = expr.getLeft().accept(*this);
+    const auto& left = evaluate(expr.getLeft());
     const auto& op = expr.getOperator().getType();
-    const auto& right = expr.getRight().accept(*this);
+    const auto& right = evaluate(expr.getRight());
 
     try {
         switch (op) {
@@ -385,7 +393,7 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
         // TODO might make some problems with other types / block to int only
         if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getRight())) {
             const auto& name = varExpr->getName().getValue<std::string>();
-            auto oldValue = std::get<std::int32_t>(varExpr->accept(*this));
+            auto oldValue = std::get<std::int32_t>(evaluate(*varExpr));
             LOG_DEBUG << std::format(
                 "Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
             _currentEnvironment->reassignVar(name, oldValue + 1);
@@ -405,7 +413,7 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
 
 RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     LOG_DEBUG << "Visiting CallExpr";
-    auto calleeValue = expr.getCallee().accept(*this);
+    auto calleeValue = evaluate(expr.getCallee());
 
     if (not is<Function>(calleeValue)) {
         // TODO investigate a failure scenario
@@ -418,7 +426,7 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     evaluatedArgs.reserve(callArgs.size());
             
     for (const auto& arg : callArgs) {
-        evaluatedArgs.push_back(arg->accept(*this));
+        evaluatedArgs.push_back(evaluate(*arg));
     }
 
     LOG_DEBUG << std::format("Successfully valuated {} parameters", evaluatedArgs.size());
@@ -446,7 +454,7 @@ RuntimeValue Interpreter::handleModuleCall(
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
 
-    const auto leftValue = expr.getLeft().accept(*this);
+    const auto leftValue = evaluate(expr.getLeft());
     const auto& rightName = expr.getRight().getValue<std::string>();
 
     if (is<Module>(leftValue)) {
@@ -474,11 +482,11 @@ RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
     const auto vectorSize = initializers.size();
     vector->data.reserve(vectorSize);
 
-    auto firstElement = initializers[0]->accept(*this);
+    auto firstElement = evaluate(*initializers[0]);
     vector->typeId = firstElement.index();
 
     for (size_t i{0ull}; i < vectorSize; ++i) {
-        auto nextValue = initializers[i]->accept(*this);
+        auto nextValue = evaluate(*initializers[i]);
         if (nextValue.index() != vector->typeId) {
             throw RuntimeError{
                 RuntimeError::Type::Value,
@@ -495,13 +503,13 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
     LOG_DEBUG << "Visiting LogicalExpr";
 
     const auto op = expr.getOperator().getType();
-    const auto leftResult = expr.getLeft().accept(*this);
+    const auto leftResult = evaluate(expr.getLeft());
     const auto leftBool = tryAs<Bool>(leftResult);
     if (op == Token::Type::Or) {
         if (leftBool) {
             return Bool{true};
         }
-        const auto rightResult = expr.getRight().accept(*this);
+        const auto rightResult = evaluate(expr.getRight());
         return tryAs<Bool>(rightResult);
     }
 
@@ -509,7 +517,7 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
         if (not leftBool) {
             return Bool{false};
         }
-        const auto rightResult = expr.getRight().accept(*this);
+        const auto rightResult = evaluate(expr.getRight());
         return tryAs<Bool>(rightResult);
     }
 

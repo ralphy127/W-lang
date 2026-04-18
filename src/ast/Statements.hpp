@@ -13,7 +13,6 @@
 class Stmt : public AstNode {
 public:
     Stmt(SourceRange srcRange) : AstNode{srcRange} {}
-    virtual RuntimeValue accept(AstVisitor&) const = 0;
 };
 
 class VarDefinitionStmt : public Stmt {
