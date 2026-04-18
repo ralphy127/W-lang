@@ -9,7 +9,7 @@ namespace logger::detail {
 
 class LogStream {
 public:
-    LogStream(std::string_view level, std::source_location loc);
+    LogStream(std::string_view level, std::source_location);
     ~LogStream();
     
     template <typename T>
@@ -19,7 +19,7 @@ public:
     }
 
 private:
-    std::ostringstream _stream;
+    std::ostringstream _stream{};
     std::string_view _level;
     std::source_location _location;
 };

@@ -33,6 +33,7 @@ private:
     const Token& getPreviousToken() const;
     const Token& getToken() const;
     const Token& getTokenAndAdvance();
+    std::string getTokenStr() const { return toString(getToken().getType()); }
     
     bool match(Token::Type type) const { return getToken().getType() == type; }
     bool matchAndAdvanceIfNeeded(Token::Type);
