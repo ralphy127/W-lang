@@ -27,6 +27,6 @@ RuntimeValue callStringMethod(const String& string, const std::string& name) {
     }
 
         throw NativeError{
-        RuntimeError::Type::Logic,
-        std::string{"Yap cannot do {}"} +  name};
+            RuntimeError::Type::Logic,
+            std::string{"Yap cannot do {}"} +  name};
 }

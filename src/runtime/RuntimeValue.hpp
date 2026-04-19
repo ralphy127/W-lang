@@ -59,20 +59,28 @@ inline std::string typeName(const RuntimeValueBase& value) {
     }, value);
 }
 
+void ensureSameTypesInRuntime(const RuntimeValue& lhs, const RuntimeValue& rhs) {
+    if (lhs.index() != rhs.index()) {
+        throw NativeError{
+            RuntimeError::Type::TypeMismatch,
+            "Cannot compare different vibes"};
+    }
+}
+
 }
 
 inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
-    // TODO error handling
-    if (lhs.index() != rhs.index()) {
-        throw std::runtime_error{"Cannot compare values of different types"};
-    }
+    ensureSameTypesInRuntime(lhs, rhs);
+
     return std::visit([](const auto& l, const auto& r) -> bool {
         using T = std::decay_t<decltype(l)>;
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
             if constexpr (std::is_same_v<T, Function>) {
-                throw std::runtime_error{"Cannot compare functions"};
+                throw NativeError{
+                    RuntimeError::Type::TypeMismatch,
+                    "Cannot compare gigs"};
             }
             else {
                 return l == r;
@@ -83,10 +91,7 @@ inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
 }
 
 inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
-    // TODO error handling
-    if (lhs.index() != rhs.index()) {
-        throw std::runtime_error{"Cannot compare values of different types"};
-    }
+    ensureSameTypesInRuntime(lhs, rhs);
 
     return std::visit([](const auto& l, const auto& r) -> bool {
         using T = std::decay_t<decltype(l)>;
@@ -94,7 +99,9 @@ inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         
         if constexpr (std::is_same_v<T, U>) {
             if constexpr (std::is_same_v<T, Function>) {
-                throw std::runtime_error{"Cannot compare functions"};
+                throw NativeError{
+                    RuntimeError::Type::TypeMismatch,
+                    "Cannot compare gigs"};
             }
             else {
                 return l < r;
@@ -104,10 +111,10 @@ inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
     }, static_cast<const RuntimeValueBase&>(lhs), static_cast<const RuntimeValueBase&>(rhs));
 }
 
-inline bool operator!=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return !(lhs == rhs); }
+inline bool operator!=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return not (lhs == rhs); }
 inline bool operator>(const RuntimeValue& lhs, const RuntimeValue& rhs)  { return rhs < lhs; }
-inline bool operator<=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return !(rhs < lhs); }
-inline bool operator>=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return !(lhs < rhs); }
+inline bool operator<=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return not (rhs < lhs); }
+inline bool operator>=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return not (lhs < rhs); }
 
 std::string stringify(const RuntimeValue& value);
 
@@ -130,8 +137,9 @@ const T& as(const RuntimeValueBase& v, const SourceRange& srcRange) {
 template<typename T>
 const T& asUnsafe(const RuntimeValue& v) {
     if (not is<T>(v)) {
-        throw std::runtime_error{std::format(
-            "Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(v))};
+        throw NativeError{
+            RuntimeError::Type::TypeMismatch,
+            std::format("Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(v))};
     }
     return std::get<T>(v);
 }
