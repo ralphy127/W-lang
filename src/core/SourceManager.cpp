@@ -1,4 +1,5 @@
 #include "SourceManager.hpp"
+#include <format>
 
 FileId SourceManager::registerFile(const std::string& filePath) {
     _files.push_back(filePath);
@@ -6,6 +7,8 @@ FileId SourceManager::registerFile(const std::string& filePath) {
 }
 
 const std::string& SourceManager::getFilePath(FileId id) const {
-    // TODO better error handling?
-    return _files.at(id);
+    if (id >= _files.size()) {
+        throw std::runtime_error{std::format("File with id: {} not found", id)};
+    }
+    return _files[id];
 }

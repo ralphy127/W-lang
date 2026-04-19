@@ -6,11 +6,11 @@
 Environment::Environment(std::shared_ptr<Environment> outerScope)
     : _outerScope{std::move(outerScope)} {}
 
-// TODO error handling
-
 void Environment::defineVar(const std::string& name, RuntimeValue value) {
     if (_variables.contains(name)) {
-        throw std::runtime_error{std::format("Variable {} already exists", name)};
+        throw NativeError{
+            RuntimeError::Type::Logic,
+            std::format("Variable {} already exists", name)};
     }
     _variables.emplace(name, std::move(value));
 }
@@ -24,7 +24,9 @@ void Environment::reassignVar(const std::string& name, RuntimeValue newValue) {
         _outerScope->reassignVar(name, std::move(newValue));
         return;
     }
-    throw std::runtime_error{std::format("Variable {} does not exist", name)};
+    throw NativeError{
+        RuntimeError::Type::Logic,
+        std::format("Variable {} does not exist", name)};
 }
 
 RuntimeValue Environment::getVar(const std::string& name) const {
@@ -34,5 +36,6 @@ RuntimeValue Environment::getVar(const std::string& name) const {
     if (_outerScope) {
         return _outerScope->getVar(name);
     }
-    throw std::runtime_error{std::format("Variable {} does not exist", name)};
+    throw NativeError{
+        RuntimeError::Type::Logic,std::format("Variable {} does not exist", name)};
 }
