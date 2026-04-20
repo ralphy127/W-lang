@@ -45,7 +45,7 @@ Interpreter::Interpreter(
     assert(astResolver);
 }
 
-void Interpreter::interpret() {
+int Interpreter::interpret() {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());
     for (const auto& stmt : _statements) {
         evaluate(*stmt);
@@ -61,15 +61,27 @@ void Interpreter::interpret() {
                 "macho is not a gig"};
         }
         LOG_DEBUG << "Executing 'macho' function";
-        asUnsafe<Function>(mainFunc)(std::vector<RuntimeValue>{});
+        const auto ret = asUnsafe<Function>(mainFunc)(std::vector<RuntimeValue>{});
+
+        if (is<Int>(ret)) {
+            const auto val = asUnsafe<Int>(ret);
+            LOG_DEBUG << "Returning an int from macho: " << val;
+            return val;
+        }
+        if (is<Null>(ret)) {
+            LOG_DEBUG << "Returning 0 (casted Null) from macho";
+            return 0;
+        }
+
+        throw RuntimeError{
+            RuntimeError::Type::Logic,
+            _currentRange,
+            "Casting is for the weak. Macho only yeets solids or ghosted"};
     }
-    // TODO handle main func return value
-    catch (ReturnStatementException) {}
     catch (const std::exception& e) {
         LOG_ERROR << "[FATAL] Caught unexpected error: " << e.what();
         throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, e.what()};
     }
-    LOG_DEBUG << "Interpretation completed";
 }
 
 EvalProxy Interpreter::evaluate(const AstNode& node) {

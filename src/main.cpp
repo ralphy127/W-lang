@@ -28,7 +28,7 @@ static std::string readFile(const std::string& filepath) {
     return buffer.str();
 }
 
-static void run(const std::string& filePath, SourceManager& srcManager, RunOptions options) {
+static int run(const std::string& filePath, SourceManager& srcManager, RunOptions options) {
     AstResolver resolver = [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
         const auto currentFileId = srcManager.registerFile(filePath);
         Lexer lexer{readFile(filePath), currentFileId};
@@ -55,7 +55,7 @@ static void run(const std::string& filePath, SourceManager& srcManager, RunOptio
     auto mainFolderPath = filePath.substr(0, filePath.find_last_of('/') + 1);
     if (mainFolderPath == filePath) mainFolderPath = "./";
     Interpreter interpreter{std::move(mainAst), std::move(resolver), std::move(mainFolderPath)};
-    interpreter.interpret();
+    return interpreter.interpret();
 }
 
 int main(int argc, const char* argv[]) {
@@ -68,18 +68,14 @@ int main(int argc, const char* argv[]) {
 
     RunOptions options{};
     for (int i{2}; i < argc; ++i) {
-        bool matched{false};
         const char* flag = argv[i];
         if (strcmp(flag, "--debug") == 0) {
             ::logLevel = logLevelDebug;
-            matched = true;
         }
         else if (strcmp(flag, "--dump_ast") == 0) {
             options.dumpAst = true;
-            matched = true;
         }
-
-        if (not matched) {
+        else {
             std::cerr << "Unknown flag: " << flag << std::endl;
             return 1;
         }
@@ -90,8 +86,7 @@ int main(int argc, const char* argv[]) {
     SourceManager sourceManager{};
 
     try {
-        run(std::move(filepath), sourceManager, options);
-        return 0;
+        return run(std::move(filepath), sourceManager, options);
     }
     catch (const LexerCrash& crash) {
         errorReporter.printLexerErrors(crash);
@@ -105,6 +100,4 @@ int main(int argc, const char* argv[]) {
     catch (const std::exception& e) {
         std::cout << "Error: " << e.what() << std::endl;
     }
-
-    return 1;
 }

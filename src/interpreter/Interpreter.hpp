@@ -17,7 +17,7 @@ public:
         AstResolver,
         std::string mainFolderPath);
 
-    void interpret();
+    int interpret();
 
     RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) override;
     RuntimeValue visitReassignStmt(const ReassignStmt&) override;
