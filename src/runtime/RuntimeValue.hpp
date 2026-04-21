@@ -18,7 +18,12 @@ using Null = std::monostate;
 using Int = std::int32_t;
 using Bool = bool;
 using Float = double;
-using Function = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
+
+struct Function {
+    std::function<RuntimeValue(const std::vector<RuntimeValue>&)> exec;
+    std::shared_ptr<Environment> closure;
+};
+
 struct Module {
     std::shared_ptr<Environment> env;
 };
@@ -32,6 +37,7 @@ using RuntimeValueBase = std::variant<
     Vector,
     Function,
     Module>;
+
 struct RuntimeValue : RuntimeValueBase {
     using RuntimeValueBase::variant;
 };

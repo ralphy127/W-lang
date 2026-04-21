@@ -6,6 +6,7 @@
 #include <iomanip>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
+#include "utils/Logging.hpp"
 
 namespace {
 
@@ -35,6 +36,7 @@ void printError(
     const std::string& msg) {
     std::ifstream file{fileName};
 
+    LOG_DEBUG << "Printing error: " << msg;
     std::cerr << std::format("{}:{}:{} - {}\n", fileName, line, column, msg);
     if (not file.is_open()) return;
 

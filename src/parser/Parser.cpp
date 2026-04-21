@@ -406,8 +406,9 @@ std::unique_ptr<Stmt> Parser::parseImport() {
     const auto& importToken = getPreviousToken();
     const auto& moduleToken = consume(Token::Type::Ident, "Expected module name after 'summon'");
     const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after module import");
-    LOG_DEBUG << "Successfully parsed 'summon' statement for module '{}'"
-              << moduleToken.getValue<std::string>();
+    LOG_DEBUG << std::format(
+        "Successfully parsed 'summon' statement for module '{}'",
+        moduleToken.getValue<std::string>());
     return std::make_unique<ImportStmt>(moduleToken, makeRange(importToken, semiToken));
 }
 

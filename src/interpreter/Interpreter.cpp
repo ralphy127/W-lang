@@ -4,6 +4,7 @@
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
 #include "runtime/RuntimeErrors.hpp"
+#include "EnvironmentGuard.hpp"
 
 namespace {
 
@@ -27,6 +28,13 @@ RuntimeValue applyMath(const RuntimeValue& left, const RuntimeValue& right, Op&&
             throw std::invalid_argument("Math is only mathing on numbers"); 
         }
     }, left, right);
+}
+
+void throwDevError(SourceRange range, const std::string& msg) {
+    throw RuntimeError{
+        RuntimeError::Type::Undefined,
+        range,
+        "Call the dev bud: " + msg};
 }
 
 }
@@ -69,7 +77,7 @@ int Interpreter::interpret() {
         }
 
         LOG_DEBUG << "Executing 'macho' function";
-        const auto ret = asUnsafe<Function>(mainFunc)(std::vector<RuntimeValue>{});
+        const auto ret = asUnsafe<Function>(mainFunc).exec(std::vector<RuntimeValue>{});
         if (is<Int>(ret)) {
             const auto val = asUnsafe<Int>(ret);
             LOG_DEBUG << "Returning an int from macho: " << val;
@@ -130,19 +138,9 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
 
 RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
     LOG_DEBUG << "Visiting BlockStmt with " << stmt.getStatements().size() << " statements";
-    
-    auto previousEnvironment = _currentEnvironment;
-    _currentEnvironment = std::make_shared<Environment>(previousEnvironment);
-    ++_scopeDepth;
 
-    struct ScopeRollback {
-        Interpreter& self;
-        std::shared_ptr<Environment> previous;
-        ~ScopeRollback() {
-            self._currentEnvironment = std::move(previous);
-            --self._scopeDepth;
-        }
-    } rollback{*this, previousEnvironment};
+    LOG_DEBUG << "Jumping into new block environment";
+    EnvironmentGuard guard{*this, std::make_shared<Environment>(_currentEnvironment)};
 
     for (const auto& innerStmt : stmt.getStatements()) {
         evaluate(*innerStmt);
@@ -223,18 +221,25 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
     LOG_DEBUG << "Visiting FunctionStmt";
     auto funcName = stmt.getName().getValue<std::string>();
 
+    auto closureEnvironment = _currentEnvironment;
+
     LOG_DEBUG << "Registering function: " << funcName;
-    // TODO make sure stmt always outlives function / refactor just in case
-    auto function = [this, &stmt](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-        auto localEnvironment = std::make_shared<Environment>(_globalEnvironment);
-        const auto& argNames = stmt.getParameters();
+    auto exec =
+        [this, stmt = &stmt, closureEnvironment = _currentEnvironment]
+        (const std::vector<RuntimeValue>& args) -> RuntimeValue {
+
+        if (not stmt) {
+            throwDevError(_currentRange, "gig statement has died");
+        }
+        auto localEnvironment = std::make_shared<Environment>(closureEnvironment);
+        const auto& argNames = stmt->getParameters();
         const auto namesCount = argNames.size();
 
         const auto argsSize = args.size();
         if (namesCount != argsSize) {
             throw RuntimeError{
                 RuntimeError::Type::OutOfBounds,
-                stmt.getSrcRange(),
+                stmt->getSrcRange(),
                 std::format("Argument count don't vibe ({} is not {})", argsSize, namesCount)};
         }
 
@@ -242,28 +247,21 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
             localEnvironment->defineVar(argNames[i].getValue<std::string>(), args[i]);
         }
 
-        LOG_DEBUG << "Jumping into local function environemnt";
-        auto previousEnv = _currentEnvironment;
-        _currentEnvironment = localEnvironment;
+        LOG_DEBUG << "Jumping into local function environment";
+        EnvironmentGuard guard{*this, localEnvironment};
 
         try {
-            evaluate(stmt.getBody());
+            evaluate(stmt->getBody());
         }
         catch (const ReturnStatementException& ret) {
             LOG_DEBUG << "Caught return value";
-            _currentEnvironment = previousEnv;
             return ret.value;
         }
-        catch (...) {
-            _currentEnvironment = previousEnv;
-            throw;
-        }
 
-        _currentEnvironment = previousEnv;
         return Null{};
     };
 
-    _currentEnvironment->defineVar(funcName, Function{std::move(function)});
+    _currentEnvironment->defineVar(funcName, Function{std::move(exec), closureEnvironment});
         
     return Null{};
 }
@@ -405,10 +403,7 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
                 return applyMath(left, right, [](auto&& a, auto&& b) { return a / b; });
             }
             default:
-                throw RuntimeError{
-                    RuntimeError::Type::Undefined,
-                    expr.getSrcRange(),
-                    "Call the dev bud: unknown binary operator"};
+                throwDevError(expr.getSrcRange(), "unknown binary operator");
         }
     }
     catch (const std::invalid_argument& e) {
@@ -421,6 +416,7 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
         LOG_ERROR << "Caught other exception: " << msg;
         throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), msg};
     }
+    return Null{};
 }
 
 RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
@@ -455,14 +451,13 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     const auto& callArgs = expr.getArgs();
     std::vector<RuntimeValue> evaluatedArgs{};
     evaluatedArgs.reserve(callArgs.size());
-            
+
     for (const auto& arg : callArgs) {
         evaluatedArgs.push_back(evaluate(*arg));
     }
-
     LOG_DEBUG << std::format("Successfully valuated {} parameters", evaluatedArgs.size());
 
-    return function(evaluatedArgs);
+    return function.exec(evaluatedArgs);
 }
 
 RuntimeValue Interpreter::handleModuleCall(
@@ -555,8 +550,6 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
         return evaluate(expr.getRight()).as<Bool>();
     }
 
-    throw RuntimeError{
-        RuntimeError::Type::Undefined,
-        expr.getSrcRange(),
-        "Call the dev bud: unknown logical operator"};
+    throwDevError(expr.getSrcRange(), "unknown logical operator");
+    return Null{};
 }

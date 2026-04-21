@@ -1431,3 +1431,49 @@ TEST_F(InterpreterTests, ScopedImportModulesTest) {
     )";
     EXPECT_ANY_THROW(expectOutput(source, "Hello\n"));
 }
+
+TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
+    auto moduleSource = R"(
+        summon gossip...
+
+        gig print(msg) {
+            gossip.spill_tea(msg)...
+        }
+    )";
+
+    AstResolver resolver = [this, moduleSource](const std::string& path) {
+        if (path == "user_module.weird") {
+            auto parsed = parseSource(moduleSource);
+            EXPECT_TRUE(parsed.errors.empty());
+            return std::move(parsed.statements);
+        }
+        ADD_FAILURE() << "Unexpected module path: " << path;
+        return std::vector<std::unique_ptr<Stmt>>{};
+    };
+
+    auto mainSource = R"(
+        summon user_module...
+
+        gig macho() {
+            user_module.print("OK")...
+            yeet ghosted...
+        }
+    )";
+
+    auto statements = parseSource(mainSource).statements;
+
+    std::stringstream buffer{};
+    auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
+
+    Interpreter interpreter{std::move(statements), std::move(resolver), ""};
+    try {
+        interpreter.interpret();
+    }
+    catch (...) {
+        std::cout.rdbuf(oldCout);
+        throw;
+    }
+
+    std::cout.rdbuf(oldCout);
+    EXPECT_EQ(buffer.str(), "OK\n");
+}

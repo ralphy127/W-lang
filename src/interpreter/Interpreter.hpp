@@ -19,6 +19,12 @@ public:
 
     int interpret();
 
+std::shared_ptr<Environment> getCurrentEnvironment() const { return _currentEnvironment; }
+    void setCurrentEnvironment(std::shared_ptr<Environment> env) { _currentEnvironment = env; }
+
+    void incrementScopeDepth() { ++_scopeDepth; }
+    void decrementScopeDepth() { --_scopeDepth; }
+
     RuntimeValue visitVarDefinitionStmt(const VarDefinitionStmt&) override;
     RuntimeValue visitReassignStmt(const ReassignStmt&) override;
     RuntimeValue visitBlockStmt(const BlockStmt&) override;
