@@ -128,19 +128,19 @@ RuntimeValue Interpreter::visitBlockStmt(const BlockStmt& stmt) {
     _currentEnvironment = std::make_shared<Environment>(previousEnvironment);
     ++_scopeDepth;
 
-    try {
-        for (const auto& innerStmt : stmt.getStatements()) {
-            evaluate(*innerStmt);
+    struct ScopeRollback {
+        Interpreter& self;
+        std::shared_ptr<Environment> previous;
+        ~ScopeRollback() {
+            self._currentEnvironment = std::move(previous);
+            --self._scopeDepth;
         }
+    } rollback{*this, previousEnvironment};
+
+    for (const auto& innerStmt : stmt.getStatements()) {
+        evaluate(*innerStmt);
     }
-    catch (const std::exception& e) {
-        _currentEnvironment = previousEnvironment;
-        --_scopeDepth;
-        throw;
-    }
-    
-    _currentEnvironment = previousEnvironment;
-    --_scopeDepth;
+
     return Null{};
 }
 

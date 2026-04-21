@@ -1183,6 +1183,25 @@ TEST_F(InterpreterTests, DoUntilBoredLoopWithPumpItAndRageQuit) {
     expectOutput(source, "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n");
 }
 
+TEST_F(InterpreterTests, BreakInsideBlockDoesNotLeakBlockScope) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            do_until_bored {
+                stash x about 123...
+                rage_quit!!!
+            }
+            gossip.spill_tea(x)...
+        }
+    )";
+
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Undefined,
+        "Variable x does not exist");
+}
+
 TEST_F(InterpreterTests, VoidFunctionCall) {
     auto source = R"(
         summon gossip...
