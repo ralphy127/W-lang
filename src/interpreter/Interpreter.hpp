@@ -52,6 +52,7 @@ private:
     std::shared_ptr<Environment> _globalEnvironment{std::make_shared<Environment>()};
     std::shared_ptr<Environment> _currentEnvironment{_globalEnvironment};
     std::uint32_t _scopeDepth{1u};
+    std::unordered_map<std::string, Module> _moduleCache;
     std::unordered_map<std::string, std::vector<std::unique_ptr<Stmt>>> _importedModuleAsts;
     SourceRange _currentRange{0u, {0u, 0u}, {0u, 0u}};
 };

@@ -1,4 +1,5 @@
 #include "Gossip.hpp"
+#include "runtime/Environment.hpp"
 #include <iostream>
 
 namespace modules {
@@ -30,12 +31,12 @@ RuntimeValue eavesdrop(const std::vector<RuntimeValue>& args) {
 }
 
 Module createGossipModule() {
-    auto moduleMap = std::make_shared<Module::element_type>();
+    auto moduleEnv = std::make_unique<Environment>();
 
-    (*moduleMap)["spill_tea"] = gossip::spill_tea;
-    (*moduleMap)["eavesdrop"] = gossip::eavesdrop;
+    moduleEnv->defineVar("spill_tea", Function{gossip::spill_tea});
+    moduleEnv->defineVar("eavesdrop", Function{gossip::eavesdrop});
 
-    return moduleMap;
+    return Module{std::move(moduleEnv)};
 }
 
 }

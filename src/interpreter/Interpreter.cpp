@@ -270,11 +270,25 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     LOG_DEBUG << "Visiting ImportStmt";
     const auto& moduleName = stmt.getModuleName().getValue<std::string>();
 
-    if (moduleName == "gossip") {
-        LOG_DEBUG << "Defining native module " << moduleName;
-        _currentEnvironment->defineVar(moduleName, modules::createGossipModule());
+    if (_moduleCache.contains(moduleName)) {
+        LOG_DEBUG << std::format("Skipping module creation, {} already exists", moduleName);
+        _currentEnvironment->defineVar(moduleName, _moduleCache[moduleName]);
         return Null{};
     }
+
+    if (moduleName == "gossip") {
+        LOG_DEBUG << "Defining native module " << moduleName;
+        const auto [it, inserted] = _moduleCache.emplace(moduleName, modules::createGossipModule());
+        _currentEnvironment->defineVar(moduleName, it->second);
+        return Null{};
+    }
+
+    // TODO add possibility of changing global variables in modules
+    // (look at /tests/test_files/user_modules/macho.weird)
+
+    auto mod = Module{std::make_shared<Environment>()};
+
+    _moduleCache[moduleName] = mod;
 
     auto userFileName = _mainFolderPath + moduleName + ".weird";
 
@@ -283,20 +297,18 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     LOG_DEBUG << std::format("Resolved user module: {} ast", moduleName);
     
     auto previousEnvironment = _currentEnvironment;
-    _currentEnvironment = std::make_shared<Environment>();
+    _currentEnvironment = mod.env; 
 
     for (const auto& statement : moduleAst) {
+        // TODO investigate if try/catch or guard regarding rollback to previous env is needed
         evaluate(*statement);
     }
     LOG_DEBUG << std::format("Interpreted all statements from user module: {} ast", moduleName);
-
-    // ! TODO instead of stealing resources, consider other Module implementation
-    auto module = Module{std::make_shared<std::unordered_map<std::string, RuntimeValue>>(
-        _currentEnvironment->stealAllVariables())};
         
     _currentEnvironment = previousEnvironment;
-    _currentEnvironment->defineVar(moduleName, std::move(module));
-    _importedModuleAsts[moduleName] = std::move(moduleAst);
+    _importedModuleAsts.emplace(moduleName, std::move(moduleAst));
+    _currentEnvironment->defineVar(moduleName, mod);
+
     return Null{};
 }
     
@@ -446,15 +458,14 @@ RuntimeValue Interpreter::handleModuleCall(
     const std::string& rightName,
     const DotExpr& expr) {
 
-    auto it = mod->find(rightName);
-    if (it == mod->end()) {
+    if (not mod.env->hasVar(rightName)) {
         throw RuntimeError{
             RuntimeError::Type::TypeMismatch,
             expr.getSrcRange(),
             std::format("Hub ain't got '{}'", rightName)};
     }
 
-    return it->second;
+    return mod.env->getVar(rightName);
 }
 
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {

@@ -12,13 +12,16 @@
 #include "RuntimeErrors.hpp"
 
 struct RuntimeValue;
+struct Environment;
 
 using Null = std::monostate;
 using Int = std::int32_t;
 using Bool = bool;
 using Float = double;
 using Function = std::function<RuntimeValue(const std::vector<RuntimeValue>&)>;
-using Module = std::shared_ptr<std::unordered_map<std::string, RuntimeValue>>;
+struct Module {
+    std::shared_ptr<Environment> env;
+};
 
 using RuntimeValueBase = std::variant<
     Null,
