@@ -53,16 +53,23 @@ int Interpreter::interpret() {
 
     LOG_DEBUG << "Looking for entry point 'macho'";
     try {
+        if (not _currentEnvironment->hasVar("macho")) {
+            throw RuntimeError{
+                RuntimeError::Type::Logic,
+                _currentRange,
+                "Macho gig does not exist"};
+        }
+
         const auto mainFunc = _currentEnvironment->getVar("macho");
         if (not is<Function>(mainFunc)) {
             throw RuntimeError{
                 RuntimeError::Type::TypeMismatch,
                 _currentRange,
-                "macho is not a gig"};
+                "Macho is not a gig"};
         }
+
         LOG_DEBUG << "Executing 'macho' function";
         const auto ret = asUnsafe<Function>(mainFunc)(std::vector<RuntimeValue>{});
-
         if (is<Int>(ret)) {
             const auto val = asUnsafe<Int>(ret);
             LOG_DEBUG << "Returning an int from macho: " << val;
@@ -351,9 +358,14 @@ RuntimeValue Interpreter::visitVariableExpr(const VariableExpr& expr) {
     const auto& name = expr.getName().getValue<std::string>();
     LOG_DEBUG << std::format("Accessing variable {} at scope depth {}", name, _scopeDepth);
 
-    auto value = _currentEnvironment->getVar(name);
-    LOG_DEBUG << std::format("Retrieved value: {}", stringify(value));
-    return value;
+    try {
+        auto value = _currentEnvironment->getVar(name);
+        LOG_DEBUG << std::format("Retrieved value: {}", stringify(value));
+        return value;
+    }
+    catch (const NativeError& e) {
+        throw RuntimeError{e.type, expr.getSrcRange(), e.what()};
+    }
 }
 
 RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
@@ -488,7 +500,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     catch (const NativeError& e) {
         throw RuntimeError{e.type, _currentRange, e.what()};
     }
-    catch(...) {
+    catch (...) {
         throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, "Unexpected crash, sorry"};
     }
 

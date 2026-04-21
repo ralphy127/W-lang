@@ -129,6 +129,18 @@ TEST_F(InterpreterTests, MvpExecutesMachoFunction) {
     expectOutput(source, "F*ck me it works\n");
 }
 
+TEST_F(InterpreterTests, Failure_MachoGigDoesNotExist) {
+    auto source = R"(
+        summon gossip...
+
+        gig notMacho() {
+            gossip.spill_tea("hi")...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Logic, "Macho gig does not exist");
+}
+
 TEST_F(InterpreterTests, MvpExecutesVariableStashAndScream) {
     auto source = R"(
         summon gossip...
@@ -1198,7 +1210,7 @@ TEST_F(InterpreterTests, BreakInsideBlockDoesNotLeakBlockScope) {
 
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::Undefined,
+        RuntimeError::Type::Logic,
         "Variable x does not exist");
 }
 
