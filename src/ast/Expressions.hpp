@@ -30,6 +30,7 @@ public:
 
     const Token& getName() const { return _variableName; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitVariableExpr(*this); }
+    std::optional<LValue> getLValue() const override;
 
 private:
     Token _variableName;
@@ -58,7 +59,7 @@ public:
     explicit UnaryExpr(Token, std::unique_ptr<Expr> right, SourceRange);
 
     const Token& getOperator() const { return _operator; }
-    const Expr& getRight() const;
+    const Expr& getRight() const { return *_right; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitUnaryExpr(*this); }
 
 private:
@@ -89,6 +90,7 @@ public:
     const Expr& getLeft() const { return *_left; }
     const Token& getRight() const { return _right; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitDotExpr(*this); }
+    // TODO add lvalue getter while adding property
 
 private:
     std::unique_ptr<Expr> _left;

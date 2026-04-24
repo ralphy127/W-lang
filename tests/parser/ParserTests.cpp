@@ -1201,3 +1201,29 @@ TEST_F(ParserTests, Failure_SynchronizeCanSkipNextError) {
     expectHasErrorContaining(result, "Expected '...' after expression");
     expectNoErrorContaining(result, "Expected variable name after 'stash'");
 }
+
+TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithRvalue) {
+    const auto result = parse("pump_it 1...");
+    expectHasErrorContaining(result, "Can't pump_it - no grip, no glory.");
+}
+
+TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithFunctionCall) {
+    const auto result = parse(
+        "gig print(x) { gossip.spill_tea(x)... }\n"
+        "pump_it print(1)..."
+    );
+    expectHasErrorContaining(result, "Can't pump_it - no grip, no glory.");
+}
+
+TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithStringLiteral) {
+    const auto result = parse("pump_it \"hello\"...");
+    expectHasErrorContaining(result, "Can't pump_it - no grip, no glory.");
+}
+
+TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithDotExpression) {
+    const auto result = parse(
+        "summon gossip...\n"
+        "pump_it gossip.spill_tea..."
+    );
+    expectHasErrorContaining(result, "Can't pump_it - no grip, no glory.");
+}

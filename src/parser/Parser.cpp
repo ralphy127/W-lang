@@ -1,5 +1,6 @@
 #include "Parser.hpp"
 #include "utils/Logging.hpp"
+#include "ast/LValue.hpp"
 #include <cassert>
 #include <format>
 #include <algorithm>
@@ -676,8 +677,17 @@ std::unique_ptr<Expr> Parser::parseUnary() {
     if (match(Token::Type::Incr)) {
         const auto& opToken = getTokenAndAdvance();
         auto right = parseUnary();
-        auto srcRange = makeRange(opToken, *right);
-        return std::make_unique<UnaryExpr>(opToken, std::move(right), srcRange);
+        if (not right) {
+            throwParserError("Can't pump_it into the void");
+        }
+
+        if (right->getLValue().has_value()) {
+            auto srcRange = makeRange(opToken, *right);
+            return std::make_unique<UnaryExpr>(opToken, std::move(right), srcRange);
+        }
+        else {
+            throwParserError("Can't pump_it - no grip, no glory.");
+        }
     }
 
     return parsePrimary();

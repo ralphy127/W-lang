@@ -12,17 +12,19 @@ struct InterpreterTests : ::testing::Test {
         return std::vector<std::unique_ptr<Stmt>>{};
     };
 
-    ParserResult parseSource(const std::string& source) {
+    std::vector<std::unique_ptr<Stmt>> parseSource(const std::string& source) {
         Lexer lexer{source, 0ull};
         auto lexerResult = lexer.tokenize();
         EXPECT_TRUE(lexerResult.errors.empty());
         
         Parser parser{std::move(lexerResult.tokens)};
-        return parser.parse();
+        auto parserResult = parser.parse();
+        EXPECT_TRUE(parserResult.errors.empty());
+        return std::move(parserResult.statements);
     }
     
     std::string executeAndCaptureOutput(const std::string& source) {
-        auto statements = parseSource(source).statements;
+        auto statements = parseSource(source);
         
         std::stringstream buffer{};
         auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
@@ -42,7 +44,7 @@ struct InterpreterTests : ::testing::Test {
     }
 
     std::string executeAndCaptureFailure(const std::string& source) {
-        auto statements = parseSource(source).statements;
+        auto statements = parseSource(source);
 
         std::stringstream buffer{};
         auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
@@ -66,7 +68,7 @@ struct InterpreterTests : ::testing::Test {
     }
 
     RuntimeError executeAndCaptureRuntimeError(const std::string& source) {
-        auto statements = parseSource(source).statements;
+        auto statements = parseSource(source);
 
         std::stringstream buffer{};
         auto* oldCout = std::cout.rdbuf(buffer.rdbuf());
@@ -953,16 +955,6 @@ TEST_F(InterpreterTests, FunctionCallWithNullArgumentPrintsGhosted) {
     expectOutput(source, "ghosted\n");
 }
 
-TEST_F(InterpreterTests, Failure_PumpItOnNonVariableThrowsLogicRuntimeError) {
-    auto source = R"(
-        gig macho() {
-            pump_it 1...
-        }
-    )";
-
-    expectRuntimeError(source, RuntimeError::Type::Logic, "Can't pump_it into the void!");
-}
-
 TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
     auto source = R"(
         gig macho() {
@@ -1443,9 +1435,7 @@ TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
 
     AstResolver resolver = [this, moduleSource](const std::string& path) {
         if (path == "user_module.weird") {
-            auto parsed = parseSource(moduleSource);
-            EXPECT_TRUE(parsed.errors.empty());
-            return std::move(parsed.statements);
+            return parseSource(moduleSource);
         }
         ADD_FAILURE() << "Unexpected module path: " << path;
         return std::vector<std::unique_ptr<Stmt>>{};
@@ -1460,7 +1450,7 @@ TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
         }
     )";
 
-    auto statements = parseSource(mainSource).statements;
+    auto statements = parseSource(mainSource);
 
     std::stringstream buffer{};
     auto* oldCout = std::cout.rdbuf(buffer.rdbuf());

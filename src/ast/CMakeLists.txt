@@ -5,6 +5,7 @@ add_library(ast
     Statements.cpp
     Statements.hpp
     AstVisitor.hpp
+    LValue.hpp
 )
 
 target_include_directories(ast PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

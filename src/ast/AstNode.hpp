@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/SourceRange.hpp"
+#include "LValue.hpp"
+#include <optional>
 
 struct RuntimeValue;
 class AstVisitor;
@@ -11,6 +13,7 @@ public:
     virtual ~AstNode() = default;
 
     virtual RuntimeValue accept(AstVisitor&) const = 0;
+    virtual std::optional<LValue> getLValue() const { return std::nullopt; }
     const SourceRange& getSrcRange() const { return _srcRange; }
 
 private:

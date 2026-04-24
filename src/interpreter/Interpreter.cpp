@@ -422,23 +422,26 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
 RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     LOG_DEBUG << "Visiting UnaryExpr";
     if (expr.getOperator().getType() == Token::Type::Incr) {
-        // TODO might make some problems with other types / block to int only
-        // TODO remove dynamic_cast
-        if (const auto* varExpr = dynamic_cast<const VariableExpr*>(&expr.getRight())) {
-            const auto& name = varExpr->getName().getValue<std::string>();
-            auto oldValue = evaluate(*varExpr).as<Int>();
+        const auto& right = expr.getRight();
+        // TODO lValue is for sure here, make it 100% safe
+        auto lValue = right.getLValue();
+        if (not lValue.has_value()) {
+            throwDevError(expr.getSrcRange(), "Can't get a grip on this");
+        }
+        auto target = lValue.value();
+
+        auto oldValue = evaluate(right).as<Int>();
+        auto newValue = oldValue + Int{1};
+
+        if (auto* varTarget = std::get_if<LValue::Variable>(&target.location)) {
             LOG_DEBUG << std::format(
-                "Incrementing variable {}: {} --> {}", name, oldValue, oldValue + 1);
-            _currentEnvironment->reassignVar(name, oldValue + 1);
-            return Null{};
+                "Incrementing variable {}: {} --> {}",
+                varTarget->name,
+                stringify(oldValue),
+                stringify(newValue));
+            _currentEnvironment->reassignVar(varTarget->name, newValue);
         }
-        else {
-            // TODO maybe chceck it somehow in parser ?
-            throw RuntimeError{
-                RuntimeError::Type::Logic,
-                expr.getSrcRange(),
-                "Can't pump_it into the void!"};
-        }
+        return Null{};
     }
     LOG_WARN << "Unknown unary operator";
     return Null{};

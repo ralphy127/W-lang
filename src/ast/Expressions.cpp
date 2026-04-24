@@ -15,6 +15,10 @@ VariableExpr::VariableExpr(Token token, SourceRange srcRange)
     assert(token.getType() == Token::Type::Ident and _variableName.valueIs<std::string>());
 }
 
+std::optional<LValue> VariableExpr::getLValue() const {
+    return LValue{LValue::Variable{_variableName.getValue<std::string>()}};
+}
+
 BinaryExpr::BinaryExpr(
     std::unique_ptr<Expr> left,
     Token token,
@@ -26,8 +30,8 @@ BinaryExpr::BinaryExpr(
     , _right{std::move(right)} {
     
     assert(_operator.isOperator());
-    assert(_left.get());
-    assert(_right.get());
+    assert(_left);
+    assert(_right);
 }
 
 UnaryExpr::UnaryExpr(Token token, std::unique_ptr<Expr> right, SourceRange srcRange)
@@ -36,12 +40,7 @@ UnaryExpr::UnaryExpr(Token token, std::unique_ptr<Expr> right, SourceRange srcRa
     , _right{std::move(right)} {
 
     assert(_operator.getType() == Token::Type::Incr);
-    assert(_right.get());
-}
-
-const Expr& UnaryExpr::getRight() const {
-    assert(_right.get());
-    return *_right;
+    assert(_right);
 }
 
 CallExpr::CallExpr(
@@ -79,6 +78,6 @@ LogicalExpr::LogicalExpr(
     , _right{std::move(right)} {
     
     assert(_operator.isLogicalOperator());
-    assert(_left.get());
-    assert(_right.get());
+    assert(_left);
+    assert(_right);
 }
