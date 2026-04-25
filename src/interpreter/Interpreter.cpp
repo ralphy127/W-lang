@@ -104,7 +104,7 @@ EvalProxy Interpreter::evaluate(const AstNode& node) {
 }
 
 RuntimeValue Interpreter::evaluateImpl(const AstNode& node) {
-    auto previousRange = _currentRange; 
+    const auto previousRange = _currentRange; 
     _currentRange = node.getSrcRange(); 
 
     RuntimeValue result = node.accept(*this); 
@@ -300,20 +300,17 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     LOG_DEBUG << std::format("Resolving user module: {} ast", moduleName);
     auto moduleAst = _astResolver(userFileName);
     LOG_DEBUG << std::format("Resolved user module: {} ast", moduleName);
-    
-    auto previousEnvironment = _currentEnvironment;
-    _currentEnvironment = mod.env; 
 
-    for (const auto& statement : moduleAst) {
-        // TODO investigate if try/catch or guard regarding rollback to previous env is needed
-        evaluate(*statement);
+    {
+        EnvironmentGuard guard{*this, mod.env};
+        for (const auto& statement : moduleAst) {
+            evaluate(*statement);
+        }
+        LOG_DEBUG << std::format("Interpreted all statements from user module: {} ast", moduleName);
     }
-    LOG_DEBUG << std::format("Interpreted all statements from user module: {} ast", moduleName);
-        
-    _currentEnvironment = previousEnvironment;
+
     _importedModuleAsts.emplace(moduleName, std::move(moduleAst));
     _currentEnvironment->defineVar(moduleName, mod);
-
     return Null{};
 }
     
@@ -423,7 +420,6 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     LOG_DEBUG << "Visiting UnaryExpr";
     if (expr.getOperator().getType() == Token::Type::Incr) {
         const auto& right = expr.getRight();
-        // TODO lValue is for sure here, make it 100% safe
         auto lValue = right.getLValue();
         if (not lValue.has_value()) {
             throwDevError(expr.getSrcRange(), "Can't get a grip on this");
