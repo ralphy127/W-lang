@@ -1,4 +1,5 @@
 #include "Vector.hpp"
+#include "common.hpp"
 #include "runtime/RuntimeValue.hpp"
 #include "utils/Logging.hpp"
 
@@ -16,14 +17,6 @@ namespace {
         }
 
         return static_cast<size_t>(i - 1);
-    }
-
-    void expectArgsSize(const std::vector<RuntimeValue>& args, size_t expected) {
-        if (args.size() != expected) {
-            throw NativeError{
-                RuntimeError::Type::OutOfBounds, 
-                std::format("Expected {} args, got {}", expected, args.size())};
-        }
     }
 
     void expectInBounds(const Vector& vector, size_t index) {

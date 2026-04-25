@@ -1,18 +1,8 @@
 #include "String.hpp"
 #include <vector>
+#include "common.hpp"
 #include "runtime/RuntimeValue.hpp"
 #include "utils/Logging.hpp"
-
-namespace {
-    // TODO can be extracted (Vector has similar)
-    void expectArgsSize(const std::vector<RuntimeValue>& args, size_t expected) {
-        if (args.size() != expected) {
-            throw NativeError{
-                RuntimeError::Type::OutOfBounds, 
-                std::format("Expected {} args, got {}", expected, args.size())};
-        }
-    }
-}
 
 RuntimeValue callStringMethod(const String& string, const std::string& name) {
     if (name == "to_solid") {
