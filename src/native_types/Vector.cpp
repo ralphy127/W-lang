@@ -4,7 +4,6 @@
 #include "utils/Logging.hpp"
 
 //! TODO spice up user errors - whole repo
-// TODO test methods and failures
 
 namespace {
     size_t toIndex(const RuntimeValue& arg) {
@@ -138,5 +137,5 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
 
     throw NativeError{
         RuntimeError::Type::Logic,
-        std::string{"Lineup cannot do {}"} +  name};
+        std::string{"Lineup cannot do "} +  name};
 }

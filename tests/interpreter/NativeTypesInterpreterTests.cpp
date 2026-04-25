@@ -164,3 +164,195 @@ TEST_F(InterpreterTests, VectorResetTheVibeResetsVectorType) {
 
     expectOutput(source, "[11.11]\n");
 }
+
+TEST_F(InterpreterTests, Failure_VectorUnknownMethodThrowsLogicError) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [1, 2, 3]...
+            vector.non_existing()...
+        }
+    )";
+
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Logic,
+        "Lineup cannot do non_existing");
+}
+
+TEST_F(InterpreterTests, Failure_VectorYoinkFailsWhenCalledWithWrongArgCount) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.yoink()...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 1 args, got 0");
+}
+
+TEST_F(InterpreterTests, Failure_VectorYoinkFailsWhenIndexIsOutOfBounds) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.yoink(10)...
+        }
+    )";
+
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Lineup got only 3 places");
+}
+
+TEST_F(InterpreterTests, Failure_VectorYoinkFailsWhenIndexIsZeroOrLower) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.yoink(0)...
+        }
+    )";
+
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Lineup place must be bigger than 1 buddy");
+}
+
+TEST_F(InterpreterTests, Failure_VectorYoinkFailsWhenIndexIsNotInt) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.yoink("two")...
+        }
+    )";
+
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::TypeMismatch,
+        "Anticipated solid instead of yap");
+}
+
+TEST_F(InterpreterTests, Failure_VectorPatchFailsWhenCalledOnEmptyVector) {
+    auto source = R"(
+        gig macho() {
+            stash vector about []...
+            vector.patch(1, 10)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Logic, "Lineup is empty");
+}
+
+TEST_F(InterpreterTests, Failure_VectorPatchFailsWhenCalledWithWrongArgCount) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.patch(1)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 2 args, got 1");
+}
+
+TEST_F(InterpreterTests, Failure_VectorPatchFailsWhenNewValueTypeDoesNotMatch) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.patch(2, "oops")...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Vibes don't match");
+}
+
+TEST_F(InterpreterTests, Failure_VectorShoveFailsWhenCalledWithWrongArgCount) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.shove()...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 1 args, got 0");
+}
+
+TEST_F(InterpreterTests, Failure_VectorShoveFailsWhenTypeDoesNotMatch) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11, 22, 33]...
+            vector.shove("oops")...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Vibes don't match");
+}
+
+TEST_F(InterpreterTests, Failure_VectorKickFailsWhenCalledOnEmptyVector) {
+    auto source = R"(
+        gig macho() {
+            stash vector about []...
+            vector.kick()...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::Logic, "Lineup is empty");
+}
+
+TEST_F(InterpreterTests, Failure_VectorKickFailsWhenCalledWithArguments) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11]...
+            vector.kick(1)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+}
+
+TEST_F(InterpreterTests, Failure_VectorVibeCheckFailsWhenCalledWithArguments) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11]...
+            vector.vibe_check(1)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+}
+
+TEST_F(InterpreterTests, Failure_VectorVibeCountFailsWhenCalledWithArguments) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11]...
+            vector.vibe_count(1)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+}
+
+TEST_F(InterpreterTests, Failure_VectorResetTheVibeFailsWhenCalledWithArguments) {
+    auto source = R"(
+        gig macho() {
+            stash vector about [11]...
+            vector.reset_the_vibe(1)...
+        }
+    )";
+
+    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+}
+
+TEST_F(InterpreterTests, VectorShoveIntoEmptyVectorSetsAndKeepsType) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            stash vector about []...
+            vector.shove(1)...
+            vector.shove(2)...
+            gossip.spill_tea(vector)...
+        }
+    )";
+
+    expectOutput(source, "[1, 2]\n");
+}

@@ -93,8 +93,12 @@ int Interpreter::interpret() {
             _currentRange,
             "Casting is for the weak. Macho only yeets solids or ghosted"};
     }
+    catch (const NativeError& e) {
+        LOG_ERROR << "Caught native error: " << e.what();
+        throw RuntimeError{e.type, _currentRange, e.what()};
+    }
     catch (const std::exception& e) {
-        LOG_ERROR << "[FATAL] Caught unexpected error: " << e.what();
+        LOG_ERROR << "Caught unexpected exception: " << e.what();
         throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, e.what()};
     }
 }
@@ -478,7 +482,16 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     LOG_DEBUG << "Visiting DotExpr";
 
     const RuntimeValue leftValue = evaluate(expr.getLeft());
-    const auto& rightName = expr.getRight().getValue<std::string>();
+    const auto& rightToken = expr.getRight();
+    const auto& rightName = rightToken.getValue<std::string>();
+    const auto methodLine = rightToken.getLine();
+    const auto methodLength = static_cast<std::uint32_t>(rightName.size());
+    const auto methodEndColumn = rightToken.getColumn() + (methodLength > 0u ? methodLength - 1u : 0u);
+    const SourceRange rightRange{
+        rightToken.getFileId(),
+        {methodLine, rightToken.getColumn()},
+        {methodLine, methodEndColumn}
+    };
 
     try {
         if (is<Module>(leftValue)) {
@@ -492,7 +505,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
         }
     }
     catch (const NativeError& e) {
-        throw RuntimeError{e.type, _currentRange, e.what()};
+        throw RuntimeError{e.type, rightRange, e.what()};
     }
     catch (...) {
         throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, "Unexpected crash, sorry"};
