@@ -164,12 +164,13 @@ TEST_F(InterpreterTests, EvaluatesMixedLogicalInPerhaps) {
 }
 
 TEST_F(InterpreterTests, EvaluatesHeavilyNestedLogicalInPerhaps) {
-    // TODO fix line breaking
     auto source = R"(
         summon gossip...
 
         gig macho() {
-            perhaps ((((totally also nah) either (totally also totally)) also ((nah either totally) either (totally also (totally either nah)))) either ((nah also totally) either (nah also (totally either nah)))) {
+            perhaps ((((totally also nah) either (totally also totally)) also
+                     ((nah either totally) either (totally also (totally either nah)))) either
+                    ((nah also totally) either (nah also (totally either nah)))) {
                 gossip.spill_tea("nested true")...
             }
             screw_it {
@@ -1120,7 +1121,6 @@ TEST_F(InterpreterTests, GossipModulePrint) {
 }
 
 TEST_F(InterpreterTests, ScopedImportModulesTest) {
-    // TODO explicitly check error
     auto source = R"(
         gig invalidPrint() {
             psst: summon gossip...
@@ -1135,7 +1135,11 @@ TEST_F(InterpreterTests, ScopedImportModulesTest) {
             invalidPrint()...
         }
     )";
-    EXPECT_ANY_THROW(expectOutput(source, "Hello\n"));
+
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Logic,
+        "Variable gossip does not exist");
 }
 
 TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
