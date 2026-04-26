@@ -7,6 +7,7 @@
 #include "token/Token.hpp"
 #include "ast/Statements.hpp"
 #include "ast/Expressions.hpp"
+#include "ErrorMsgBuilder.hpp"
 
 struct ParserError {
     Token badToken;
@@ -40,10 +41,10 @@ private:
     bool matchAndAdvanceIfNeeded(const std::vector<Token::Type>&);
     bool matchLookahead(Token::Type curr, Token::Type next);
 
-    void throwParserError(const std::string& errorMessage);
+    void throwParserError(const ErrorMsgBuilder&);
 
-    const Token& consume(Token::Type, const std::string& errorMessage);
-    const Token& consumeIdent(Token::Type, const std::string& errorMessage);
+    const Token& consume(Token::Type, const ErrorMsgBuilder&);
+    const Token& consumeIdent(const ErrorMsgBuilder&);
 
     SourceRange makeRange(const Token& start, const Token& end);
     SourceRange makeRange(const AstNode& start, const AstNode& end);

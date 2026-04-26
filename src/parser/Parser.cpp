@@ -144,25 +144,25 @@ bool Parser::matchAndAdvanceIfNeeded(const std::vector<Token::Type>& types) {
     return true;
 }
 
-void Parser::throwParserError(const std::string& errorMessage) {
-    throw ParserError{getToken(), errorMessage};
+void Parser::throwParserError(const ErrorMsgBuilder& errorMessageBuilder) {
+    throw ParserError{getToken(), errorMessageBuilder.build()};
 }
 
 const Token& Parser::consume(
     Token::Type type,
-    const std::string& errorMessage) {
+    const ErrorMsgBuilder& errorMessageBuilder) {
 
     if (not match(type)) {
-        throwParserError(errorMessage);
+        throwParserError(errorMessageBuilder);
     }
     LOG_DEBUG << std::format("Consuming token: {} at token: ", toString(type), getTokenStr());
     return getTokenAndAdvance();
 }
 
-const Token& Parser::consumeIdent(Token::Type type, const std::string& errorMessage) {
-    const auto& identToken = consume(type, errorMessage);
+const Token& Parser::consumeIdent(const ErrorMsgBuilder& errorMessageBuilder) {
+    const auto& identToken = consume(Token::Type::Ident, errorMessageBuilder);
     if (not identToken.valueIs<std::string>()) {
-        throwParserError("Not yapping when supposed to");
+        throwParserError(ErrorMsgBuilder::expected("yapping"));
     }
     return identToken;
 }
@@ -201,10 +201,12 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
     if (matchAndAdvanceIfNeeded(Token::Type::Break)) {
         LOG_DEBUG << "Detected break statement";
         const auto& breakToken = getPreviousToken();
-        const auto& semiToken = consume(Token::Type::BrSemi, "Expected '!!!' after 'rage_quit'");
+        const auto& semiToken = consume(
+            Token::Type::BrSemi,
+            ErrorMsgBuilder::expected("!!!").after("rage_quit"));
         return std::make_unique<BreakStmt>(makeRange(breakToken, semiToken));
     }
-    if (match(Token::Type::Return)) {
+    if (matchAndAdvanceIfNeeded(Token::Type::Return)) {
         LOG_DEBUG << "Detected Return statement";
         return parseReturn();
     }
@@ -219,7 +221,7 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         return nullptr;
     }
 
-    const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after expression");
+    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("expression"));
     
     return std::make_unique<ExpressionStmt>(std::move(expr), makeRange(firstToken, semiToken));
 }
@@ -239,24 +241,24 @@ std::unique_ptr<Stmt> Parser::parseDefinition() {
 std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
     LOG_DEBUG << "Parsing function definition starting at token: " << getTokenStr();
     const auto& gigToken = getPreviousToken();
-    const auto& nameToken = consumeIdent(Token::Type::Ident, "Expected function name after 'gig'");
+    const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("name").after("gig"));
     const auto& name = nameToken.getValue<std::string>();
     LOG_DEBUG << "Function name: " << name;
 
-    consume(Token::Type::LParen, "Expected '(' after function name");
+    consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("gig name"));
 
     std::vector<Token> parameters{};
     if (not match(Token::Type::RParen)) {
         LOG_DEBUG << "Parsing function parameters";
         do {
-            parameters.push_back(consume(Token::Type::Ident, "Expected function parameter name"));
+            parameters.push_back(consume(Token::Type::Ident, ErrorMsgBuilder::expected("gig unit name").after(",")));
             LOG_DEBUG << "Added function parameter: " << parameters.back().getValue<std::string>();
         }
         while (matchAndAdvanceIfNeeded(Token::Type::Comma));
     }
     LOG_DEBUG << "Function has " << parameters.size() << " parameter(s)";
 
-    consume(Token::Type::RParen, "Expected ')' after function parameters");
+    consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("gig units"));
 
     auto body = parseBlock("gig");
     auto srcRange = makeRange(gigToken, *body);
@@ -269,9 +271,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
 std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     LOG_DEBUG << "Parsing variable definition starting at token: " << getTokenStr();
     const auto& stashToken = getPreviousToken();
-    const auto& nameToken = consumeIdent(
-        Token::Type::Ident,
-    "Expected variable name after 'stash'");
+    const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("name").after("stash"));
     const auto& name = nameToken.getValue<std::string>();
 
     std::unique_ptr<Expr> initializer{nullptr};
@@ -286,7 +286,9 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
             makeRange(nameToken, nameToken));
     }
 
-    const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after variable definition");
+    const auto& semiToken = consume(
+        Token::Type::Semi,
+        ErrorMsgBuilder::expected("...").after("stashed item"));
     LOG_DEBUG << std::format(
         "Successfully parsed variable definition for '{}'", name);
     return std::make_unique<VarDefinitionStmt>(
@@ -296,7 +298,10 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
 std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
     LOG_DEBUG << std::format(
         "Parsing block ({}) starting at token: {}", blockIdent, getTokenStr());
-    const auto& lbraceToken = consume(Token::Type::LBrace, "Expected '{' opening block");
+    const auto& lbraceToken = consume(
+        Token::Type::LBrace,
+        ErrorMsgBuilder::expected("{").need(
+            std::format("it to open a code snippet for {}", blockIdent)));
 
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
@@ -304,14 +309,17 @@ std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
     }
     LOG_DEBUG << std::format("Parsed {} statement(s) in block", statements.size());
 
-    const auto& rbraceToken = consume(Token::Type::RBrace, "Expected '}' closing block");
+    const auto& rbraceToken = consume(
+        Token::Type::RBrace,
+        ErrorMsgBuilder::unclosed("{").need(
+            std::format("}} to close the code snippet for {}", blockIdent)));
 
     LOG_DEBUG << "Block parsed with " << statements.size() << " statement(s)";
     return std::make_unique<BlockStmt>(std::move(statements), makeRange(lbraceToken, rbraceToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseReturn() {
-    const auto& returnToken = consume(Token::Type::Return, "Expected return token");
+    const auto& returnToken = getPreviousToken();
     LOG_DEBUG << "Parsing return statement at token: " << getTokenStr();
     if (match(Token::Type::Semi)) {
         const auto& semiToken = getTokenAndAdvance();
@@ -326,10 +334,10 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
     LOG_DEBUG << "Parsing return value expression";
     auto value = parseExpression();
     if (not value) {
-        throwParserError("Expected an expression after 'yeet'");
+        throwParserError(ErrorMsgBuilder::expected("something").after("yeet"));
     }
 
-    const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after return value");
+    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("yeeting thingy"));
 
     LOG_DEBUG << "Return statement parsed successfully";
     return std::make_unique<ReturnStmt>(std::move(value), makeRange(returnToken, semiToken));
@@ -338,18 +346,18 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
 std::unique_ptr<Stmt> Parser::parseIf() {
     LOG_DEBUG << "Parsing 'perhaps' statement";
     const auto& ifToken = getPreviousToken();
-    consume(Token::Type::LParen, "Expected '(' after 'perhaps'");
+    consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("perhaps"));
 
     auto ifCondition = parseExpression();
-    consume(Token::Type::RParen, "Expected ')' after 'perhaps' condition");
+    consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("perhaps vibe"));
 
     auto ifBody = parseBlock("perhaps");
 
     std::vector<ElseIfClause> elIfClauses{};
     while (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Elif)) {
-        consume(Token::Type::LParen, "Expected '(' after 'or_whatever'");
+        consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("or_whatever"));
         auto elifCondition = parseExpression();
-        consume(Token::Type::RParen, "Expected ')' after 'or_whatever' condition");
+        consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("or_whatever vibe"));
         auto elifBody = parseBlock("or_whatever");
 
         elIfClauses.emplace_back(std::move(elifCondition), std::move(elifBody));
@@ -387,12 +395,12 @@ std::unique_ptr<Stmt> Parser::parseLoop() {
 std::unique_ptr<Stmt> Parser::parseRepeat() {
     LOG_DEBUG << "Parsing 'repeat' statement";
     const auto& loopToken = getPreviousToken();
-    consume(Token::Type::LParen, "Expected '(' after 'repeat'");
+    consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("repeat"));
     auto countExpr = parseExpression();
     if (not countExpr) {
-        throwParserError("Expected loop count expression inside '()'");
+        throwParserError(ErrorMsgBuilder::expected("repeat counter").after("("));
     }
-    consume(Token::Type::RParen, "Expected ')' after loop count expression");
+    consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("repeat counter"));
 
     auto body = parseBlock("spin_around");
 
@@ -405,8 +413,8 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
 std::unique_ptr<Stmt> Parser::parseImport() {
     LOG_DEBUG << "Parsing 'summon' statement";
     const auto& importToken = getPreviousToken();
-    const auto& moduleToken = consume(Token::Type::Ident, "Expected module name after 'summon'");
-    const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after module import");
+    const auto& moduleToken = consume(Token::Type::Ident, ErrorMsgBuilder::expected("hub name").after("summon"));
+    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("hub import"));
     LOG_DEBUG << std::format(
         "Successfully parsed 'summon' statement for module '{}'",
         moduleToken.getValue<std::string>());
@@ -419,7 +427,7 @@ std::unique_ptr<Stmt> Parser::parseReassign() {
     advance();
             
     auto value = parseExpression();
-    const auto& semiToken = consume(Token::Type::Semi, "Expected '...' after reassignment");
+    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("restashing"));
     return std::make_unique<ReassignStmt>(
         nameToken, std::move(value), makeRange(nameToken, semiToken));
 }
@@ -447,8 +455,7 @@ std::unique_ptr<Expr> Parser::parseOr() {
         advance();
         auto right = parseAnd();
         if (not right) {
-            throwParserError(
-                std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
         }
         auto srcRange = makeRange(*left, *right);
         LOG_DEBUG << "Parsed logical or expression successfully";
@@ -477,8 +484,7 @@ std::unique_ptr<Expr> Parser::parseAnd() {
         advance();
         auto right = parseEquality();
         if (not right) {
-            throwParserError(
-                std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+            throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
         }
         auto srcRange = makeRange(*left, *right);
         LOG_DEBUG << "Parsed logical and expression successfully";
@@ -503,7 +509,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     if (match(Token::Type::Ident)) {
         const auto& nameToken = getTokenAndAdvance();
         if (not nameToken.valueIs<std::string>()) {
-            throwParserError("This is the moment to start yapping");
+            throwParserError(ErrorMsgBuilder::expected("yapping"));
         }
 
         std::unique_ptr<Expr> expr = std::make_unique<VariableExpr>(
@@ -512,7 +518,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
         while (not parsedAll()) {
             if (matchAndAdvanceIfNeeded(Token::Type::Dot)) {
                 const auto& propertyToken = consume(
-                    Token::Type::Ident, "Expected property name after '.'");
+                    Token::Type::Ident, ErrorMsgBuilder::expected("something").after("."));
                 expr = std::make_unique<DotExpr>(
                     std::move(expr), propertyToken, makeRange(nameToken, propertyToken));
             }
@@ -531,7 +537,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
     if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
         LOG_DEBUG << "Parsing grouped expression";
         auto expr = parseExpression();
-        consume(Token::Type::RParen, "Expected ) after expression");
+        consume(Token::Type::RParen, ErrorMsgBuilder::unclosed("(").need(")"));
         return expr;
     }
 
@@ -545,7 +551,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
             } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
         }
         const auto& rbracketToken = consume(
-            Token::Type::RBracket, "Expected ']' at the end of a vector");
+            Token::Type::RBracket, ErrorMsgBuilder::expected("]").after("lineup places"));
         LOG_DEBUG << std::format("Parsed vector with {} elements", elements.size());
         return std::make_unique<VectorExpr>(
             std::move(elements),
@@ -567,8 +573,7 @@ std::unique_ptr<Expr> Parser::parseEquality() {
             advance();
             auto right = parseComparison();
             if (not right) {
-                throwParserError(
-                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             LOG_DEBUG << "Parsed equality binary expression successfully";
@@ -591,8 +596,7 @@ std::unique_ptr<Expr> Parser::parseComparison() {
             advance();
             auto right = parseTerm();
             if (not right) {
-                throwParserError(
-                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             LOG_DEBUG << "Parsed comparison binary expression successfully";
@@ -615,8 +619,7 @@ std::unique_ptr<Expr> Parser::parseTerm() {
             advance();
             auto right = parseFactor();
             if (not right) {
-                throwParserError(
-                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right), srcRange);
@@ -641,8 +644,7 @@ std::unique_ptr<Expr> Parser::parseFactor() {
             advance();
             auto right = parseUnary();
             if (not right) {
-                throwParserError(
-                    std::format("Expected right operand after '{}'", toSourceString(tokenType)));
+                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right), srcRange);
@@ -666,7 +668,7 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
             arguments.push_back(parseExpression());
         } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
     }
-    const auto& rParenToken = consume(Token::Type::RParen, "Expected ')' after arguments");
+    const auto& rParenToken = consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("units"));
                 
     LOG_DEBUG << std::format("Parsed function call with {} arguments", arguments.size());
     return std::make_unique<CallExpr>(
@@ -678,7 +680,7 @@ std::unique_ptr<Expr> Parser::parseUnary() {
         const auto& opToken = getTokenAndAdvance();
         auto right = parseUnary();
         if (not right) {
-            throwParserError("Can't pump_it into the void");
+            throwParserError(ErrorMsgBuilder::cannot("pump it into the void"));
         }
 
         if (right->getLValue().has_value()) {
@@ -686,7 +688,7 @@ std::unique_ptr<Expr> Parser::parseUnary() {
             return std::make_unique<UnaryExpr>(opToken, std::move(right), srcRange);
         }
         else {
-            throwParserError("Can't pump_it - no grip, no glory.");
+            throwParserError(ErrorMsgBuilder::cannot("pump that thing, no grip - no glory"));
         }
     }
 
