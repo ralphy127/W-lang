@@ -54,7 +54,7 @@ struct ParserTests : public ::testing::Test {
             throw std::out_of_range("AST index out of bounds");
         }
         const T* stmt = dynamic_cast<const T*>(ast[index].get());
-        if (!stmt) {
+        if (not stmt) {
             ADD_FAILURE() << "Failed to cast statement at index " << index;
             throw std::runtime_error("Bad AST cast");
         }
@@ -64,7 +64,7 @@ struct ParserTests : public ::testing::Test {
     template <typename T, typename Base>
     const T& expectCast(const Base& base) {
         const T* casted = dynamic_cast<const T*>(&base);
-        if (!casted) {
+        if (not casted) {
             ADD_FAILURE() << "Failed to cast expression/statement";
             throw std::runtime_error("Bad AST cast");
         }
@@ -81,7 +81,8 @@ struct ParserTests : public ::testing::Test {
     const ReassignStmt& expectReassign(size_t index, const std::string& expectedName) {
         const auto* stmt = expectStmt<ReassignStmt>(index);
         EXPECT_NE(stmt, nullptr);
-        EXPECT_EQ(stmt->getName().getValue<std::string>(), expectedName);
+        const auto* targetVar = dynamic_cast<const VariableExpr*>(&stmt->getTarget());
+        EXPECT_EQ(targetVar->getName().getValue<std::string>(), expectedName);
         return *stmt;
     }
 
@@ -1217,13 +1218,5 @@ TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithFunctionCall) {
 
 TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithStringLiteral) {
     const auto result = parse("pump_it \"hello\"...");
-    expectHasErrorContaining(result, "Nice try, but you can't pump that thing, no grip - no glory");
-}
-
-TEST_F(ParserTests, Failure_IncrOperatorThrowsWhenCalledWithDotExpression) {
-    const auto result = parse(
-        "summon gossip...\n"
-        "pump_it gossip.spill_tea..."
-    );
     expectHasErrorContaining(result, "Nice try, but you can't pump that thing, no grip - no glory");
 }

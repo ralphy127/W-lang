@@ -21,7 +21,7 @@ ParserResult Parser::parse() {
                 LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
             }
             else {
-                LOG_WARN << "parseDefinition() returned null, synchronizing";
+                LOG_ERROR << "parseDefinition() returned null";
                 errors.emplace_back(getToken(), "Mystery statement");
                 synchronize();
             }
@@ -210,15 +210,15 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected Return statement";
         return parseReturn();
     }
-    if (matchLookahead(Token::Type::Ident, Token::Type::Reassign)) {        
-        return parseReassign();
-    }
-
     const auto& firstToken = getToken();
     auto expr = parseExpression();
     if (not expr) {
         LOG_WARN << "Returning nullptr in parseStatement()";
         return nullptr;
+    }
+
+    if (matchAndAdvanceIfNeeded(Token::Type::Reassign)) {
+        return parseReassign(std::move(expr), firstToken);
     }
 
     const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("expression"));
@@ -421,15 +421,17 @@ std::unique_ptr<Stmt> Parser::parseImport() {
     return std::make_unique<ImportStmt>(moduleToken, makeRange(importToken, semiToken));
 }
 
-std::unique_ptr<Stmt> Parser::parseReassign() {
+std::unique_ptr<Stmt> Parser::parseReassign(std::unique_ptr<Expr> target, const Token& startToken) {
     LOG_DEBUG << "parseReassign() called at token: " << getTokenStr();
-    const auto& nameToken = getTokenAndAdvance();
-    advance();
-            
+    // TODO while working on internal errors, use them to check target != nullptr
     auto value = parseExpression();
+    if (not target->getLValue().has_value()) {
+        throwParserError(ErrorMsgBuilder::cannot("restash this thing"));
+    }
+
     const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("restashing"));
     return std::make_unique<ReassignStmt>(
-        nameToken, std::move(value), makeRange(nameToken, semiToken));
+        std::move(target), std::move(value), makeRange(startToken, semiToken));
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {

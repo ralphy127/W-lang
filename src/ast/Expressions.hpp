@@ -90,7 +90,7 @@ public:
     const Expr& getLeft() const { return *_left; }
     const Token& getRight() const { return _right; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitDotExpr(*this); }
-    // TODO add lvalue getter while adding property
+    std::optional<LValue> getLValue() const override;
 
 private:
     std::unique_ptr<Expr> _left;

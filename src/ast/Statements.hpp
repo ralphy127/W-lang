@@ -30,14 +30,14 @@ private:
 
 class ReassignStmt : public Stmt {
 public:
-    explicit ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange);
+    explicit ReassignStmt(std::unique_ptr<Expr> target, std::unique_ptr<Expr> value, SourceRange);
 
-    const Token& getName() const { return _name; }
-    const Expr& getValue() const;
+    const Expr& getTarget() const { return *_target; }
+    const Expr& getValue() const { return *_value; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitReassignStmt(*this); }
 
 private:
-    Token _name;
+    std::unique_ptr<Expr> _target;
     std::unique_ptr<Expr> _value;
 };
 

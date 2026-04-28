@@ -17,18 +17,13 @@ const Expr& VarDefinitionStmt::getInitializer() const {
     return *_initializer;
 }
 
-ReassignStmt::ReassignStmt(Token name, std::unique_ptr<Expr> value, SourceRange srcRange)
+ReassignStmt::ReassignStmt(std::unique_ptr<Expr> target, std::unique_ptr<Expr> value, SourceRange srcRange)
     : Stmt{srcRange}
-    , _name{std::move(name)}
+    , _target{std::move(target)}
     , _value{std::move(value)} {
     
-    assert(_name.valueIs<std::string>());
-    assert(_value.get());
-}
-
-const Expr& ReassignStmt::getValue() const {
-    assert(_value.get());
-    return *_value;
+    assert(_target);
+    assert(_value);
 }
 
 BlockStmt::BlockStmt(std::vector<std::unique_ptr<Stmt>> statements, SourceRange srcRange)

@@ -145,3 +145,15 @@ void ErrorReporter::printRuntimeError(const RuntimeError& error, const SourceMan
     printError(filePath, error.srcRange.start.line, error.srcRange.start.column, length, msg);
     std::cerr << '\n';
 }
+
+void ErrorReporter::printInternalError(const InternalError& error) {
+    auto& loc = error.loc;
+    auto msg = std::format(
+        "Internal error, W-Lang just crashed.\n"
+        "This is a bug, please report it.\n"
+        "Reason  : {}\n"
+        "C++ File: {}:{}\n"
+        "Function: {}\n",
+        error.msg, loc.file_name(), loc.line(), loc.function_name());
+    std::cerr << msg;
+}

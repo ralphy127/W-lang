@@ -4,6 +4,7 @@
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
 #include "runtime/RuntimeErrors.hpp"
+#include "errors/Exceptions.hpp"
 #include "EnvironmentGuard.hpp"
 
 namespace {
@@ -130,12 +131,22 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
 RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
     LOG_DEBUG << "Visiting ReassignStmt";
 
-    const auto& name = stmt.getName().getValue<std::string>();
+    auto lValue = stmt.getTarget().getLValueUnsafe();
     RuntimeValue newValue = evaluate(stmt.getValue());
-    _currentEnvironment->reassignVar(name, std::move(newValue));
 
-    LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
-        name, stringify(newValue), _scopeDepth);
+    std::visit(overloaded{
+        [&](const LValue::Variable& var) {
+            _currentEnvironment->reassignVar(var.name, newValue);
+            LOG_DEBUG << std::format("Reassigning variable {} to {} at scope depth {}",
+                var.name, stringify(newValue), _scopeDepth);
+        },
+        [&](const LValue::Property& prop) {
+            auto mod = evaluate(prop.object.get()).as<Module>();
+            mod.env->reassignVar(prop.name, newValue);
+            LOG_DEBUG << std::format("Reassigning module property {} to {}",
+                prop.name, stringify(newValue));
+        }
+    }, lValue.location);
 
     return Null{};
 }

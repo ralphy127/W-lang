@@ -851,6 +851,21 @@ TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
     expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated vibe instead of solid");
 }
 
+TEST_F(InterpreterTests, Failure_IncrementingOfModuleFunctionMismatches) {
+    auto source = R"(
+        summon gossip...
+
+        gig macho() {
+            pump_it gossip.spill_tea...
+        }
+    )";
+
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::TypeMismatch,
+        "Anticipated solid instead of gig");
+}
+
 TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
     auto source = R"(
         gig add(x, y) {

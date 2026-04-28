@@ -57,7 +57,11 @@ RuntimeValue AstPrinter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) {
 }
 
 RuntimeValue AstPrinter::visitReassignStmt(const ReassignStmt& stmt) {
-    printLine("ReassignStmt " + tokenToString(stmt.getName()));
+    printLine("ReassignStmt");
+    printKey("target");
+    ++_indent;
+    stmt.getTarget().accept(*this);
+    --_indent;
     printKey("value");
     ++_indent;
     stmt.getValue().accept(*this);

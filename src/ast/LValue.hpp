@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include <memory>
 #include <variant>
+#include <functional>
 
 class Expr;
 
@@ -11,7 +11,10 @@ struct LValue {
         std::string name;
     };
 
-    // TODO property
+    struct Property {
+        std::reference_wrapper<const Expr> object;
+        std::string name;
+    };
 
-    std::variant<Variable> location;
+    std::variant<Variable, Property> location;
 };

@@ -97,6 +97,9 @@ int main(int argc, const char* argv[]) {
     catch (const RuntimeError& error) {
         errorReporter.printRuntimeError(error, sourceManager);
     }
+    catch(const InternalError& error) {
+        errorReporter.printInternalError(error);
+    }
     catch (const std::exception& e) {
         std::cout << "Error: " << e.what() << std::endl;
     }

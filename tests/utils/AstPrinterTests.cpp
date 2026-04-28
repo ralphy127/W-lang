@@ -30,14 +30,14 @@ struct AstPrinterTests : public ::testing::Test {
         Lexer lexer{source, dummyFileId};
         auto lexerResult = lexer.tokenize();
         EXPECT_TRUE(lexerResult.errors.empty());
-        if (!lexerResult.errors.empty()) {
+        if (not lexerResult.errors.empty()) {
             return {};
         }
 
         Parser parser{std::move(lexerResult.tokens)};
         auto parserResult = parser.parse();
         EXPECT_TRUE(parserResult.errors.empty());
-        if (!parserResult.errors.empty()) {
+        if (not parserResult.errors.empty()) {
             return {};
         }
 
@@ -78,7 +78,8 @@ TEST_F(AstPrinterTests, VisitVarDefinitionStmt_PrintsInitializer) {
 
 TEST_F(AstPrinterTests, VisitReassignStmt_PrintsValue) {
     expectInOrder(printSource("counter might_be 42..."), {
-        "ReassignStmt Ident (counter)",
+        "ReassignStmt",
+        "VariableExpr Ident (counter)",
         "value:",
         "LiteralExpr Int (42)",
     });

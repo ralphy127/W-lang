@@ -1,6 +1,7 @@
 add_library(errors
     ErrorReporter.hpp
     ErrorReporter.cpp
+    Exceptions.hpp
 )
 
 target_include_directories(errors PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

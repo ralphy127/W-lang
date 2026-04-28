@@ -60,7 +60,7 @@ private:
     std::unique_ptr<Stmt> parseLoop();
     std::unique_ptr<Stmt> parseRepeat();
     std::unique_ptr<Stmt> parseImport();
-    std::unique_ptr<Stmt> parseReassign();
+    std::unique_ptr<Stmt> parseReassign(std::unique_ptr<Expr> target, const Token& startToken);
 
     std::unique_ptr<Expr> parseExpression();
     std::unique_ptr<Expr> parseOr();

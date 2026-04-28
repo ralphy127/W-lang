@@ -59,8 +59,15 @@ DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right, SourceRange srcRange)
     , _left{std::move(left)}
     , _right{std::move(right)}
 {
-    assert(_left != nullptr);
+    assert(_left);
     assert(_right.getType() == Token::Type::Ident);
+}
+
+std::optional<LValue> DotExpr::getLValue() const {
+    if (_right.getType() == Token::Type::Ident) {
+        return LValue{LValue::Property{*_left, _right.getValue<std::string>()}};
+    }
+    return std::nullopt;
 }
 
 VectorExpr::VectorExpr(std::vector<std::unique_ptr<Expr>> initializers, SourceRange srcRange)
