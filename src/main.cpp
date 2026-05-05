@@ -4,6 +4,7 @@
 #include <string>
 #include <exception>
 #include <functional>
+#include <cstring>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"

@@ -143,12 +143,15 @@ const T& as(const RuntimeValueBase& v, const SourceRange& srcRange) {
     return std::get<T>(v);
 }
 
+// TODO make it a method
 template<typename T>
 const T& asUnsafe(const RuntimeValue& v) {
-    if (not is<T>(v)) {
+    const auto& base = static_cast<const RuntimeValueBase&>(v);
+    
+    if (not is<T>(base)) {
         throw NativeError{
             RuntimeError::Type::TypeMismatch,
-            std::format("Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(v))};
+            std::format("Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(base))};
     }
-    return std::get<T>(v);
+    return std::get<T>(base);
 }

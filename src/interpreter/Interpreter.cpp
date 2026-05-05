@@ -51,7 +51,7 @@ Interpreter::Interpreter(
     for (const auto& stmt : _statements) {
         assert(stmt);
     }
-    assert(astResolver);
+    assert(_astResolver);
 }
 
 int Interpreter::interpret() {
@@ -302,9 +302,6 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
         _currentEnvironment->defineVar(moduleName, it->second);
         return Null{};
     }
-
-    // TODO add possibility of changing global variables in modules
-    // (look at /tests/test_files/user_modules/macho.weird)
 
     auto mod = Module{std::make_shared<Environment>()};
 
