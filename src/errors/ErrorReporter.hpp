@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Exceptions.hpp"
+#include "InternalError.hpp"
 #include "core/SourceManager.hpp"
 #include "runtime/RuntimeErrors.hpp"
 

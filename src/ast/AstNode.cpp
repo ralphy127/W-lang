@@ -1,5 +1,5 @@
 #include "AstNode.hpp"
-#include "errors/Exceptions.hpp"
+#include "errors/InternalError.hpp"
 
 LValue AstNode::getLValueUnsafe(const std::source_location& loc) const {
     auto lValue = getLValue();

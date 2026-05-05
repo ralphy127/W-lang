@@ -1,6 +1,4 @@
 #include "Environment.hpp"
-
-#include <cassert>
 #include <format>
 
 Environment::Environment(std::shared_ptr<Environment> outerScope)

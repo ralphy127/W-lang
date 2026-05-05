@@ -98,11 +98,6 @@ public:
     template<VariantAlternative<Value> T>
     bool valueIs() const noexcept { return std::holds_alternative<T>(_value); }
 
-    bool isLiteral() const;
-    bool isOperator() const;
-    bool isLogicalOperator() const;
-    bool isStatementStart() const;
-
 private:
     Value _value;
     FileId _fileId;

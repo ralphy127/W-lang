@@ -20,7 +20,7 @@ public:
     explicit VarDefinitionStmt(Token name, std::unique_ptr<Expr> initializer, SourceRange);
 
     const Token& getName() const { return _name; }
-    const Expr& getInitializer() const;
+    const Expr& getInitializer() const { return *_initializer; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitVarDefinitionStmt(*this); }
 
 private:
@@ -61,14 +61,15 @@ struct ElseIfClause {
 
 class IfStmt : public Stmt {
 public:
-    explicit IfStmt(SourceRange srcRange,
-                    std::unique_ptr<Expr> condition, 
-                    std::unique_ptr<Stmt> thenBlock,
-                    std::vector<ElseIfClause> elseIfs = std::vector<ElseIfClause>{},
-                    std::unique_ptr<Stmt> elseBlock = nullptr);
+    explicit IfStmt(
+        SourceRange srcRange,
+        std::unique_ptr<Expr> condition, 
+        std::unique_ptr<Stmt> thenBlock,
+        std::vector<ElseIfClause> elseIfs = std::vector<ElseIfClause>{},
+        std::unique_ptr<Stmt> elseBlock = nullptr);
 
-    const Expr& getCondition() const;
-    const Stmt& getThenBlock() const;
+    const Expr& getCondition() const { return *_condition; }
+    const Stmt& getThenBlock() const { return *_thenBlock; }
     const std::vector<ElseIfClause>& getElseIfClauses() const { return _elseIfs; }
     std::optional<std::reference_wrapper<const Stmt>> getElseBlock() const;
     RuntimeValue accept(AstVisitor& v) const override { return v.visitIfStmt(*this); }
@@ -84,7 +85,7 @@ class LoopStmt : public Stmt {
 public:
     explicit LoopStmt(std::unique_ptr<Stmt> body, SourceRange);
 
-    const Stmt& getBody() const;
+    const Stmt& getBody() const { return *_body; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitLoopStmt(*this); }
 
 private:
@@ -95,8 +96,8 @@ class RepeatStmt : public Stmt {
 public:
     explicit RepeatStmt(std::unique_ptr<Expr> count, std::unique_ptr<Stmt> body, SourceRange);
 
-    const Expr& getCount() const;
-    const Stmt& getBody() const;
+    const Expr& getCount() const { return *_count; }
+    const Stmt& getBody() const { return *_body; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitRepeatStmt(*this); }
 
 private:
@@ -123,14 +124,15 @@ public:
 
 class FunctionStmt : public Stmt {
 public:
-    explicit FunctionStmt(Token name, 
-                         std::vector<Token> parameters,
-                         std::unique_ptr<Stmt> body,
-                         SourceRange);
+    explicit FunctionStmt(
+        Token name, 
+        std::vector<Token> parameters,
+        std::unique_ptr<Stmt> body,
+        SourceRange);
 
     const Token& getName() const { return _name; }
     const std::vector<Token>& getParameters() const { return _parameters; }
-    const Stmt& getBody() const;
+    const Stmt& getBody() const { return *_body; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitFunctionStmt(*this); }
 
 private:

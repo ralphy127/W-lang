@@ -1,7 +1,7 @@
 #include "Parser.hpp"
 #include "utils/Logging.hpp"
 #include "ast/LValue.hpp"
-#include <cassert>
+#include "errors/InternalError.hpp"
 #include <format>
 #include <algorithm>
 
@@ -9,34 +9,33 @@ Parser::Parser(std::vector<Token> tokens)
     : _tokens{std::move(tokens)} {}
 
 ParserResult Parser::parse() {
-    const auto tokensCount = static_cast<int>(_tokens.size());
-    LOG_INFO << "Starting parse with " << tokensCount << " tokens";
-    std::vector<std::unique_ptr<Stmt>> statements;
-    std::vector<ParserError> errors;
+    LOG_INFO << "Starting parse with " << _tokens.size() << " tokens";
+    std::vector<std::unique_ptr<Stmt>> statements{};
+    std::vector<ParserError> errors{};
 
     while (not parsedAll()) {
         try {
             if (auto statement = parseDefinition()) {
                 statements.push_back(std::move(statement));
                 LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
+                continue;
             }
             else {
                 LOG_ERROR << "parseDefinition() returned null";
                 errors.emplace_back(getToken(), "Mystery statement");
-                synchronize();
             }
         }
         catch(ParserError error) {
             LOG_ERROR << std::format("Parse error at line {}, column {}: {}",
                 error.badToken.getLine(), error.badToken.getColumn(), error.msg);
             errors.emplace_back(std::move(error));
-            synchronize();
         }
         catch(const std::exception& e) {
             LOG_ERROR << "Unexpected exception: " << e.what();
             errors.emplace_back(getToken(), e.what());
-            synchronize();
         }
+
+        synchronize();
     }
 
     LOG_INFO << std::format(
@@ -104,12 +103,12 @@ void Parser::synchronize() {
 }
 
 const Token& Parser::getPreviousToken() const {
-    assert(_current > 0ull);
+    ensureUnsafe(_current > 0ull, "Cannot get previous token");
     return _tokens[_current - 1ull];
 }
 
 const Token& Parser::getToken() const {
-    assert(not parsedAll());
+    ensureUnsafe(not parsedAll(), "Cannot get current token");
     return _tokens[_current];
 }
 
@@ -251,7 +250,9 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
     if (not match(Token::Type::RParen)) {
         LOG_DEBUG << "Parsing function parameters";
         do {
-            parameters.push_back(consume(Token::Type::Ident, ErrorMsgBuilder::expected("gig unit name").after(",")));
+            parameters.push_back(consume(
+                Token::Type::Ident,
+                ErrorMsgBuilder::expected("gig unit name").after(",")));
             LOG_DEBUG << "Added function parameter: " << parameters.back().getValue<std::string>();
         }
         while (matchAndAdvanceIfNeeded(Token::Type::Comma));
@@ -260,7 +261,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
 
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("gig units"));
 
-    auto body = parseBlock("gig");
+    auto body = unwrapUnsafe(parseBlock("gig"));
     auto srcRange = makeRange(gigToken, *body);
 
     LOG_DEBUG << "Successfully parsed function definition for '" << name << "'";
@@ -277,7 +278,7 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     std::unique_ptr<Expr> initializer{nullptr};
     if (matchAndAdvanceIfNeeded(Token::Type::Assign)) {
         LOG_DEBUG << "Parsing initializer for variable " << name;
-        initializer = parseExpression();
+        initializer = unwrapUnsafe(parseExpression());
     }
     else {
         LOG_DEBUG << "Creating default initializer for variable " << name;
@@ -305,7 +306,8 @@ std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
 
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
-        statements.push_back(parseDefinition());
+        // TODO investigate if user errors might happen below (1)
+        statements.push_back(unwrapUnsafe(parseDefinition()));
     }
     LOG_DEBUG << std::format("Parsed {} statement(s) in block", statements.size());
 
@@ -348,17 +350,19 @@ std::unique_ptr<Stmt> Parser::parseIf() {
     const auto& ifToken = getPreviousToken();
     consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("perhaps"));
 
-    auto ifCondition = parseExpression();
+    // TODO investigate if user errors might happen below (2)
+    auto ifCondition = unwrapUnsafe(parseExpression());
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("perhaps vibe"));
 
-    auto ifBody = parseBlock("perhaps");
+    auto ifBody = unwrapUnsafe(parseBlock("perhaps"));
 
     std::vector<ElseIfClause> elIfClauses{};
     while (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Elif)) {
         consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("or_whatever"));
-        auto elifCondition = parseExpression();
+        // TODO investigate if user errors might happen below (3)
+        auto elifCondition = unwrapUnsafe(parseExpression());
         consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("or_whatever vibe"));
-        auto elifBody = parseBlock("or_whatever");
+        auto elifBody = unwrapUnsafe(parseBlock("or_whatever"));
 
         elIfClauses.emplace_back(std::move(elifCondition), std::move(elifBody));
     }
@@ -385,7 +389,7 @@ std::unique_ptr<Stmt> Parser::parseIf() {
 std::unique_ptr<Stmt> Parser::parseLoop() {
     LOG_DEBUG << "Parsing 'do_until_bored' statement";
     const auto& loopToken = getPreviousToken();
-    auto body = parseBlock("do_until_bored");
+    auto body = unwrapUnsafe(parseBlock("do_until_bored"));
     auto srcRange = makeRange(loopToken, *body);
 
     LOG_DEBUG << "Successfully parsed 'do_until_bored' statement";
@@ -402,7 +406,7 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
     }
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("repeat counter"));
 
-    auto body = parseBlock("spin_around");
+    auto body = unwrapUnsafe(parseBlock("spin_around"));
 
     auto srcRange = makeRange(loopToken, *body);
 
@@ -423,15 +427,14 @@ std::unique_ptr<Stmt> Parser::parseImport() {
 
 std::unique_ptr<Stmt> Parser::parseReassign(std::unique_ptr<Expr> target, const Token& startToken) {
     LOG_DEBUG << "parseReassign() called at token: " << getTokenStr();
-    // TODO while working on internal errors, use them to check target != nullptr
-    auto value = parseExpression();
+    auto value = unwrapUnsafe(parseExpression());
     if (not target->getLValue().has_value()) {
         throwParserError(ErrorMsgBuilder::cannot("restash this thing"));
     }
 
     const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("restashing"));
     return std::make_unique<ReassignStmt>(
-        std::move(target), std::move(value), makeRange(startToken, semiToken));
+        unwrapUnsafe(std::move(target)), std::move(value), makeRange(startToken, semiToken));
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {
@@ -447,6 +450,9 @@ std::unique_ptr<Expr> Parser::parseExpression() {
 std::unique_ptr<Expr> Parser::parseOr() {
     LOG_DEBUG << "parseOr() called at token: " << getTokenStr();
     auto left = parseAnd();
+    if (not left) {
+        return nullptr;
+    }
 
     while (not parsedAll()) {
         const auto& token = getToken();
@@ -457,7 +463,8 @@ std::unique_ptr<Expr> Parser::parseOr() {
         advance();
         auto right = parseAnd();
         if (not right) {
-            throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
+            throwParserError(
+                ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
         }
         auto srcRange = makeRange(*left, *right);
         LOG_DEBUG << "Parsed logical or expression successfully";
@@ -476,6 +483,9 @@ std::unique_ptr<Expr> Parser::parseOr() {
 std::unique_ptr<Expr> Parser::parseAnd() {
     LOG_DEBUG << "parseAnd() called at token: " << getTokenStr();
     auto left = parseEquality();
+    if (not left) {
+        return nullptr;
+    }
 
     while (not parsedAll()) {
         const auto& token = getToken();
@@ -503,9 +513,20 @@ std::unique_ptr<Expr> Parser::parseAnd() {
 
 std::unique_ptr<Expr> Parser::parsePrimary() {
     LOG_DEBUG << "parsePrimary() called at token: " << getTokenStr();
-    if (const auto& token = getToken(); token.isLiteral()) {
+    const auto& token = getToken();
+    const auto& tokenType = token.getType();
+    const bool isLiteral =
+        tokenType == Token::Type::Null or
+        tokenType == Token::Type::Int or
+        tokenType == Token::Type::Float or
+        tokenType == Token::Type::String or
+        tokenType == Token::Type::True or
+        tokenType == Token::Type::False;
+
+    if (isLiteral) {
         LOG_DEBUG << "Parsed literal expression: " << toString(token.getType());
-        return std::make_unique<LiteralExpr>(getTokenAndAdvance(), makeRange(token, token));
+        advance();
+        return std::make_unique<LiteralExpr>(token, makeRange(token, token));
     }
 
     if (match(Token::Type::Ident)) {
@@ -525,7 +546,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
                     std::move(expr), propertyToken, makeRange(nameToken, propertyToken));
             }
             else if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
-                expr = parseFunctionCall(std::move(expr)); 
+                expr = unwrapUnsafe(parseFunctionCall(std::move(expr))); 
             }
             else {
                 break;
@@ -567,6 +588,9 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 std::unique_ptr<Expr> Parser::parseEquality() {
     LOG_DEBUG << "parseEquality() called at token: " << getTokenStr();
     auto left = parseComparison();
+    if (not left) {
+        return nullptr;
+    }
 
     if (not parsedAll()) {
         const auto& token = getToken();
@@ -590,6 +614,9 @@ std::unique_ptr<Expr> Parser::parseEquality() {
 std::unique_ptr<Expr> Parser::parseComparison() {
     LOG_DEBUG << "parseComparison() called at token: " << getTokenStr();
     auto left = parseTerm();
+    if (not left) {
+        return nullptr;
+    }
 
     if (not parsedAll()) {
         const auto& token = getToken();
@@ -613,6 +640,9 @@ std::unique_ptr<Expr> Parser::parseComparison() {
 std::unique_ptr<Expr> Parser::parseTerm() {
     LOG_DEBUG << "parseTerm() called at token: " << getTokenStr();
     auto left = parseFactor();
+    if (not left) {
+        return nullptr;
+    }
 
     while (not parsedAll()) {
         const auto& token = getToken();
@@ -638,6 +668,9 @@ std::unique_ptr<Expr> Parser::parseTerm() {
 std::unique_ptr<Expr> Parser::parseFactor() {
     LOG_DEBUG << "parseFactor() called at token: " << getTokenStr();
     auto left = parseUnary();
+    if (not left) {
+        return nullptr;
+    }
 
     while (not parsedAll()) {
         const auto& token = getToken();
@@ -670,11 +703,15 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
             arguments.push_back(parseExpression());
         } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
     }
-    const auto& rParenToken = consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("units"));
+    const auto& rParenToken = consume(
+        Token::Type::RParen,
+        ErrorMsgBuilder::expected(")").after("units"));
                 
     LOG_DEBUG << std::format("Parsed function call with {} arguments", arguments.size());
     return std::make_unique<CallExpr>(
-        std::move(callee), std::move(arguments), makeRange(lParenToken, rParenToken));
+        unwrapUnsafe(std::move(callee)),
+        std::move(arguments),
+        makeRange(lParenToken, rParenToken));
 }
 
 std::unique_ptr<Expr> Parser::parseUnary() {

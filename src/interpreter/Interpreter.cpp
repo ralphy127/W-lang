@@ -1,10 +1,10 @@
 #include "Interpreter.hpp"
 #include <iostream>
-#include <cassert>
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
 #include "runtime/RuntimeErrors.hpp"
 #include "errors/Exceptions.hpp"
+#include "errors/InternalError.hpp"
 #include "EnvironmentGuard.hpp"
 
 namespace {
@@ -49,9 +49,9 @@ Interpreter::Interpreter(
     , _mainFolderPath{std::move(mainFolderPath)} {
 
     for (const auto& stmt : _statements) {
-        assert(stmt);
+        ensureUnsafe(stmt != nullptr, "Interpreter received a null statement");
     }
-    assert(_astResolver);
+    ensureUnsafe(_astResolver != nullptr, "Interpreter received a null astResolver");
 }
 
 int Interpreter::interpret() {

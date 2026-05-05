@@ -13,41 +13,6 @@ Token::Token(
     , _line{line}
     , _column{column} {}
 
-bool Token::isLiteral() const {
-    return _type == Type::Null or
-           _type == Type::Int or
-           _type == Type::Float or
-           _type == Type::String or
-           _type == Type::True or
-           _type == Type::False;
-}
-
-bool Token::isOperator() const {
-    return _type == Type::Plus or
-           _type == Type::Minus or
-           _type == Type::Multiply or
-           _type == Type::Divide or
-           _type == Type::Equal or
-           _type == Type::NotEqual or
-           _type == Type::Incr or
-           _type == Type::Greater or
-           _type == Type::Less;
-}
-
-bool Token::isLogicalOperator() const {
-    return _type == Type::And or _type == Type::Or;
-}
-
-bool Token::isStatementStart() const {
-    return _type == Type::Var or
-           _type == Type::If or
-           _type == Type::Elif or
-           _type == Type::Else or
-           _type == Type::Loop or
-           _type == Type::Repeat or
-           _type == Type::Return ;
-}
-
 std::string toString(Token::Type type) {
     switch (type) {
         case Token::Type::Eof: return "Eof";

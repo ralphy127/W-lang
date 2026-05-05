@@ -1,19 +1,12 @@
 #include "Expressions.hpp"
-#include <cassert>
 
-LiteralExpr::LiteralExpr(Token token, SourceRange srcRange)
+LiteralExpr::LiteralExpr(Token literalToken, SourceRange srcRange)
     : Expr{srcRange}
-    , _literal{std::move(token)} {
-
-    assert(_literal.isLiteral());
-}
+    , _literal{std::move(literalToken)} {}
 
 VariableExpr::VariableExpr(Token token, SourceRange srcRange)
     : Expr{srcRange}
-    , _variableName{std::move(token)} {
-
-    assert(token.getType() == Token::Type::Ident and _variableName.valueIs<std::string>());
-}
+    , _variableName{std::move(token)} {}
 
 std::optional<LValue> VariableExpr::getLValue() const {
     return LValue{LValue::Variable{_variableName.getValue<std::string>()}};
@@ -27,21 +20,12 @@ BinaryExpr::BinaryExpr(
     : Expr{srcRange}
     , _operator{std::move(token)}
     , _left{std::move(left)}
-    , _right{std::move(right)} {
-    
-    assert(_operator.isOperator());
-    assert(_left);
-    assert(_right);
-}
+    , _right{std::move(right)} {}
 
 UnaryExpr::UnaryExpr(Token token, std::unique_ptr<Expr> right, SourceRange srcRange)
     : Expr{srcRange}
     , _operator{std::move(token)}
-    , _right{std::move(right)} {
-
-    assert(_operator.getType() == Token::Type::Incr);
-    assert(_right);
-}
+    , _right{std::move(right)} {}
 
 CallExpr::CallExpr(
     std::unique_ptr<Expr> callee,
@@ -49,19 +33,12 @@ CallExpr::CallExpr(
     SourceRange srcRange)
     : Expr{srcRange}
     , _callee{std::move(callee)}
-    , _args{std::move(args)} {
-
-    assert(_callee != nullptr);
-}
+    , _args{std::move(args)} {}
 
 DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right, SourceRange srcRange)
     : Expr{srcRange}
     , _left{std::move(left)}
-    , _right{std::move(right)}
-{
-    assert(_left);
-    assert(_right.getType() == Token::Type::Ident);
-}
+    , _right{std::move(right)} {}
 
 std::optional<LValue> DotExpr::getLValue() const {
     if (_right.getType() == Token::Type::Ident) {
@@ -82,9 +59,4 @@ LogicalExpr::LogicalExpr(
     : Expr{srcRange}
     , _operator{std::move(token)}
     , _left{std::move(left)}
-    , _right{std::move(right)} {
-    
-    assert(_operator.isLogicalOperator());
-    assert(_left);
-    assert(_right);
-}
+    , _right{std::move(right)} {}
