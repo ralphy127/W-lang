@@ -4,7 +4,10 @@
 #include <string>
 #include <exception>
 #include <functional>
-#include <cstring>
+#include <format>
+#include <filesystem>
+#include <string_view>
+#include <utility>
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
@@ -13,11 +16,19 @@
 #include "core/SourceManager.hpp"
 #include "utils/AstPrinter.hpp"
 
+namespace {
+
 struct RunOptions {
     bool dumpAst{false};
 };
 
-static std::string readFile(const std::string& filepath) {
+enum class ExitCode : int {
+    AstDump = 0,
+    Failure,
+    Usage
+};
+
+std::string readFile(const std::string& filepath) {
     const std::ifstream file(filepath);
     if (not file.is_open()) {
         throw std::runtime_error{"Cannot open file: " + filepath};
@@ -28,9 +39,37 @@ static std::string readFile(const std::string& filepath) {
     return buffer.str();
 }
 
-static int run(const std::string& filePath, SourceManager& srcManager, RunOptions options) {
-    AstResolver resolver =
-            [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
+std::string getMainFolderPath(const std::filesystem::path& file) {
+    auto parent = file.parent_path();
+    if (parent.empty()) {
+        parent = std::filesystem::path{"."};
+    }
+    return (parent / "").string();
+}
+
+bool checkValidFile(const std::filesystem::path& path){
+    if (not std::filesystem::exists(path)) {
+        std::cerr << std::format("This doesn't exist: {}\n", path.string());
+        return false;
+    }
+    if (std::filesystem::is_directory(path)) {
+        std::cerr << std::format(
+        "Cannot run a directory: {}\n",
+        path.string());
+        return false;
+    }
+    if (not std::filesystem::is_regular_file(path)) {
+        std::cerr << std::format(
+            "This isn't a regular file: {}\n",
+            path.string());
+        return false;
+    }
+
+    return true;
+}
+
+AstResolver createAstResolver(SourceManager& srcManager) {
+    return [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
         const auto currentFileId = srcManager.registerFile(filePath);
         Lexer lexer{readFile(filePath), currentFileId};
         auto lexerResult = lexer.tokenize();
@@ -46,48 +85,64 @@ static int run(const std::string& filePath, SourceManager& srcManager, RunOption
 
         return std::move(parserResult.statements);
     };
+}
 
-    auto mainAst = resolver(filePath);
+int run(
+    const std::filesystem::path& filePath,
+    SourceManager& srcManager,
+    const RunOptions& options) {
+
+    auto astResolver = createAstResolver(srcManager);
+
+    auto mainAst = astResolver(filePath.string());
 
     if (options.dumpAst) {
         AstPrinter{}.print(mainAst);
+        return std::to_underlying(ExitCode::AstDump);
     }
 
-    auto mainFolderPath = filePath.substr(0, filePath.find_last_of('/') + 1);
-    if (mainFolderPath == filePath) mainFolderPath = "./";
-    Interpreter interpreter{std::move(mainAst), std::move(resolver), std::move(mainFolderPath)};
+    Interpreter interpreter{
+        std::move(mainAst),
+        std::move(astResolver),
+        getMainFolderPath(filePath)};
     return interpreter.interpret();
+}
+
 }
 
 int main(int argc, const char* argv[]) {
     ::logLevel = logLevelInfo;
 
     if (argc < 2) {
-        std::cerr << "Usage: ./wlang <filepath>\n";
-        return 1;
+        std::cerr << "Usage: ./wlang <filepath> [--debug] [--dump-ast]\n";
+        return std::to_underlying(ExitCode::Usage);
+    }
+
+    const std::filesystem::path inputPath{argv[1]};
+    if (not checkValidFile(inputPath)) {
+        return std::to_underlying(ExitCode::Usage);
     }
 
     RunOptions options{};
     for (int i{2}; i < argc; ++i) {
-        const char* flag = argv[i];
-        if (strcmp(flag, "--debug") == 0) {
+        const std::string_view flag{argv[i]};
+        if (flag == "--debug") {
             ::logLevel = logLevelDebug;
         }
-        else if (strcmp(flag, "--dump_ast") == 0) {
+        else if (flag == "--dump-ast") {
             options.dumpAst = true;
         }
         else {
-            std::cerr << "Unknown flag: " << flag << std::endl;
-            return 1;
+            std::cerr << std::format("Unknown flag: {}\n", flag);
+            return std::to_underlying(ExitCode::Usage);
         }
     }
 
-    const auto filepath = argv[1];
     ErrorReporter errorReporter{};
     SourceManager sourceManager{};
 
     try {
-        return run(std::move(filepath), sourceManager, options);
+        return run(inputPath, sourceManager, options);
     }
     catch (const LexerCrash& crash) {
         errorReporter.printLexerErrors(crash);
@@ -102,6 +157,7 @@ int main(int argc, const char* argv[]) {
         errorReporter.printInternalError(error);
     }
     catch (const std::exception& e) {
-        std::cout << "Error: " << e.what() << std::endl;
+        std::cerr << std::format("Trainwreck: {}\n", e.what());
     }
+    return std::to_underlying(ExitCode::Failure);
 }
