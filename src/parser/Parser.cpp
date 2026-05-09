@@ -15,27 +15,20 @@ ParserResult Parser::parse() {
 
     while (not parsedAll()) {
         try {
-            if (auto statement = parseDefinition()) {
-                statements.push_back(std::move(statement));
-                LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
-                continue;
-            }
-            else {
-                LOG_ERROR << "parseDefinition() returned null";
-                errors.emplace_back(getToken(), "Mystery statement");
-            }
+            statements.push_back(unwrapUnsafe(parseDefinition()));
+            LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
         }
         catch(ParserError error) {
             LOG_ERROR << std::format("Parse error at line {}, column {}: {}",
                 error.badToken.getLine(), error.badToken.getColumn(), error.msg);
             errors.emplace_back(std::move(error));
+            synchronize();
         }
         catch(const std::exception& e) {
             LOG_ERROR << "Unexpected exception: " << e.what();
             errors.emplace_back(getToken(), e.what());
+            synchronize();
         }
-
-        synchronize();
     }
 
     LOG_INFO << std::format(
@@ -234,7 +227,12 @@ std::unique_ptr<Stmt> Parser::parseDefinition() {
         return parseVarDefinition();
     }
 
-    return parseStatement();
+    auto statement = parseStatement();
+    if (not statement) {
+        throw ParserError{getToken(), "Witchcraft"};
+    }
+
+    return statement;
 }
 
 std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
@@ -306,7 +304,6 @@ std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
 
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
-        // TODO investigate if user errors might happen below (1)
         statements.push_back(unwrapUnsafe(parseDefinition()));
     }
     LOG_DEBUG << std::format("Parsed {} statement(s) in block", statements.size());
@@ -350,8 +347,10 @@ std::unique_ptr<Stmt> Parser::parseIf() {
     const auto& ifToken = getPreviousToken();
     consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("perhaps"));
 
-    // TODO investigate if user errors might happen below (2)
-    auto ifCondition = unwrapUnsafe(parseExpression());
+    auto ifCondition = parseExpression();
+    if (not ifCondition) {
+        throwParserError(ErrorMsgBuilder::expected("valid vibe"));
+    }
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("perhaps vibe"));
 
     auto ifBody = unwrapUnsafe(parseBlock("perhaps"));
@@ -359,8 +358,10 @@ std::unique_ptr<Stmt> Parser::parseIf() {
     std::vector<ElseIfClause> elIfClauses{};
     while (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Elif)) {
         consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("or_whatever"));
-        // TODO investigate if user errors might happen below (3)
-        auto elifCondition = unwrapUnsafe(parseExpression());
+        auto elifCondition = parseExpression();
+        if (not elifCondition) {
+            throwParserError(ErrorMsgBuilder::expected("valid vibe"));
+        }
         consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("or_whatever vibe"));
         auto elifBody = unwrapUnsafe(parseBlock("or_whatever"));
 

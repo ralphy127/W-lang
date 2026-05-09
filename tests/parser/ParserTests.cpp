@@ -1004,7 +1004,22 @@ TEST_F(ParserTests, Structural_FloatComparisonsInIfElseChain) {
 
 TEST_F(ParserTests, Failure_MysteryStatement_OnUnexpectedToken) {
     const auto result = parse(",");
-    expectHasErrorContaining(result, "Mystery statement");
+    expectHasErrorContaining(result, "Witchcraft");
+}
+
+TEST_F(ParserTests, Failure_MysteryStatement_OnUnexpectedStatementInsideBlock) {
+    const auto result = parse("gig foo() { with }");
+    expectHasErrorContaining(result, "Witchcraft");
+}
+
+TEST_F(ParserTests, Failure_NotValidBool_OnUnexpectedStatementInsideIfCondition) {
+    const auto result = parse("perhaps (with) { }");
+    expectHasErrorContaining(result, "Bruh, missing valid vibe");
+}
+
+TEST_F(ParserTests, Failure_NotValidBool_OnUnexpectedStatementInsideElseIfCondition) {
+    const auto result = parse("perhaps (totally) { } or_whatever (with) { }");
+    expectHasErrorContaining(result, "Bruh, missing valid vibe");
 }
 
 TEST_F(ParserTests, Failure_Break_RequiresBangSemi) {
