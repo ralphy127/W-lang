@@ -11,7 +11,7 @@
 namespace {
 
 std::string createIndent(std::uint32_t column, const std::string& line) {
-    std::string indent = "";
+    std::string indent{""};
     for (int i = 0; i < column - 1 && i < line.length(); ++i) {
         if (line[i] == '\t') {
             indent += '\t';
@@ -30,45 +30,79 @@ void printLine(std::size_t lineNumebr, const std::string& content) {
 
 void printError(
     const std::string& fileName,
-    std::uint32_t line,
-    std::uint32_t column,
-    std::uint32_t length,
+    std::uint32_t startLine,
+    std::uint32_t startColumn,
+    std::uint32_t endLine,
+    std::uint32_t endColumn,
     const std::string& msg) {
     std::ifstream file{fileName};
 
     LOG_DEBUG << "Printing error: " << msg;
-    std::cerr << std::format("{}:{}:{} - {}\n", fileName, line, column, msg);
-    if (not file.is_open()) return;
+    std::cerr << std::format("{}:{}:{} - {}\n", fileName, startLine, startColumn, msg);
+    if (not file.is_open()) {
+        return;
+    }
 
-    std::string prevLine;
-    std::string currLine;
-    std::string nextLine;
+    std::string prevLine{};
+    std::string currLine{};
+    std::string nextLine{};
 
     bool hasCurr = static_cast<bool>(std::getline(file, currLine));
 
-    for (std::uint32_t curr{1u}; curr <= line && hasCurr; ++curr) {
+    for (std::uint32_t curr{1u}; curr <= endLine && hasCurr; ++curr) {
         const bool hasNext = static_cast<bool>(std::getline(file, nextLine));
 
-        if (curr == line) {
+        if (curr >= startLine and curr <= endLine) {
             constexpr int margin{6};
 
-            if (curr > 1) {
+            if (curr == startLine && curr > 1) {
                 printLine(curr - 1, prevLine);
             }
             
             printLine(curr, currLine);
 
+            auto col = curr == startLine ? startColumn : 1u;
+            if (curr != startLine) {
+                while (col <= currLine.length() and
+                       (currLine[col - 1] == ' ' or currLine[col - 1] == '\t')) {
+                    col++;
+                }
+            }
+
+            auto length = currLine.length();
+            if (curr == endLine) {
+                if (curr == startLine) {
+                    length = endColumn > startColumn ? (endColumn - startColumn) : 1u;
+                }
+                else {
+                    length = endColumn > col ? (endColumn - col) : 1u;
+                }
+            }
+            else if (curr == startLine) {
+                length =
+                    currLine.length() >= startColumn ? (currLine.length() - startColumn + 1u) : 1u;
+            }
+            else {
+                length = currLine.length() >= col ? (currLine.length() - col + 1) : 1u;
+            }
+
+            if (length == 0) {
+                length = 1;
+            }
+
             std::cerr << std::setw(margin) << "" << " | "
-                      << createIndent(column, currLine)
+                      << createIndent(col, currLine)
                       << std::string(length, '^')
                       << "\n";
 
-            if (hasNext) {
+            if (curr == endLine && hasNext) {
                 printLine(curr + 1, nextLine);
             }
 
-            std::cerr << '\n';
-            break;
+            if (curr == endLine) {
+                std::cerr << '\n';
+                break;
+            }
         }
 
         prevLine = currLine;
@@ -105,7 +139,13 @@ void ErrorReporter::printLexerErrors(const LexerCrash& crash) {
             case LexerErrorType::UnknownToken: msg = "What the heck is this character?"; break;
             case LexerErrorType::EmptySource: msg = "You sure this does anything?"; break;
         }
-        printError(crash.fileName, error.line, error.column, error.length, msg);
+        printError(
+            crash.fileName,
+            error.line,
+            error.column,
+            error.line,
+            error.column + error.length,
+            msg);
     }
     std::cerr << '\n';
 }
@@ -117,7 +157,8 @@ void ErrorReporter::printParserErrors(const ParserCrash& crash) {
             crash.fileName,
             error.badToken.getLine(),
             error.badToken.getColumn(),
-            1u,
+            error.badToken.getLine(),
+            error.badToken.getColumn() + 1u,
             error.msg);
     }
     std::cerr << '\n';
@@ -128,16 +169,9 @@ void ErrorReporter::printRuntimeError(
     const SourceManager& sourceManager) {
 
     std::cerr << '\n';
-    // TODO different handling of these errors
-    // TODO what with multi line errors
     const auto typeStr = runtimeErrorTypeToString(error.type);
     const auto msg = std::format("[{}] {}", typeStr, error.msg);
-    std::uint32_t length = 1u;
-    if (error.srcRange.end.line == error.srcRange.start.line and
-        error.srcRange.end.column > error.srcRange.start.column) {
-
-        length = error.srcRange.end.column - error.srcRange.start.column;
-    }
+    
     std::string filePath{"<unknown-file>"};
     try {
         filePath = sourceManager.getFilePath(error.srcRange.fileId);
@@ -145,7 +179,13 @@ void ErrorReporter::printRuntimeError(
     catch (const std::out_of_range&) {
     }
 
-    printError(filePath, error.srcRange.start.line, error.srcRange.start.column, length, msg);
+    printError(
+        filePath, 
+        error.srcRange.start.line, 
+        error.srcRange.start.column, 
+        error.srcRange.end.line, 
+        error.srcRange.end.column, 
+        msg);
     std::cerr << '\n';
 }
 

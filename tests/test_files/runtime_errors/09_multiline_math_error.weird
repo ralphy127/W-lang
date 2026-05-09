@@ -1,0 +1,13 @@
+summon gossip...
+
+gig macho() {
+    stash a about (
+        100
+        with
+        "to spowoduje blad w wlang, ktory obejmuje kilka linii kodu!"
+        with
+        200
+    )...
+
+    gossip.spill_tea(a)...
+}
