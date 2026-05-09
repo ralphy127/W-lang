@@ -63,10 +63,10 @@ struct LexerTests : public ::testing::Test {
 
         ASSERT_EQ(tokens.size(), expectedTypes.size());
 
-        size_t index = 0;
+        size_t idx{0ull};
         for (const auto expectedType : expectedTypes) {
-            EXPECT_EQ(tokens[index].getType(), expectedType) << "Token mismatch at index: " << index;
-            ++index;
+            EXPECT_EQ(tokens[idx].getType(), expectedType) << "Token mismatch at idx: " << idx;
+            ++idx;
         }
     }
 
@@ -87,7 +87,8 @@ TEST_F(LexerTests, MainFunc) {
 
     expectTypes(tokens, {
         Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::RParen,
-        Token::Type::LBrace, Token::Type::Return, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
+        Token::Type::LBrace, Token::Type::Return, Token::Type::Int, Token::Type::Semi,
+        Token::Type::RBrace
     });
     expectValue<std::int32_t>(tokens, 6, 0);
 }
@@ -158,14 +159,16 @@ TEST_F(LexerTests, DivideOver) {
 TEST_F(LexerTests, PrototypeCommentsAreSkipped) {
     expectTypes("psst: useful\ngig macho() { yeet 0... }", {
         Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::RParen,
-        Token::Type::LBrace, Token::Type::Return, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
+        Token::Type::LBrace, Token::Type::Return, Token::Type::Int, Token::Type::Semi,
+        Token::Type::RBrace
     });
 }
 
 TEST_F(LexerTests, PrototypeBlockCommentIsSkipped) {
     expectTypes("stash x about 1...\nrant_stop\nignored text\nrant_start\nstash y about 2...", {
-        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi,
-        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int,
+        Token::Type::Semi, Token::Type::Var, Token::Type::Ident, Token::Type::Assign,
+        Token::Type::Int, Token::Type::Semi
     });
 }
 
@@ -173,9 +176,10 @@ TEST_F(LexerTests, PrototypeFunctionWithMathOperators) {
     const auto tokens = tokenizeOk("gig calculate_stuff(x, y) { yeet 2 with 2 without 2... }");
 
     expectTypes(tokens, {
-        Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::Ident, Token::Type::Comma,
-        Token::Type::Ident, Token::Type::RParen, Token::Type::LBrace, Token::Type::Return, Token::Type::Int,
-        Token::Type::Plus, Token::Type::Int, Token::Type::Minus, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
+        Token::Type::Func, Token::Type::Ident, Token::Type::LParen, Token::Type::Ident,
+        Token::Type::Comma, Token::Type::Ident, Token::Type::RParen, Token::Type::LBrace,
+        Token::Type::Return, Token::Type::Int, Token::Type::Plus, Token::Type::Int,
+        Token::Type::Minus, Token::Type::Int, Token::Type::Semi, Token::Type::RBrace
     });
     expectValue<std::int32_t>(tokens, 9, 2);
     expectValue<std::int32_t>(tokens, 11, 2);
@@ -194,14 +198,18 @@ TEST_F(LexerTests, PrototypeExpressionWithMultiplyAndDivide) {
 }
 
 TEST_F(LexerTests, PrototypeExpressionMixingAddSubMulDiv) {
-    const auto tokens = tokenizeOk("yeet 1 with 2 times 3 without 4 over 5 with 6 times 7 without 8 over 9...");
+    const auto tokens = tokenizeOk(
+        "yeet 1 with 2 times 3 without 4 "
+        "over 5 with 6 times 7 without 8 "
+        "over 9..."
+    );
     expectTypes(tokens, {
         Token::Type::Return,
-        Token::Type::Int, Token::Type::Plus, Token::Type::Int, Token::Type::Multiply, Token::Type::Int,
-        Token::Type::Minus, Token::Type::Int, Token::Type::Divide, Token::Type::Int,
-        Token::Type::Plus, Token::Type::Int, Token::Type::Multiply, Token::Type::Int,
-        Token::Type::Minus, Token::Type::Int, Token::Type::Divide, Token::Type::Int,
-        Token::Type::Semi
+        Token::Type::Int, Token::Type::Plus, Token::Type::Int, Token::Type::Multiply,
+        Token::Type::Int, Token::Type::Minus, Token::Type::Int, Token::Type::Divide,
+        Token::Type::Int, Token::Type::Plus, Token::Type::Int, Token::Type::Multiply,
+        Token::Type::Int, Token::Type::Minus, Token::Type::Int, Token::Type::Divide,
+        Token::Type::Int, Token::Type::Semi
     });
 
     expectValue<std::int32_t>(tokens, 1, 1);
@@ -216,18 +224,24 @@ TEST_F(LexerTests, PrototypeExpressionMixingAddSubMulDiv) {
 }
 
 TEST_F(LexerTests, PrototypeConditionalChainTokens) {
-    expectTypes("perhaps (isNumberTen looks_like totally) {} or_whatever (isNumberTen looks_like nah) {} screw_it {}", {
-        Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::Equal, Token::Type::True,
-        Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace,
-        Token::Type::Elif, Token::Type::LParen, Token::Type::Ident, Token::Type::Equal, Token::Type::False,
-        Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace,
-        Token::Type::Else, Token::Type::LBrace, Token::Type::RBrace
-    });
+    expectTypes(
+        "perhaps (isNumberTen looks_like totally) {}\n"
+        "or_whatever (isNumberTen looks_like nah) {}\n"
+        "screw_it {}", 
+        {
+            Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::Equal,
+            Token::Type::True, Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace,
+            Token::Type::Elif, Token::Type::LParen, Token::Type::Ident, Token::Type::Equal,
+            Token::Type::False, Token::Type::RParen, Token::Type::LBrace, Token::Type::RBrace,
+            Token::Type::Else, Token::Type::LBrace, Token::Type::RBrace
+        });
 }
 
 TEST_F(LexerTests, PrototypeFloatAssignmentTokenAndValue) {
     const auto tokens = tokenizeOk("stash floatingNumber about 11.0...");
-    expectTypes(tokens, {Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Float, Token::Type::Semi});
+    expectTypes(tokens, {
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign,
+        Token::Type::Float, Token::Type::Semi});
     expectValue<double>(tokens, 3, 11.0);
 }
 
@@ -250,13 +264,19 @@ TEST_F(LexerTests, PrototypeLessComparisonTokenAndValue) {
 }
 
 TEST_F(LexerTests, PrototypeLoopIncrAndBreakTokens) {
-    expectTypes("do_until_bored { pump_it counter... perhaps (counter bigger_ish 3) { rage_quit!!! } }", {
-        Token::Type::Loop, Token::Type::LBrace,
-        Token::Type::Incr, Token::Type::Ident, Token::Type::Semi,
-        Token::Type::If, Token::Type::LParen, Token::Type::Ident, Token::Type::Greater, Token::Type::Int,
-        Token::Type::RParen, Token::Type::LBrace, Token::Type::Break, Token::Type::BrSemi,
-        Token::Type::RBrace, Token::Type::RBrace
-    });
+    expectTypes(
+        "do_until_bored {\n"
+        "    pump_it counter...\n"
+        "    perhaps (counter bigger_ish 3) {\n"
+        "        rage_quit!!!\n"
+        "    }\n"
+        "}", 
+        {
+            Token::Type::Loop, Token::Type::LBrace, Token::Type::Incr, Token::Type::Ident,
+            Token::Type::Semi, Token::Type::If, Token::Type::LParen, Token::Type::Ident,
+            Token::Type::Greater, Token::Type::Int, Token::Type::RParen, Token::Type::LBrace,
+            Token::Type::Break, Token::Type::BrSemi, Token::Type::RBrace, Token::Type::RBrace
+        });
 }
 
 TEST_F(LexerTests, PrototypeFunctionCallAssignmentValues) {
@@ -274,8 +294,8 @@ TEST_F(LexerTests, PrototypeRepeatLoopAndCallTokens) {
     expectTypes("spin_around (n) { gossip.spill_tea(\"Spinnin\")... }", {
         Token::Type::Repeat, Token::Type::LParen, Token::Type::Ident, Token::Type::RParen,
         Token::Type::LBrace, Token::Type::Ident, Token::Type::Dot, Token::Type::Ident,
-        Token::Type::LParen, Token::Type::String, Token::Type::RParen, Token::Type::Semi, Token::Type::RBrace
-    });
+        Token::Type::LParen, Token::Type::String, Token::Type::RParen, Token::Type::Semi,
+        Token::Type::RBrace});
 }
 
 TEST_F(LexerTests, PrototypeNullReturnTokens) {
@@ -361,9 +381,9 @@ TEST_F(LexerTests, MultipleUnknownTokensProduceMultipleErrors) {
 
 TEST_F(LexerTests, MixedWhitespaceBetweenStatements) {
     expectTypes("\tstash a about 1...\r\n  stash b about 2...", {
-        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi,
-        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi
-    });
+        Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int,
+        Token::Type::Semi, Token::Type::Var, Token::Type::Ident, Token::Type::Assign,
+        Token::Type::Int, Token::Type::Semi});
 }
 
 TEST_F(LexerTests, SequentialCommentsAreSkipped) {
@@ -375,7 +395,10 @@ TEST_F(LexerTests, SequentialCommentsAreSkipped) {
         "rant_start\n"
         "psst: third\n"
         "stash x about 1...",
-        {Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Int, Token::Type::Semi}
+        {
+            Token::Type::Var, Token::Type::Ident, Token::Type::Assign,
+            Token::Type::Int, Token::Type::Semi
+        }
     );
 }
 

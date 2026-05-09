@@ -19,7 +19,7 @@ public:
 
     int interpret();
 
-std::shared_ptr<Environment> getCurrentEnvironment() const { return _currentEnvironment; }
+    std::shared_ptr<Environment> getCurrentEnvironment() const { return _currentEnvironment; }
     void setCurrentEnvironment(std::shared_ptr<Environment> env) { _currentEnvironment = env; }
 
     void incrementScopeDepth() { ++_scopeDepth; }

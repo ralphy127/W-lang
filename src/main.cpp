@@ -20,8 +20,7 @@ struct RunOptions {
 static std::string readFile(const std::string& filepath) {
     const std::ifstream file(filepath);
     if (not file.is_open()) {
-        // TODO handle this differently
-        throw std::runtime_error("Cannot open file: " + filepath);
+        throw std::runtime_error{"Cannot open file: " + filepath};
     }
     
     std::stringstream buffer{};
@@ -30,7 +29,8 @@ static std::string readFile(const std::string& filepath) {
 }
 
 static int run(const std::string& filePath, SourceManager& srcManager, RunOptions options) {
-    AstResolver resolver = [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
+    AstResolver resolver =
+            [&srcManager](const std::string& filePath) -> std::vector<std::unique_ptr<Stmt>> {
         const auto currentFileId = srcManager.registerFile(filePath);
         Lexer lexer{readFile(filePath), currentFileId};
         auto lexerResult = lexer.tokenize();

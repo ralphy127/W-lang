@@ -160,7 +160,10 @@ const Token& Parser::consumeIdent(const ErrorMsgBuilder& errorMessageBuilder) {
 }
 
 SourceRange Parser::makeRange(const Token& start, const Token& end) {
-    return {start.getFileId(), {start.getLine(), start.getColumn()}, {end.getLine(), end.getColumn()}};
+    return {
+        start.getFileId(),
+        SourcePosition{start.getLine(), start.getColumn()},
+        SourcePosition{end.getLine(), end.getColumn()}};
 }
 
 SourceRange Parser::makeRange(const AstNode& start, const AstNode& end) {
@@ -213,7 +216,8 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         return parseReassign(std::move(expr), firstToken);
     }
 
-    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("expression"));
+    const auto& semiToken = consume(
+        Token::Type::Semi, ErrorMsgBuilder::expected("...").after("expression"));
     
     return std::make_unique<ExpressionStmt>(std::move(expr), makeRange(firstToken, semiToken));
 }
@@ -281,7 +285,11 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     else {
         LOG_DEBUG << "Creating default initializer for variable " << name;
         initializer = std::make_unique<LiteralExpr>(
-            Token{Token::Type::Null, nameToken.getFileId(), nameToken.getLine(), nameToken.getColumn()},
+            Token{
+                Token::Type::Null,
+                nameToken.getFileId(),
+                nameToken.getLine(),
+                nameToken.getColumn()},
             makeRange(nameToken, nameToken));
     }
 
@@ -325,7 +333,11 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
         LOG_DEBUG << "Return statement with no value (implicit null)";
         return std::make_unique<ReturnStmt>(
             std::make_unique<LiteralExpr>(
-                Token{Token::Type::Null, semiToken.getFileId(), semiToken.getLine(), semiToken.getColumn()},
+                Token{
+                    Token::Type::Null,
+                    semiToken.getFileId(),
+                    semiToken.getLine(),
+                    semiToken.getColumn()},
                 makeRange(semiToken, semiToken)),
             makeRange(returnToken, semiToken));
     }
@@ -336,7 +348,8 @@ std::unique_ptr<Stmt> Parser::parseReturn() {
         throwParserError(ErrorMsgBuilder::expected("something").after("yeet"));
     }
 
-    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("yeeting thingy"));
+    const auto& semiToken = consume(
+        Token::Type::Semi, ErrorMsgBuilder::expected("...").after("yeeting thingy"));
 
     LOG_DEBUG << "Return statement parsed successfully";
     return std::make_unique<ReturnStmt>(std::move(value), makeRange(returnToken, semiToken));
@@ -418,8 +431,10 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
 std::unique_ptr<Stmt> Parser::parseImport() {
     LOG_DEBUG << "Parsing 'summon' statement";
     const auto& importToken = getPreviousToken();
-    const auto& moduleToken = consume(Token::Type::Ident, ErrorMsgBuilder::expected("hub name").after("summon"));
-    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("hub import"));
+    const auto& moduleToken = consume(
+        Token::Type::Ident, ErrorMsgBuilder::expected("hub name").after("summon"));
+    const auto& semiToken = consume(
+        Token::Type::Semi, ErrorMsgBuilder::expected("...").after("hub import"));
     LOG_DEBUG << std::format(
         "Successfully parsed 'summon' statement for module '{}'",
         moduleToken.getValue<std::string>());
@@ -433,7 +448,8 @@ std::unique_ptr<Stmt> Parser::parseReassign(std::unique_ptr<Expr> target, const 
         throwParserError(ErrorMsgBuilder::cannot("restash this thing"));
     }
 
-    const auto& semiToken = consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("restashing"));
+    const auto& semiToken = consume(
+        Token::Type::Semi, ErrorMsgBuilder::expected("...").after("restashing"));
     return std::make_unique<ReassignStmt>(
         unwrapUnsafe(std::move(target)), std::move(value), makeRange(startToken, semiToken));
 }
@@ -497,7 +513,8 @@ std::unique_ptr<Expr> Parser::parseAnd() {
         advance();
         auto right = parseEquality();
         if (not right) {
-            throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
+            throwParserError(
+                ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
         }
         auto srcRange = makeRange(*left, *right);
         LOG_DEBUG << "Parsed logical and expression successfully";
@@ -600,7 +617,8 @@ std::unique_ptr<Expr> Parser::parseEquality() {
             advance();
             auto right = parseComparison();
             if (not right) {
-                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
+                throwParserError(
+                    ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             LOG_DEBUG << "Parsed equality binary expression successfully";
@@ -626,7 +644,8 @@ std::unique_ptr<Expr> Parser::parseComparison() {
             advance();
             auto right = parseTerm();
             if (not right) {
-                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
+                throwParserError(
+                    ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             LOG_DEBUG << "Parsed comparison binary expression successfully";
@@ -652,7 +671,8 @@ std::unique_ptr<Expr> Parser::parseTerm() {
             advance();
             auto right = parseFactor();
             if (not right) {
-                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
+                throwParserError(
+                    ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right), srcRange);
@@ -680,7 +700,8 @@ std::unique_ptr<Expr> Parser::parseFactor() {
             advance();
             auto right = parseUnary();
             if (not right) {
-                throwParserError(ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
+                throwParserError(
+                    ErrorMsgBuilder::expected("right side").after(toSourceString(tokenType)));
             }
             auto srcRange = makeRange(*left, *right);
             left = std::make_unique<BinaryExpr>(std::move(left), token, std::move(right), srcRange);

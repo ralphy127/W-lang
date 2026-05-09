@@ -120,10 +120,21 @@ inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
     }, static_cast<const RuntimeValueBase&>(lhs), static_cast<const RuntimeValueBase&>(rhs));
 }
 
-inline bool operator!=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return not (lhs == rhs); }
-inline bool operator>(const RuntimeValue& lhs, const RuntimeValue& rhs)  { return rhs < lhs; }
-inline bool operator<=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return not (rhs < lhs); }
-inline bool operator>=(const RuntimeValue& lhs, const RuntimeValue& rhs) { return not (lhs < rhs); }
+inline bool operator!=(const RuntimeValue& lhs, const RuntimeValue& rhs) {
+    return not (lhs == rhs);
+}
+
+inline bool operator>(const RuntimeValue& lhs, const RuntimeValue& rhs) {
+    return rhs < lhs;
+}
+
+inline bool operator<=(const RuntimeValue& lhs, const RuntimeValue& rhs) {
+    return not (rhs < lhs);
+}
+
+inline bool operator>=(const RuntimeValue& lhs, const RuntimeValue& rhs) {
+    return not (lhs < rhs);
+}
 
 std::string stringify(const RuntimeValue& value);
 
@@ -143,7 +154,6 @@ const T& as(const RuntimeValueBase& v, const SourceRange& srcRange) {
     return std::get<T>(v);
 }
 
-// TODO make it a method
 template<typename T>
 const T& asUnsafe(const RuntimeValue& v) {
     const auto& base = static_cast<const RuntimeValueBase&>(v);
@@ -151,7 +161,8 @@ const T& asUnsafe(const RuntimeValue& v) {
     if (not is<T>(base)) {
         throw NativeError{
             RuntimeError::Type::TypeMismatch,
-            std::format("Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(base))};
+            std::format(
+                "Anticipated {} instead of {}", std::string{typeName<T>()}, typeName(base))};
     }
     return std::get<T>(base);
 }

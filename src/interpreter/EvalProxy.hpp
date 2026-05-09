@@ -2,23 +2,29 @@
 
 #include "runtime/RuntimeValue.hpp"
 
-struct EvalProxy {
-    RuntimeValue value;
-    SourceRange range;
-
+class EvalProxy {
+public:
+    EvalProxy(RuntimeValue value, SourceRange range)
+        : _value{std::move(value)}
+        , _range(std::move(range)) {}
+    
     operator RuntimeValue() && { 
-        return std::move(value); 
+        return std::move(_value); 
     }
 
     operator RuntimeValue() const & = delete;
 
     template <typename T>
     const T& as() const {
-        return ::as<T>(value, range); 
+        return ::as<T>(_value, _range); 
     }
 
     template <typename T>
     bool is() const {
-        return ::is<T>(value); 
+        return ::is<T>(_value); 
     }
+
+private:
+    RuntimeValue _value;
+    SourceRange _range;
 };

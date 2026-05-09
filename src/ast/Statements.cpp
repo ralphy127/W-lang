@@ -8,7 +8,10 @@ VarDefinitionStmt::VarDefinitionStmt(
     , _name{std::move(name)}
     , _initializer{std::move(initializer)} {}
 
-ReassignStmt::ReassignStmt(std::unique_ptr<Expr> target, std::unique_ptr<Expr> value, SourceRange srcRange)
+ReassignStmt::ReassignStmt(
+    std::unique_ptr<Expr> target,
+    std::unique_ptr<Expr> value,
+    SourceRange srcRange)
     : Stmt{srcRange}
     , _target{std::move(target)}
     , _value{std::move(value)} {}

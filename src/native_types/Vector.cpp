@@ -3,8 +3,6 @@
 #include "runtime/RuntimeValue.hpp"
 #include "utils/Logging.hpp"
 
-//! TODO spice up user errors - whole repo
-
 namespace {
     size_t toIndex(const RuntimeValue& arg) {
         const auto& i = asUnsafe<Int>(arg);

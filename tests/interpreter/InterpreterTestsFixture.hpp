@@ -108,13 +108,21 @@ struct InterpreterTests : ::testing::Test {
         EXPECT_EQ(err.type, expectedType);
     }
 
-    void expectRuntimeError(const std::string& source, RuntimeError::Type expectedType, const std::string& expectedMsg) {
+    void expectRuntimeError(
+        const std::string& source,
+        RuntimeError::Type expectedType,
+        const std::string& expectedMsg) {
+
         const auto err = executeAndCaptureRuntimeError(source);
         EXPECT_EQ(err.type, expectedType);
         EXPECT_EQ(err.msg, expectedMsg);
     }
 
-    void expectRuntimeErrorMsgContains(const std::string& source, RuntimeError::Type expectedType, const std::string& needle) {
+    void expectRuntimeErrorMsgContains(
+        const std::string& source,
+        RuntimeError::Type expectedType,
+        const std::string& needle) {
+
         const auto err = executeAndCaptureRuntimeError(source);
         EXPECT_EQ(err.type, expectedType);
         EXPECT_NE(err.msg.find(needle), std::string::npos) << "Full message: " << err.msg;

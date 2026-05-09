@@ -141,14 +141,25 @@ struct ParserTests : public ::testing::Test {
         return varExpr;
     }
 
-    void expectVarDefBinOpLits(const std::string& varName, Token::Type opType, Token::Type litType, std::int32_t leftVal, std::int32_t rightVal) {
+    void expectVarDefBinOpLits(
+        const std::string& varName,
+        Token::Type opType,
+        Token::Type litType,
+        std::int32_t leftVal,
+        std::int32_t rightVal) {
+
         const auto& varStmt = expectVarDef(0, varName);
         const auto& binExpr = expectBinaryExpr(varStmt.getInitializer(), opType);
         expectLiteralValue<std::int32_t>(binExpr.getLeft(), litType, leftVal);
         expectLiteralValue<std::int32_t>(binExpr.getRight(), litType, rightVal);
     }
 
-    void expectVarDefLogOpLits(const std::string& varName, Token::Type opType, Token::Type leftType, Token::Type rightType) {
+    void expectVarDefLogOpLits(
+        const std::string& varName,
+        Token::Type opType,
+        Token::Type leftType,
+        Token::Type rightType) {
+
         const auto& varStmt = expectVarDef(0, varName);
         const auto& logExpr = expectLogicalExpr(varStmt.getInitializer(), opType);
         expectLiteral(logExpr.getLeft(), leftType);
@@ -168,9 +179,12 @@ struct ParserTests : public ::testing::Test {
         ASSERT_FALSE(result.errors.empty())
             << "Expected at least one parser error.";
 
-        const bool found = std::any_of(result.errors.begin(), result.errors.end(), [&](const ParserError& err) {
-            return err.msg.find(needle) != std::string::npos;
-        });
+        const bool found = std::any_of(
+            result.errors.begin(),
+            result.errors.end(),
+            [&](const ParserError& err) {
+                return err.msg.find(needle) != std::string::npos;
+            });
 
         ASSERT_TRUE(found)
             << "Missing error containing: " << needle << "\n"
@@ -178,9 +192,12 @@ struct ParserTests : public ::testing::Test {
     }
 
     static void expectNoErrorContaining(const ParserResult& result, std::string_view needle) {
-        const bool found = std::any_of(result.errors.begin(), result.errors.end(), [&](const ParserError& err) {
-            return err.msg.find(needle) != std::string::npos;
-        });
+        const bool found = std::any_of(
+            result.errors.begin(),
+            result.errors.end(),
+            [&](const ParserError& err) {
+                return err.msg.find(needle) != std::string::npos;
+            });
 
         ASSERT_FALSE(found)
             << "Unexpected error containing: " << needle << "\n"

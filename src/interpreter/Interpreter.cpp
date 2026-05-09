@@ -494,7 +494,8 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     const auto& rightName = rightToken.getValue<std::string>();
     const auto methodLine = rightToken.getLine();
     const auto methodLength = static_cast<std::uint32_t>(rightName.size());
-    const auto methodEndColumn = rightToken.getColumn() + (methodLength > 0u ? methodLength - 1u : 0u);
+    const auto adjustedLength = methodLength > 0u ? methodLength - 1u : 0u;
+    const auto methodEndColumn = rightToken.getColumn() + adjustedLength;
     const SourceRange rightRange{
         rightToken.getFileId(),
         {methodLine, rightToken.getColumn()},

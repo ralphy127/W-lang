@@ -123,7 +123,10 @@ void ErrorReporter::printParserErrors(const ParserCrash& crash) {
     std::cerr << '\n';
 }
 
-void ErrorReporter::printRuntimeError(const RuntimeError& error, const SourceManager& sourceManager) {
+void ErrorReporter::printRuntimeError(
+    const RuntimeError& error,
+    const SourceManager& sourceManager) {
+
     std::cerr << '\n';
     // TODO different handling of these errors
     // TODO what with multi line errors

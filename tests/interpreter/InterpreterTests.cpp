@@ -848,7 +848,10 @@ TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated vibe instead of solid");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::TypeMismatch,
+        "Anticipated vibe instead of solid");
 }
 
 TEST_F(InterpreterTests, Failure_IncrementingOfModuleFunctionMismatches) {
@@ -877,7 +880,10 @@ TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
         }
     )";
 
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Argument count don't vibe");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Argument count don't vibe");
 }
 
 TEST_F(InterpreterTests, Failure_CallingNonFunctionThrowsRuntimeError) {
@@ -888,7 +894,10 @@ TEST_F(InterpreterTests, Failure_CallingNonFunctionThrowsRuntimeError) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated gig instead of solid");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::TypeMismatch,
+        "Anticipated gig instead of solid");
 }
 
 TEST_F(InterpreterTests, Failure_DotIntoNonDotThrowsRuntimeError) {
@@ -912,7 +921,10 @@ TEST_F(InterpreterTests, Failure_TypeDoesNotMatchTriggersCppException) {
 
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::TypeMismatch, "Anticipated solid instead of yap");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::TypeMismatch,
+        "Anticipated solid instead of yap");
 }
 
 TEST_F(InterpreterTests, FunctionCallWithNullArgumentWorksButMathFails) {
