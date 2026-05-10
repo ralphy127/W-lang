@@ -35,11 +35,6 @@ namespace {
 
     void expectTheSameTypes(const Vector& vector, const RuntimeValue& value) {
         // TODO could use some enum instead of relying on variant's index
-        if (vector->data.empty() and vector->typeId == 0ull) {
-            // TODO this should not be here
-            vector->typeId = value.index();
-            return;
-        }
         if (vector->typeId != value.index()) {
             throw NativeError{
                 RuntimeError::Type::TypeMismatch, "Vibes don't match"};
@@ -83,7 +78,9 @@ RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
             LOG_DEBUG << "Vector:shove called";
             expectArgsSize(args, 1ull);
             auto& value = args[0];
-            expectTheSameTypes(vector, value);
+            if (vector->data.empty() and vector->typeId == 0ull) {
+                vector->typeId = value.index();
+            }
 
             LOG_DEBUG << std::format("Adding {} to the end of the vector", stringify(value));
             vector->data.push_back(value);
