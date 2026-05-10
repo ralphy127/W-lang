@@ -4,6 +4,7 @@ add_library(runtime
     Environment.hpp
     Environment.cpp
     RuntimeErrors.hpp
+    RuntimeValueType.hpp
 )
 
 target_include_directories(runtime PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

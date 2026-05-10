@@ -11,6 +11,7 @@
 #include "native_types/String.hpp"
 #include "RuntimeErrors.hpp"
 
+enum class RuntimeValueType : std::uint8_t;
 struct RuntimeValue;
 struct Environment;
 
@@ -78,6 +79,9 @@ void ensureSameTypesInRuntime(const RuntimeValue& lhs, const RuntimeValue& rhs) 
 
 }
 
+std::string stringify(const RuntimeValue& value);
+RuntimeValueType getType(const RuntimeValue& v);
+
 inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
     ensureSameTypesInRuntime(lhs, rhs);
 
@@ -135,8 +139,6 @@ inline bool operator<=(const RuntimeValue& lhs, const RuntimeValue& rhs) {
 inline bool operator>=(const RuntimeValue& lhs, const RuntimeValue& rhs) {
     return not (lhs < rhs);
 }
-
-std::string stringify(const RuntimeValue& value);
 
 template<typename T>
 bool is(const RuntimeValueBase& v) {

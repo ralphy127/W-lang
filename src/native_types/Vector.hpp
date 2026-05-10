@@ -3,12 +3,13 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "runtime/RuntimeValueType.hpp"
 
 struct RuntimeValue;
 
 struct VectorImpl {
     std::vector<RuntimeValue> data{};
-    size_t typeId{0ull};
+    RuntimeValueType type{RuntimeValueType::Unset};
 };
 
 using Vector = std::shared_ptr<VectorImpl>;

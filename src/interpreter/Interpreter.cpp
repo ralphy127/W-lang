@@ -536,11 +536,11 @@ RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
     vector->data.reserve(vectorSize);
 
     RuntimeValue firstElement = evaluate(*initializers[0]);
-    vector->typeId = firstElement.index();
+    vector->type = getType(firstElement);
 
     for (size_t i{0ull}; i < vectorSize; ++i) {
         RuntimeValue nextValue = evaluate(*initializers[i]);
-        if (nextValue.index() != vector->typeId) {
+        if (getType(nextValue) != vector->type) {
             throw RuntimeError{
                 RuntimeError::Type::TypeMismatch,
                 expr.getSrcRange(),
