@@ -2,6 +2,7 @@
 #include "common.hpp"
 #include "runtime/RuntimeValue.hpp"
 #include "utils/Logging.hpp"
+#include "errors/InternalError.hpp"
 
 namespace {
     size_t toIndex(const RuntimeValue& arg) {
@@ -41,98 +42,106 @@ namespace {
     }
 }
 
-RuntimeValue callVectorMethod(const Vector& vector, const std::string& name) {
-    // TODO change strings to enums + switch stmt
-    if (name == "yoink") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:yoink called";
-            expectArgsSize(args, 1ull);    
-            auto index = toIndex(args[0]);
-            expectInBounds(vector, index);
-            
-            auto value = vector->data.at(index);
-            LOG_DEBUG << std::format("Retrieving value: {} at index{}", stringify(value), index);
-            return value;
-        }};
+std::string stringify(VectorMethod method) {
+    switch (method) {
+        case VectorMethod::Get: return "yoink";
+        case VectorMethod::Set: return "patch";
+        case VectorMethod::PushBack: return "shove";
+        case VectorMethod::PopBack: return "kick";
+        case VectorMethod::IsEmpty: return "vibe_check";
+        case VectorMethod::Size: return "vibe_count";
+        case VectorMethod::Clear: return "reset_the_vibe";
+        default:
+            throw NativeError{
+                RuntimeError::Type::Logic,
+                "Mysterious lineup stunt"};
     }
-    if (name == "patch") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:patch called";
-            expectNotEmpty(vector);
-            expectArgsSize(args, 2ull);
-            auto index = toIndex(args[0]);
-            expectInBounds(vector, index);
-            auto& value = args[1];
-            expectTheSameTypes(vector, value);
-            auto& oldValue = vector->data.at(index);
+}
 
-            LOG_DEBUG << std::format("Changing value at index: {} from {} to {}",
-                index, stringify(oldValue), stringify(value));
-            oldValue = value;
-            return Null{};
-        }};
-    }
-    if (name == "shove") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:shove called";
-            expectArgsSize(args, 1ull);
-            auto& value = args[0];
-            if (vector->data.empty() and vector->type == RuntimeValueType::Unset) {
-                vector->type = getType(value);
-            }
-            else {
+RuntimeValue callVectorMethod(const Vector& vector, VectorMethod method) {
+    switch (method) {
+        case VectorMethod::Get:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "VectorMethod::Get called";
+                expectArgsSize(args, 1ull);    
+                auto index = toIndex(args[0]);
+                expectInBounds(vector, index);
+                
+                auto value = vector->data.at(index);
+                LOG_DEBUG << std::format("Retrieving value: {} at index{}", stringify(value), index);
+                return value;
+            }};
+        case VectorMethod::Set:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "VectorMethod::Set called";
+                expectNotEmpty(vector);
+                expectArgsSize(args, 2ull);
+                auto index = toIndex(args[0]);
+                expectInBounds(vector, index);
+                auto& value = args[1];
                 expectTheSameTypes(vector, value);
-            }
+                auto& oldValue = vector->data.at(index);
 
-            LOG_DEBUG << std::format("Adding {} to the end of the vector", stringify(value));
-            vector->data.push_back(value);
-            return Null{};
-        }};
+                LOG_DEBUG << std::format("Changing value at index: {} from {} to {}",
+                    index, stringify(oldValue), stringify(value));
+                oldValue = value;
+                return Null{};
+            }};
+        case VectorMethod::PushBack:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "VectorMethod::Pushback called";
+                expectArgsSize(args, 1ull);
+                auto& value = args[0];
+                if (vector->data.empty() and vector->type == RuntimeValueType::Unset) {
+                    vector->type = getType(value);
+                }
+                else {
+                    expectTheSameTypes(vector, value);
+                }
+
+                LOG_DEBUG << std::format("Adding {} to the end of the vector", stringify(value));
+                vector->data.push_back(value);
+                return Null{};
+            }};
+        case VectorMethod::PopBack:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "VectorMethod::PopBack called";
+                expectNotEmpty(vector);
+                expectArgsSize(args, 0ull);
+                auto valueToRemove = vector->data.back();
+
+                LOG_DEBUG << std::format(
+                    "Popping {} from the end of the vector", stringify(valueToRemove));
+                vector->data.pop_back();
+                return valueToRemove;
+            }};
+        case VectorMethod::IsEmpty:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "VectorMethod::IsEmpty called";
+                expectArgsSize(args, 0ull);
+
+                LOG_DEBUG << std::format("Checking if a vector is empty");
+                return Bool{vector->data.empty()};
+            }};
+        case VectorMethod::Size:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "VectorMethod::Size called";
+                expectArgsSize(args, 0ull);
+
+                LOG_DEBUG << std::format("Counting vector size");
+                return static_cast<Int>(vector->data.size());
+            }};
+        case VectorMethod::Clear:
+            return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
+                LOG_DEBUG << "Vector:reset_the_vibe called";
+                expectArgsSize(args, 0ull);
+
+                LOG_DEBUG << std::format("Reseting vector");
+                vector->data.clear();
+                vector->type = RuntimeValueType::Unset;
+                return Null{};
+            }};
+        default:
+            throw InternalError{"Unhandled vector method, interpreter should have caught this"};
     }
-    if (name == "kick") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:kick called";
-            expectNotEmpty(vector);
-            expectArgsSize(args, 0ull);
-            auto valueToRemove = vector->data.back();
-
-            LOG_DEBUG << std::format(
-                "Popping {} from the end of the vector", stringify(valueToRemove));
-            vector->data.pop_back();
-            return valueToRemove;
-        }};
-    }
-    if (name == "vibe_check") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:vibe_check called";
-            expectArgsSize(args, 0ull);
-
-            LOG_DEBUG << std::format("Checking if a vector is empty");
-            return Bool{vector->data.empty()};
-        }};
-    }
-    if (name == "vibe_count") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:vibe_count called";
-            expectArgsSize(args, 0ull);
-
-            LOG_DEBUG << std::format("Counting vector size");
-            return static_cast<Int>(vector->data.size());
-        }};
-    }
-    if (name == "reset_the_vibe") {
-        return Function{[vector](const std::vector<RuntimeValue>& args) -> RuntimeValue {
-            LOG_DEBUG << "Vector:reset_the_vibe called";
-            expectArgsSize(args, 0ull);
-
-            LOG_DEBUG << std::format("Reseting vector");
-            vector->data.clear();
-            vector->type = RuntimeValueType::Unset;
-            return Null{};
-        }};
-    }
-
-    throw NativeError{
-        RuntimeError::Type::Logic,
-        std::string{"Lineup cannot do "} +  name};
 }

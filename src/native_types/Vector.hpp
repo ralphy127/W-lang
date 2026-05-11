@@ -14,4 +14,17 @@ struct VectorImpl {
 
 using Vector = std::shared_ptr<VectorImpl>;
 
-RuntimeValue callVectorMethod(const Vector&, const std::string& name);
+enum class VectorMethod : std::uint8_t {
+    Unknown,
+    Get,
+    Set,
+    PushBack,
+    PopBack,
+    IsEmpty,
+    Size,
+    Clear
+};
+
+std::string stringify(VectorMethod);
+
+RuntimeValue callVectorMethod(const Vector&, VectorMethod);

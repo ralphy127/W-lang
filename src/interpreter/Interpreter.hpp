@@ -5,6 +5,7 @@
 #include "ast/AstVisitor.hpp"
 #include "ast/Statements.hpp"
 #include "runtime/Environment.hpp"
+#include "native_types/Vector.hpp"
 #include "EvalProxy.hpp"
 
 struct ParserError;
@@ -50,6 +51,7 @@ private:
     EvalProxy evaluate(const AstNode&);
     RuntimeValue evaluateImpl(const AstNode&);
     RuntimeValue handleModuleCall(const Module&, const std::string& rightName, const DotExpr& expr);
+    VectorMethod resolveVectorMethod(std::string_view name) const;
     
     const std::vector<std::unique_ptr<Stmt>> _statements;
     AstResolver _astResolver;

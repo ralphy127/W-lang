@@ -507,7 +507,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
             return handleModuleCall(asUnsafe<Module>(leftValue), rightName, expr);
         }
         if (is<Vector>(leftValue)) {
-            return callVectorMethod(asUnsafe<Vector>(leftValue), rightName);
+            return callVectorMethod(asUnsafe<Vector>(leftValue), resolveVectorMethod(rightName));
         }
         if (is<String>(leftValue)) {
             return callStringMethod(asUnsafe<String>(leftValue), rightName);
@@ -521,6 +521,19 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
     }
 
     throw RuntimeError{RuntimeError::Type::TypeMismatch, expr.getSrcRange(), "Can't dot into that"};
+}
+
+VectorMethod Interpreter::resolveVectorMethod(std::string_view name) const {
+    if (name == "yoink") return VectorMethod::Get;
+    if (name == "patch") return VectorMethod::Set;
+    if (name == "shove") return VectorMethod::PushBack;
+    if (name == "kick") return VectorMethod::PopBack;
+    if (name == "vibe_check") return VectorMethod::IsEmpty;
+    if (name == "vibe_count") return VectorMethod::Size;
+    if (name == "reset_the_vibe") return VectorMethod::Clear;
+    throw NativeError{
+        RuntimeError::Type::Logic,
+        std::format("Lineup cannot do {}", name)};
 }
 
 RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
