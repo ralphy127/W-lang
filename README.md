@@ -65,7 +65,7 @@ To execute a W-lang script, pass the file path to the `wlang` executable:
 For example, to run the tic-tac-toe example included in the repository:
 
 ```bash
-./wlang ../examples/tic_tac_toe.weird
+./wlang ../examples/tic_tac_toe/macho.weird
 ```
 
 ## Running Tests
