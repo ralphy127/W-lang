@@ -21,20 +21,6 @@ namespace {
         LOG_DEBUG << std::format("Converted String: {} to {}", str, newStr);
         return newStr;
     }
-
-    void expectArgsSizeRange(const std::vector<RuntimeValue>& args, size_t start, size_t end) {
-        const auto size = args.size();
-        if (size < start or size > end) {
-            throw NativeError{
-                RuntimeError::Type::Logic,
-                std::format("Expected number of args between {} and {}, got {}", start, end, size)
-            };
-        }
-    }
-
-    void expectAtLeastArgs(const std::vector<RuntimeValue>& args, size_t min) {
-        expectArgsSizeRange(args, min, static_cast<size_t>(-1));
-    }
 }
 
 RuntimeValue callStringMethod(const String& str, StringMethod method) {

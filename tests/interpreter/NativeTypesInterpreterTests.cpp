@@ -244,8 +244,8 @@ TEST_F(InterpreterTests, Failure_StringToSolidFailsWhenCalledWithArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 0 args, got 1");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringToUpperCaseFailsWhenCalledWithArgs) {
@@ -257,8 +257,8 @@ TEST_F(InterpreterTests, Failure_StringToUpperCaseFailsWhenCalledWithArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 0 args, got 1");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringToLowerCaseFailsWhenCalledWithArgs) {
@@ -270,8 +270,8 @@ TEST_F(InterpreterTests, Failure_StringToLowerCaseFailsWhenCalledWithArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 0 args, got 1");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringLengthFailsWhenCalledWithArgs) {
@@ -283,8 +283,8 @@ TEST_F(InterpreterTests, Failure_StringLengthFailsWhenCalledWithArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 0 args, got 1");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringIsEmptyFailsWhenCalledWithArgs) {
@@ -296,8 +296,8 @@ TEST_F(InterpreterTests, Failure_StringIsEmptyFailsWhenCalledWithArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 0 args, got 1");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringTrimFailsWhenCalledWithArgs) {
@@ -309,8 +309,8 @@ TEST_F(InterpreterTests, Failure_StringTrimFailsWhenCalledWithArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 0 args, got 1");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooFewArgs) {
@@ -323,7 +323,7 @@ TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooFewArgs) {
     expectRuntimeErrorMsgContains(
         source,
         RuntimeError::Type::Logic,
-        "Expected number of args between 1 and 2, got 0");
+        "Got empty places. This hustle demands 1 places filled, but you only showed up with 0.");
 }
 
 TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooManyArgs) {
@@ -336,7 +336,7 @@ TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooManyArgs) 
     expectRuntimeErrorMsgContains(
         source,
         RuntimeError::Type::Logic,
-        "Expected number of args between 1 and 2, got 3");
+        "Overbooked. This hustle demands 2 places filled, but you crammed 3 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenIndexIsOutOfBounds) {
@@ -362,7 +362,7 @@ TEST_F(InterpreterTests, Failure_StringConcatFailsWhenCalledWithTooFewArgs) {
     expectRuntimeErrorMsgContains(
         source,
         RuntimeError::Type::Logic,
-        "Expected number of args between 1 and");
+        "Got empty places. This hustle demands 1 places filled, but you only showed up with 0.");
 }
 
 TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooFewArgs) {
@@ -374,8 +374,8 @@ TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooFewArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 1 args, got 0");
+        RuntimeError::Type::Logic,
+        "Got empty places. This hustle demands 1 places filled, but you only showed up with 0.");
 }
 
 TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooManyArgs) {
@@ -387,8 +387,8 @@ TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooManyArgs) {
     )";
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
-        "Expected 1 args, got 2");
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 1 places filled, but you crammed 2 in.");
 }
 
 TEST_F(InterpreterTests, Failure_StringContainsFailsWhenArgIsNotString) {
@@ -578,7 +578,10 @@ TEST_F(InterpreterTests, Failure_VectorYoinkFailsWhenCalledWithWrongArgCount) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 1 args, got 0");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Got empty places. This hustle demands 1 places filled, but you only showed up with 0.");
 }
 
 TEST_F(InterpreterTests, Failure_VectorYoinkFailsWhenIndexIsOutOfBounds) {
@@ -642,7 +645,10 @@ TEST_F(InterpreterTests, Failure_VectorPatchFailsWhenCalledWithWrongArgCount) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 2 args, got 1");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Got empty places. This hustle demands 2 places filled, but you only showed up with 1.");
 }
 
 TEST_F(InterpreterTests, Failure_VectorPatchFailsWhenNewValueTypeDoesNotMatch) {
@@ -664,7 +670,10 @@ TEST_F(InterpreterTests, Failure_VectorShoveFailsWhenCalledWithWrongArgCount) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 1 args, got 0");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Got empty places. This hustle demands 1 places filled, but you only showed up with 0.");
 }
 
 TEST_F(InterpreterTests, Failure_VectorShoveFailsWhenTypeDoesNotMatch) {
@@ -697,7 +706,10 @@ TEST_F(InterpreterTests, Failure_VectorKickFailsWhenCalledWithArguments) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_VectorVibeCheckFailsWhenCalledWithArguments) {
@@ -708,7 +720,10 @@ TEST_F(InterpreterTests, Failure_VectorVibeCheckFailsWhenCalledWithArguments) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_VectorVibeCountFailsWhenCalledWithArguments) {
@@ -719,7 +734,10 @@ TEST_F(InterpreterTests, Failure_VectorVibeCountFailsWhenCalledWithArguments) {
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, Failure_VectorResetTheVibeFailsWhenCalledWithArguments) {
@@ -730,7 +748,10 @@ TEST_F(InterpreterTests, Failure_VectorResetTheVibeFailsWhenCalledWithArguments)
         }
     )";
 
-    expectRuntimeError(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeError(
+        source,
+        RuntimeError::Type::Logic,
+        "Overbooked. This hustle demands 0 places filled, but you crammed 1 in.");
 }
 
 TEST_F(InterpreterTests, VectorShoveIntoEmptyVectorSetsAndKeepsType) {
