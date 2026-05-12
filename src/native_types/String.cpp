@@ -45,7 +45,8 @@ RuntimeValue callStringMethod(const String& str, StringMethod method) {
                 expectArgsSize(args, 0ull);    
                 
                 const auto integer = Int{std::stoi(str)};
-                LOG_DEBUG << std::format("Converted String: {} to Int: {}", str, stringify(integer));
+                LOG_DEBUG << std::format(
+                    "Converted String: {} to Int: {}", str, stringify(integer));
                 return integer;
             }};
         case StringMethod::ToUpperCase:
@@ -98,10 +99,10 @@ RuntimeValue callStringMethod(const String& str, StringMethod method) {
                 expectArgsSizeRange(args, 1ull, 2ull);
 
                 const auto pos =
-                    static_cast<size_t>(asUnsafe<Int>(args[0ull]));
+                    static_cast<size_t>(as<Int>(args[0ull]));
                 const auto count =
                     args.size() == 2ull
-                    ? static_cast<size_t>(asUnsafe<Int>(args[1ull]))
+                    ? static_cast<size_t>(as<Int>(args[1ull]))
                     : std::string::npos;
                 const auto newStr = String{str.substr(pos, count)};
                 
@@ -125,7 +126,7 @@ RuntimeValue callStringMethod(const String& str, StringMethod method) {
                 LOG_DEBUG << "StringMethod::Contains called on: " << str;
                 expectArgsSize(args, 1ull);
 
-                const auto contains = str.contains(asUnsafe<String>(args[0ull]));
+                const auto contains = str.contains(as<String>(args[0ull]));
                 LOG_DEBUG << "Returning Contains: " << contains;
                 return contains;
             }};

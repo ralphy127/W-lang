@@ -8,7 +8,7 @@ VariableExpr::VariableExpr(Token token, SourceRange srcRange)
     : Expr{srcRange}
     , _variableName{std::move(token)} {}
 
-std::optional<LValue> VariableExpr::getLValue() const {
+std::optional<LValue> VariableExpr::getLValueOpt() const {
     return LValue{LValue::Variable{_variableName.getValue<std::string>()}};
 }
 
@@ -40,7 +40,7 @@ DotExpr::DotExpr(std::unique_ptr<Expr> left, Token right, SourceRange srcRange)
     , _left{std::move(left)}
     , _right{std::move(right)} {}
 
-std::optional<LValue> DotExpr::getLValue() const {
+std::optional<LValue> DotExpr::getLValueOpt() const {
     if (_right.getType() == Token::Type::Ident) {
         return LValue{LValue::Property{*_left, _right.getValue<std::string>()}};
     }

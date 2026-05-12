@@ -15,7 +15,7 @@ ParserResult Parser::parse() {
 
     while (not parsedAll()) {
         try {
-            statements.push_back(unwrapUnsafe(parseDefinition()));
+            statements.push_back(unwrap(parseDefinition()));
             LOG_DEBUG << "Parsed definition, total statements: " << statements.size();
         }
         catch(ParserError error) {
@@ -96,12 +96,12 @@ void Parser::synchronize() {
 }
 
 const Token& Parser::getPreviousToken() const {
-    ensureUnsafe(_current > 0ull, "Cannot get previous token");
+    ensure(_current > 0ull, "Cannot get previous token");
     return _tokens[_current - 1ull];
 }
 
 const Token& Parser::getToken() const {
-    ensureUnsafe(not parsedAll(), "Cannot get current token");
+    ensure(not parsedAll(), "Cannot get current token");
     return _tokens[_current];
 }
 
@@ -263,7 +263,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
 
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("gig units"));
 
-    auto body = unwrapUnsafe(parseBlock("gig"));
+    auto body = unwrap(parseBlock("gig"));
     auto srcRange = makeRange(gigToken, *body);
 
     LOG_DEBUG << "Successfully parsed function definition for '" << name << "'";
@@ -280,7 +280,7 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
     std::unique_ptr<Expr> initializer{nullptr};
     if (matchAndAdvanceIfNeeded(Token::Type::Assign)) {
         LOG_DEBUG << "Parsing initializer for variable " << name;
-        initializer = unwrapUnsafe(parseExpression());
+        initializer = unwrap(parseExpression());
     }
     else {
         LOG_DEBUG << "Creating default initializer for variable " << name;
@@ -312,7 +312,7 @@ std::unique_ptr<Stmt> Parser::parseBlock(std::string_view blockIdent) {
 
     std::vector<std::unique_ptr<Stmt>> statements{};
     while (not match(Token::Type::RBrace) and not parsedAll()) {
-        statements.push_back(unwrapUnsafe(parseDefinition()));
+        statements.push_back(unwrap(parseDefinition()));
     }
     LOG_DEBUG << std::format("Parsed {} statement(s) in block", statements.size());
 
@@ -366,7 +366,7 @@ std::unique_ptr<Stmt> Parser::parseIf() {
     }
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("perhaps vibe"));
 
-    auto ifBody = unwrapUnsafe(parseBlock("perhaps"));
+    auto ifBody = unwrap(parseBlock("perhaps"));
 
     std::vector<ElseIfClause> elIfClauses{};
     while (not parsedAll() and matchAndAdvanceIfNeeded(Token::Type::Elif)) {
@@ -376,7 +376,7 @@ std::unique_ptr<Stmt> Parser::parseIf() {
             throwParserError(ErrorMsgBuilder::expected("valid vibe"));
         }
         consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("or_whatever vibe"));
-        auto elifBody = unwrapUnsafe(parseBlock("or_whatever"));
+        auto elifBody = unwrap(parseBlock("or_whatever"));
 
         elIfClauses.emplace_back(std::move(elifCondition), std::move(elifBody));
     }
@@ -403,7 +403,7 @@ std::unique_ptr<Stmt> Parser::parseIf() {
 std::unique_ptr<Stmt> Parser::parseLoop() {
     LOG_DEBUG << "Parsing 'do_until_bored' statement";
     const auto& loopToken = getPreviousToken();
-    auto body = unwrapUnsafe(parseBlock("do_until_bored"));
+    auto body = unwrap(parseBlock("do_until_bored"));
     auto srcRange = makeRange(loopToken, *body);
 
     LOG_DEBUG << "Successfully parsed 'do_until_bored' statement";
@@ -420,7 +420,7 @@ std::unique_ptr<Stmt> Parser::parseRepeat() {
     }
     consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("repeat counter"));
 
-    auto body = unwrapUnsafe(parseBlock("spin_around"));
+    auto body = unwrap(parseBlock("spin_around"));
 
     auto srcRange = makeRange(loopToken, *body);
 
@@ -443,15 +443,15 @@ std::unique_ptr<Stmt> Parser::parseImport() {
 
 std::unique_ptr<Stmt> Parser::parseReassign(std::unique_ptr<Expr> target, const Token& startToken) {
     LOG_DEBUG << "parseReassign() called at token: " << getTokenStr();
-    auto value = unwrapUnsafe(parseExpression());
-    if (not target->getLValue().has_value()) {
+    auto value = unwrap(parseExpression());
+    if (not target->getLValueOpt().has_value()) {
         throwParserError(ErrorMsgBuilder::cannot("restash this thing"));
     }
 
     const auto& semiToken = consume(
         Token::Type::Semi, ErrorMsgBuilder::expected("...").after("restashing"));
     return std::make_unique<ReassignStmt>(
-        unwrapUnsafe(std::move(target)), std::move(value), makeRange(startToken, semiToken));
+        unwrap(std::move(target)), std::move(value), makeRange(startToken, semiToken));
 }
 
 std::unique_ptr<Expr> Parser::parseExpression() {
@@ -564,7 +564,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
                     std::move(expr), propertyToken, makeRange(nameToken, propertyToken));
             }
             else if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
-                expr = unwrapUnsafe(parseFunctionCall(std::move(expr))); 
+                expr = unwrap(parseFunctionCall(std::move(expr))); 
             }
             else {
                 break;
@@ -731,7 +731,7 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
                 
     LOG_DEBUG << std::format("Parsed function call with {} arguments", arguments.size());
     return std::make_unique<CallExpr>(
-        unwrapUnsafe(std::move(callee)),
+        unwrap(std::move(callee)),
         std::move(arguments),
         makeRange(lParenToken, rParenToken));
 }
@@ -744,7 +744,7 @@ std::unique_ptr<Expr> Parser::parseUnary() {
             throwParserError(ErrorMsgBuilder::cannot("pump it into the void"));
         }
 
-        if (right->getLValue().has_value()) {
+        if (right->getLValueOpt().has_value()) {
             auto srcRange = makeRange(opToken, *right);
             return std::make_unique<UnaryExpr>(opToken, std::move(right), srcRange);
         }

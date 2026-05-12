@@ -49,9 +49,9 @@ Interpreter::Interpreter(
     , _mainFolderPath{std::move(mainFolderPath)} {
 
     for (const auto& stmt : _statements) {
-        ensureUnsafe(stmt != nullptr, "Interpreter received a null statement");
+        ensure(stmt != nullptr, "Interpreter received a null statement");
     }
-    ensureUnsafe(_astResolver != nullptr, "Interpreter received a null astResolver");
+    ensure(_astResolver != nullptr, "Interpreter received a null astResolver");
 }
 
 int Interpreter::interpret() {
@@ -78,9 +78,9 @@ int Interpreter::interpret() {
         }
 
         LOG_DEBUG << "Executing 'macho' function";
-        const auto ret = asUnsafe<Function>(mainFunc).exec(std::vector<RuntimeValue>{});
+        const auto ret = as<Function>(mainFunc).exec(std::vector<RuntimeValue>{});
         if (is<Int>(ret)) {
-            const auto val = asUnsafe<Int>(ret);
+            const auto val = as<Int>(ret);
             LOG_DEBUG << "Returning an int from macho: " << val;
             return val;
         }
@@ -131,7 +131,7 @@ RuntimeValue Interpreter::visitVarDefinitionStmt(const VarDefinitionStmt& stmt) 
 RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
     LOG_DEBUG << "Visiting ReassignStmt";
 
-    auto lValue = stmt.getTarget().getLValueUnsafe();
+    auto lValue = stmt.getTarget().getLValue();
     RuntimeValue newValue = evaluate(stmt.getValue());
 
     std::visit(overloaded{
@@ -432,7 +432,7 @@ RuntimeValue Interpreter::visitUnaryExpr(const UnaryExpr& expr) {
     LOG_DEBUG << "Visiting UnaryExpr";
     if (expr.getOperator().getType() == Token::Type::Incr) {
         const auto& right = expr.getRight();
-        auto lValue = right.getLValue();
+        auto lValue = right.getLValueOpt();
         if (not lValue.has_value()) {
             throwDevError(expr.getSrcRange(), "Can't get a grip on this");
         }
@@ -504,13 +504,13 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
 
     try {
         if (is<Module>(leftValue)) {
-            return handleModuleCall(asUnsafe<Module>(leftValue), rightName, expr);
+            return handleModuleCall(as<Module>(leftValue), rightName, expr);
         }
         if (is<Vector>(leftValue)) {
-            return callVectorMethod(asUnsafe<Vector>(leftValue), resolveVectorMethod(rightName));
+            return callVectorMethod(as<Vector>(leftValue), resolveVectorMethod(rightName));
         }
         if (is<String>(leftValue)) {
-            return callStringMethod(asUnsafe<String>(leftValue), resolveStringMethod(rightName));
+            return callStringMethod(as<String>(leftValue), resolveStringMethod(rightName));
         }
     }
     catch (const NativeError& e) {

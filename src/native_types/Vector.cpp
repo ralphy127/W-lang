@@ -6,7 +6,7 @@
 
 namespace {
     size_t toIndex(const RuntimeValue& arg) {
-        const auto& i = asUnsafe<Int>(arg);
+        const auto& i = as<Int>(arg);
 
         if (i <= 0) {
             throw NativeError{
@@ -68,7 +68,8 @@ RuntimeValue callVectorMethod(const Vector& vector, VectorMethod method) {
                 expectInBounds(vector, index);
                 
                 auto value = vector->data.at(index);
-                LOG_DEBUG << std::format("Retrieving value: {} at index{}", stringify(value), index);
+                LOG_DEBUG << std::format(
+                    "Retrieving value: {} at index{}", stringify(value), index);
                 return value;
             }};
         case VectorMethod::Set:

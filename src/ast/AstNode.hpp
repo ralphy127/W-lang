@@ -14,8 +14,8 @@ public:
     virtual ~AstNode() = default;
 
     virtual RuntimeValue accept(AstVisitor&) const = 0;
-    virtual std::optional<LValue> getLValue() const { return std::nullopt; }
-    LValue getLValueUnsafe(const std::source_location& = std::source_location::current()) const;
+    virtual std::optional<LValue> getLValueOpt() const { return std::nullopt; }
+    LValue getLValue(const std::source_location& = std::source_location::current()) const;
     const SourceRange& getSrcRange() const { return _srcRange; }
 
 private:

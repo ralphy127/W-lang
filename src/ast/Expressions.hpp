@@ -30,7 +30,7 @@ public:
 
     const Token& getName() const { return _variableName; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitVariableExpr(*this); }
-    std::optional<LValue> getLValue() const override;
+    std::optional<LValue> getLValueOpt() const override;
 
 private:
     Token _variableName;
@@ -90,7 +90,7 @@ public:
     const Expr& getLeft() const { return *_left; }
     const Token& getRight() const { return _right; }
     RuntimeValue accept(AstVisitor& v) const override { return v.visitDotExpr(*this); }
-    std::optional<LValue> getLValue() const override;
+    std::optional<LValue> getLValueOpt() const override;
 
 private:
     std::unique_ptr<Expr> _left;

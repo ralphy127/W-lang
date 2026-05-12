@@ -229,7 +229,10 @@ TEST_F(InterpreterTests, Failure_StringToSolidFailsWhenStringIsNotInt) {
             string.to_solid()...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::Undefined, "stoi");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Undefined,
+        "stoi");
 }
 
 TEST_F(InterpreterTests, Failure_StringToSolidFailsWhenCalledWithArgs) {
@@ -239,7 +242,10 @@ TEST_F(InterpreterTests, Failure_StringToSolidFailsWhenCalledWithArgs) {
             string.to_solid(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 0 args, got 1");
 }
 
 TEST_F(InterpreterTests, Failure_StringToUpperCaseFailsWhenCalledWithArgs) {
@@ -249,7 +255,10 @@ TEST_F(InterpreterTests, Failure_StringToUpperCaseFailsWhenCalledWithArgs) {
             string.scream(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 0 args, got 1");
 }
 
 TEST_F(InterpreterTests, Failure_StringToLowerCaseFailsWhenCalledWithArgs) {
@@ -259,7 +268,10 @@ TEST_F(InterpreterTests, Failure_StringToLowerCaseFailsWhenCalledWithArgs) {
             string.mumble(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 0 args, got 1");
 }
 
 TEST_F(InterpreterTests, Failure_StringLengthFailsWhenCalledWithArgs) {
@@ -269,7 +281,10 @@ TEST_F(InterpreterTests, Failure_StringLengthFailsWhenCalledWithArgs) {
             string.yap_level(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 0 args, got 1");
 }
 
 TEST_F(InterpreterTests, Failure_StringIsEmptyFailsWhenCalledWithArgs) {
@@ -279,7 +294,10 @@ TEST_F(InterpreterTests, Failure_StringIsEmptyFailsWhenCalledWithArgs) {
             string.speechless(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 0 args, got 1");
 }
 
 TEST_F(InterpreterTests, Failure_StringTrimFailsWhenCalledWithArgs) {
@@ -289,7 +307,10 @@ TEST_F(InterpreterTests, Failure_StringTrimFailsWhenCalledWithArgs) {
             string.cut_the_crap(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 0 args, got 1");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 0 args, got 1");
 }
 
 TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooFewArgs) {
@@ -299,7 +320,10 @@ TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooFewArgs) {
             string.chop()...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::Logic, "Expected number of args between 1 and 2, got 0");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Logic,
+        "Expected number of args between 1 and 2, got 0");
 }
 
 TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooManyArgs) {
@@ -309,7 +333,10 @@ TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenCalledWithTooManyArgs) 
             string.chop(1, 2, 3)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::Logic, "Expected number of args between 1 and 2, got 3");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Logic,
+        "Expected number of args between 1 and 2, got 3");
 }
 
 TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenIndexIsOutOfBounds) {
@@ -319,7 +346,10 @@ TEST_F(InterpreterTests, Failure_StringSubstringFailsWhenIndexIsOutOfBounds) {
             string.chop(10)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::Undefined, "basic_string");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Undefined,
+        "basic_string");
 }
 
 TEST_F(InterpreterTests, Failure_StringConcatFailsWhenCalledWithTooFewArgs) {
@@ -329,7 +359,10 @@ TEST_F(InterpreterTests, Failure_StringConcatFailsWhenCalledWithTooFewArgs) {
             string.keep_yapping()...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::Logic, "Expected number of args between 1 and");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Logic,
+        "Expected number of args between 1 and");
 }
 
 TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooFewArgs) {
@@ -339,7 +372,10 @@ TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooFewArgs) {
             string.sniff_out()...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 1 args, got 0");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 1 args, got 0");
 }
 
 TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooManyArgs) {
@@ -349,7 +385,10 @@ TEST_F(InterpreterTests, Failure_StringContainsFailsWhenCalledWithTooManyArgs) {
             string.sniff_out("a", "b")...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::OutOfBounds, "Expected 1 args, got 2");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::OutOfBounds,
+        "Expected 1 args, got 2");
 }
 
 TEST_F(InterpreterTests, Failure_StringContainsFailsWhenArgIsNotString) {
@@ -359,7 +398,10 @@ TEST_F(InterpreterTests, Failure_StringContainsFailsWhenArgIsNotString) {
             string.sniff_out(1)...
         }
     )";
-    expectRuntimeErrorMsgContains(source, RuntimeError::Type::TypeMismatch, "Anticipated yap instead of solid");
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::TypeMismatch,
+        "Anticipated yap instead of solid");
 }
 
 TEST_F(InterpreterTests, GossipPrintsVectorWithVariableElement) {
