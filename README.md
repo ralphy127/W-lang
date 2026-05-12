@@ -15,7 +15,16 @@ For more detailed information about the language, its architecture, and how to u
 - [Language Guide](docs/reference/language-guide.md)
 - [Architecture Overview](docs/explanations/overview.md)
 
-the whole documentation is in the docs directory.
+Here is the rest of the documentation:
+
+- [Error Handling](docs/explanations/error-handling.md)
+- [Native Types](docs/reference/native-types.md)
+- [Type System](docs/explanations/type-system.md)
+- [Creating Modules](docs/how-to-guides/creating-modules.md)
+- [Logging](docs/explanations/logging.md)
+- [Interpreter](docs/explanations/interpreter.md)
+- [Parser](docs/explanations/parser.md)
+- [Lexer](docs/explanations/lexer.md)
 
 ## How to Build
 
