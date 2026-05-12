@@ -20,6 +20,14 @@ The `String` type represents a sequence of characters.
 ### Methods
 
 - **`to_solid()`**: Converts a string to an integer, if possible.
+- **`scream()`**: Converts all characters in the string to uppercase.
+- **`mumble()`**: Converts all characters in the string to lowercase.
+- **`yap_level()`**: Returns the length of the string.
+- **`speechless()`**: Returns `totally` (true) if the string is empty, `nah` (false) otherwise.
+- **`cut_the_crap()`**: Trims whitespace from both ends of the string.
+- **`chop(pos, count?)`**: Returns a substring starting at index `pos` with an optional `count` of characters.
+- **`keep_yapping(str1, ...)`**: Concatenates one or more values to the end of the string.
+- **`sniff_out(str)`**: Returns `totally` (true) if the string contains the specified substring, `nah` (false) otherwise.
 
 ## Vector
 
@@ -27,10 +35,10 @@ The `Vector` type is a dynamic array that can hold elements of the same type.
 
 ### Methods
 
-- **`get(index)`**: Returns the element at the given 1-based index.
-- **`set(index, value)`**: Sets the element at the given 1-based index to a new value.
-- **`push_back(value)`**: Adds an element to the end of the vector.
-- **`pop_back()`**: Removes and returns the last element of the vector.
-- **`is_empty()`**: Returns `totally` if the vector is empty, `nah` otherwise.
-- **`size()`**: Returns the number of elements in the vector.
-- **`clear()`**: Removes all elements from the vector.
+- **`yoink(index)`**: Returns the element at the given index.
+- **`patch(index, value)`**: Sets the element at the given index to a new value.
+- **`shove(value)`**: Adds an element to the end of the vector.
+- **`kick()`**: Removes and returns the last element of the vector.
+- **`vibe_check()`**: Returns `totally` if the vector is empty, `nah` otherwise.
+- **`vibe_count()`**: Returns the number of elements in the vector.
+- **`reset_the_vibe()`**: Removes all elements from the vector.

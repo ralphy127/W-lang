@@ -27,13 +27,13 @@ Type checking for these operations is performed at runtime. If an operator is us
 
 Here is a list of all built-in types available in W-lang, along with their corresponding C++ type and their name in the language's slang:
 
-| W-lang Name | C++ Type (`RuntimeValue`) | Description                               |
-|-------------|---------------------------|-------------------------------------------|
-| `ghosted`   | `Null` (`std::monostate`) | Represents the absence of a value (null). |
-| `yap`       | `String`                  | A sequence of characters (text).          |
-| `solid`     | `Int` (`std::int32_t`)    | A 32-bit signed integer.                  |
-| `vibe`      | `Bool` (`bool`)           | A boolean value (`true` or `false`).      |
-| `change`    | `Float` (`double`)        | A double-precision floating-point number. |
-| `lineup`    | `Vector`                  | A dynamic array that can hold elements.   |
-| `gig`       | `Function`                | A user-defined or native function.        |
-| `hub`       | `Module`                  | A collection of related functions and variables. |
+| W-lang Name | C++ Type (`RuntimeValue`)              | Description                               |
+|-------------|----------------------------------------|-------------------------------------------|
+| `ghosted`   | `Null` (`std::monostate`)              | Represents the absence of a value (null). |
+| `yap`       | `String` (`std::string`)               | A sequence of characters (text).          |
+| `solid`     | `Int` (`std::int32_t`)                 | A 32-bit signed integer.                  |
+| `vibe`      | `Bool` (`bool`)                        | A boolean value (`true` or `false`).      |
+| `change`    | `Float` (`double`)                     | A double-precision floating-point number. |
+| `lineup`    | `Vector` `(std::vector<RuntimeValue>)` | A dynamic array that can hold elements.   |
+| `gig`       | `Function` `(std::function<RuntimeValue(const std::vector<RuntimeValue>&)>)` | A user-defined or native function.        |
+| `hub`       | `Module` `(std::shared_ptr<Environment>)` | A collection of related functions and variables. |

@@ -156,6 +156,7 @@ const T& as(const RuntimeValueBase& v, const SourceRange& srcRange) {
     return std::get<T>(v);
 }
 
+// TODO change [..]Unsafe names to [..]orThrow[...] as some throw NativeErrors, some InternalErrors
 template<typename T>
 const T& asUnsafe(const RuntimeValue& v) {
     const auto& base = static_cast<const RuntimeValueBase&>(v);

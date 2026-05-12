@@ -6,4 +6,17 @@ struct RuntimeValue;
 
 using String = std::string;
 
-RuntimeValue callStringMethod(const String&, const std::string& name);
+enum class StringMethod : std::uint8_t {
+    Unknown,
+    ToInt,
+    ToUpperCase,
+    ToLowerCase,
+    Length,
+    IsEmpty,
+    Trim,
+    Substring,
+    Concat,
+    Contains
+};
+
+RuntimeValue callStringMethod(const String&, StringMethod);

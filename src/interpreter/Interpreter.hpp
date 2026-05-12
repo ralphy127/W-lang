@@ -52,7 +52,8 @@ private:
     RuntimeValue evaluateImpl(const AstNode&);
     RuntimeValue handleModuleCall(const Module&, const std::string& rightName, const DotExpr& expr);
     VectorMethod resolveVectorMethod(std::string_view name) const;
-    
+    StringMethod resolveStringMethod(std::string_view name) const;
+
     const std::vector<std::unique_ptr<Stmt>> _statements;
     AstResolver _astResolver;
     // TODO! while working on some global file solution, remove this field 

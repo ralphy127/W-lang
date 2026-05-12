@@ -510,7 +510,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
             return callVectorMethod(asUnsafe<Vector>(leftValue), resolveVectorMethod(rightName));
         }
         if (is<String>(leftValue)) {
-            return callStringMethod(asUnsafe<String>(leftValue), rightName);
+            return callStringMethod(asUnsafe<String>(leftValue), resolveStringMethod(rightName));
         }
     }
     catch (const NativeError& e) {
@@ -534,6 +534,22 @@ VectorMethod Interpreter::resolveVectorMethod(std::string_view name) const {
     throw NativeError{
         RuntimeError::Type::Logic,
         std::format("Lineup cannot do {}", name)};
+}
+
+StringMethod Interpreter::resolveStringMethod(std::string_view name) const {
+    if (name == "to_solid") return StringMethod::ToInt;
+    if (name == "scream") return StringMethod::ToUpperCase;
+    if (name == "mumble") return StringMethod::ToLowerCase;
+    if (name == "yap_level") return StringMethod::Length;
+    if (name == "speechless") return StringMethod::IsEmpty;
+    if (name == "cut_the_crap") return StringMethod::Trim;
+    if (name == "chop") return StringMethod::Substring;
+    if (name == "keep_yapping") return StringMethod::Concat;
+    if (name == "sniff_out") return StringMethod::Contains;
+    
+    throw NativeError{
+        RuntimeError::Type::Logic,
+        std::format("This yap cannot do '{}'. Tell it to shut up.", name)};
 }
 
 RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {
