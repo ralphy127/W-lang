@@ -18,6 +18,7 @@ For more detailed information about the language, its architecture, and how to u
 Here is the rest of the documentation:
 
 - [Error Handling](docs/explanations/error-handling.md)
+- [Keywords](docs/reference/keywords.md)
 - [Native Types](docs/reference/native-types.md)
 - [Type System](docs/explanations/type-system.md)
 - [Creating Modules](docs/how-to-guides/creating-modules.md)
