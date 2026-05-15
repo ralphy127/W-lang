@@ -5,12 +5,15 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(GNUInstallDirs)
 include(FetchContent)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/refs/heads/main.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_subdirectory(src/token)
@@ -29,4 +32,6 @@ enable_testing()
 add_subdirectory(tests)
 
 add_executable(wlang src/main.cpp)
-target_link_libraries(wlang PRIVATE lexer parser interpreter token ast utils runtime errors core modules native_types)
+target_link_libraries(wlang PRIVATE lexer parser interpreter core)
+
+install(TARGETS wlang RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

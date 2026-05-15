@@ -1,6 +1,6 @@
 add_executable(ast_printer_tests AstPrinterTests.cpp)
 
-target_link_libraries(ast_printer_tests PRIVATE utils lexer parser GTest::gtest_main)
+target_link_libraries(ast_printer_tests PRIVATE lexer parser GTest::gtest_main)
 
 include(GoogleTest)
 

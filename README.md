@@ -27,9 +27,10 @@ Here is the rest of the documentation:
 - [Parser](docs/explanations/parser.md)
 - [Lexer](docs/explanations/lexer.md)
 
-## How to Build
+## Installation
 
-To build the W-lang interpreter, you'll need a C++23 compatible compiler.
+To build and install the W-lang interpreter, you'll need a C++23 compatible compiler.
+Easy, interactive installation script is provided.
 
 1.  **Clone the repository:**
     ```bash
@@ -37,35 +38,25 @@ To build the W-lang interpreter, you'll need a C++23 compatible compiler.
     cd W-lang
     ```
 
-2.  **Create a build directory:**
+2.  **Run the install script:**
     ```bash
-    cd build
+    ./install.sh
     ```
 
-3.  **Configure with CMake:**
-    ```bash
-    cmake ..
-    ```
-
-4.  **Build the project:**
-    ```bash
-    make
-    ```
-
-This will create the `wlang` executable in the `build` directory.
+The script will automatically build the project using CMake, install the `wlang` executable to `$HOME/.local/bin`, and optionally add the directory to your `PATH` for easy execution.
 
 ## Usage
 
-To execute a W-lang script, pass the file path to the `wlang` executable:
+Once you have installed the project (and `$HOME/.local/bin` is in your `PATH`), you can execute a script anywhere:
 
 ```bash
-./wlang path/to/your/script.weird
+wlang path/to/your/script.weird
 ```
 
-For example, to run the tic-tac-toe example included in the repository:
+If you chose not to add it to your `PATH`, you can use the absolute path:
 
 ```bash
-./wlang ../examples/tic_tac_toe/macho.weird
+~/.local/bin/wlang path/to/your/script.weird
 ```
 
 ## Running Tests

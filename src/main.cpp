@@ -114,7 +114,8 @@ int main(int argc, const char* argv[]) {
     ::logLevel = logLevelInfo;
 
     if (argc < 2) {
-        std::cerr << "Usage: ./wlang <filepath> [--debug] [--dump-ast]\n";
+        std::cerr << std::format(
+            "Usage: {} <filepath> [--debug] [--dump-ast]\n", argv[0]);
         return std::to_underlying(ExitCode::Usage);
     }
 
