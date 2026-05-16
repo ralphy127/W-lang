@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <source_location>
+#include <cstdint>
 #include <fstream>
 #include <string_view>
 
