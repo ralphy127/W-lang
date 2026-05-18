@@ -27,10 +27,33 @@ Here is the rest of the documentation:
 - [Parser](docs/explanations/parser.md)
 - [Lexer](docs/explanations/lexer.md)
 
+## Supported Platforms
+
+W-lang is officially supported and continuously tested on the following platforms:
+- **macOS** (latest) with Apple Clang
+- **Linux** (Ubuntu latest) with GCC-14
+
 ## Installation
 
-To build and install the W-lang interpreter, you'll need a C++23 compatible compiler.
-Easy, interactive installation script is provided.
+### Option 1: Using Pre-built Binaries (Release)
+
+You can download a pre-built binary for your operating system directly from the [GitHub Releases](https://github.com/ralphy127/W-lang/releases) page.
+
+1. Download the `.tar.gz` file for your platform (macOS or Linux).
+2. Extract the archive:
+   ```bash
+   tar -xzf w-lang-*.tar.gz
+   ```
+3. (Optional) Move the binary to a directory included in your `$PATH` (e.g., `~/.local/bin`) so you can run it from anywhere:
+   ```bash
+   mkdir -p ~/.local/bin
+   mv wlang ~/.local/bin/
+   ```
+
+### Option 2: Building from source
+
+To build and install the W-lang interpreter from source, you'll need a C++23 compatible compiler.
+An easy, interactive installation script is provided.
 
 1.  **Clone the repository:**
     ```bash
@@ -67,3 +90,9 @@ The project uses CTest and GoogleTest for unit and integration testing. To run t
 cd build
 ctest
 ```
+
+## CI/CD
+
+W-lang uses GitHub Actions for continuous integration and deployment:
+- **Automated Testing (`ci.yaml`)**: Every push to `main` and active development branches triggers a build and test run across all supported platforms to ensure stability.
+- **Automated Releases (`release.yml`)**: Pushing a new version tag (e.g., `v*`) automatically compiles the project in Release mode without any caching overhead and attaches the properly packaged binaries to a new GitHub Release.
