@@ -21,20 +21,23 @@ private:
         LogFileHandler() {
         std::filesystem::path p = std::filesystem::current_path();
         
-        bool found{false};
+        bool foundBuildDir{false};
         for (int i = 0; i < 3; ++i) {
             if (std::filesystem::exists(p / "build")) {
                 p /= "build";
-                found = true;
+                foundBuildDir = true;
                 break;
             }
             if (p.has_parent_path()) p = p.parent_path();
         }
         
-        if (not found) {
-            throw std::logic_error{"File logging error: build folder not found"};
+        if (not foundBuildDir) {
+            p = std::filesystem::temp_directory_path();
+            _file.open(p / "w-lang_logs.txt", std::ios::out | std::ios::trunc);
+        } 
+        else {
+            _file.open(p / "logs.txt", std::ios::out | std::ios::trunc);
         }
-        _file.open(p / "logs.txt", std::ios::out | std::ios::trunc);
         
     };
 
