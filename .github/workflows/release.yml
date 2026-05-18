@@ -1,0 +1,57 @@
+name: W-Lang Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++-14 ninja-build
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja
+
+    - name: Configure CMake
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          export CXX=g++-14
+          export CXXFLAGS="-static-libgcc -static-libstdc++"
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          export CXX=clang++
+        fi
+        
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Package Binary
+      shell: bash
+      run: |
+        cd build
+        tar -czvf w-lang-${{ runner.os }}.tar.gz wlang
+
+    - name: Publish to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      with:
+        files: build/w-lang-${{ runner.os }}.tar.gz
+        prerelease: ${{ contains(github.ref, '-') }}
