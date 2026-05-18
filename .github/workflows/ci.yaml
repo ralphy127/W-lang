@@ -1,0 +1,46 @@
+name: W-Lang CI
+
+on:
+  push:
+    branches: ["main", "ci-setup"]
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false 
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++-14 ninja-build ccache
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja ccache
+
+    - name: Configure CMake
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          export CXX=g++-14
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          export CXX=clang++
+        fi
+        
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Run tests (CTest)
+      run: |
+        cd build
+        ctest --output-on-failure -C Release
