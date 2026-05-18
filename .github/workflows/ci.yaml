@@ -2,7 +2,7 @@ name: W-Lang CI
 
 on:
   push:
-    branches: ["main", "ci-setup"]
+    branches: ["main"]
 
 jobs:
   build-and-test:
