@@ -260,6 +260,11 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'summon' to Token::Type::Import";
         return true;
     }
+    if (matchAndAdvanceIfNeeded("crew")) {
+        token.setType(Token::Type::Struct);
+        LOG_DEBUG << "Tokenized 'crew' to Token::Type::Struct";
+        return true;
+    }
     return false;
 }
 
@@ -374,12 +379,6 @@ void Lexer::tokenizeIdentifier(Token& token) {
 }
 
 std::expected<Token, LexerError> Lexer::getTokenAndAdvance() {
-    // skipWhitespaces();
-    // const auto skipResult = skipComments();
-    // if (not skipResult.has_value()) {
-    //     return std::unexpected{skipResult.error()};
-    // }
-
     Token token{Token::Type::Unknown, _fileId, _line, _col};
     char ch = getChar();
 

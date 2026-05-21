@@ -1212,3 +1212,27 @@ TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
     std::cout.rdbuf(oldCout);
     EXPECT_EQ(buffer.str(), "OK\n");
 }
+
+TEST_F(InterpreterTests, EmptyStructDeclarationWorks) {
+    auto source = R"(
+        crew Test {}
+
+        gig macho() {}
+    )";
+    
+    expectOutput(source, "");
+}
+
+TEST_F(InterpreterTests, Failure_DuplicateStructDeclaration) {
+    auto source = R"(
+        crew Test {}
+        crew Test {}
+
+        gig macho() {}
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source,
+        RuntimeError::Type::Logic,
+        "Crew Test is not happy you wanted to copy their name");
+}

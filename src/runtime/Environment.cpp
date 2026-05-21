@@ -4,6 +4,9 @@
 Environment::Environment(std::shared_ptr<Environment> outerScope)
     : _outerScope{std::move(outerScope)} {}
 
+
+// TODO better variable error msg
+
 void Environment::defineVar(const std::string& name, RuntimeValue value) {
     if (_variables.contains(name)) {
         throw NativeError{
@@ -36,4 +39,24 @@ RuntimeValue Environment::getVar(const std::string& name) const {
     }
     throw NativeError{
         RuntimeError::Type::Logic,std::format("Variable {} does not exist", name)};
+}
+
+void Environment::defineStruct(const std::string& name, StructDefinition structDefinition) {
+    if (_structDefinitions.contains(name)) {
+        throw NativeError{
+            RuntimeError::Type::Logic,
+            std::format("Crew {} is not happy you wanted to copy their name", name)};
+    }
+    _structDefinitions.emplace(name, structDefinition);
+}
+
+StructDefinition Environment::getStructDefinition(const std::string& name) {
+    if (_structDefinitions.contains(name)) {
+        return _structDefinitions.at(name);
+    }
+    if (_outerScope) {
+        return _outerScope->getStructDefinition(name);
+    }
+    throw NativeError{
+        RuntimeError::Type::Logic, std::format("Crew {} is not recruiting right now", name)};
 }

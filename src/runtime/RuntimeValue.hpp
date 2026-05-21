@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <format>
 #include "native_types/Vector.hpp"
 #include "native_types/String.hpp"

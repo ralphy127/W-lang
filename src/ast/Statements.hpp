@@ -163,3 +163,15 @@ public:
 private:
     Token _moduleName;
 };
+
+class StructStmt : public Stmt {
+public:
+    explicit StructStmt(Token structName, SourceRange);
+
+    const Token& getStructName() const { return _structName; }
+
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitStructStmt(*this); }
+
+private:
+    Token _structName;
+};

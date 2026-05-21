@@ -154,6 +154,7 @@ int main(int argc, const char* argv[]) {
     catch (const RuntimeError& error) {
         errorReporter.printRuntimeError(error, sourceManager);
     }
+    // TODO make sure every NativeError is caught inside Interpreter, just in case catch them here
     catch(const InternalError& error) {
         errorReporter.printInternalError(error);
     }

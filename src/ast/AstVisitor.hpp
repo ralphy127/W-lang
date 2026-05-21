@@ -13,6 +13,7 @@ class BreakStmt;
 class FunctionStmt;
 class ExpressionStmt;
 class ImportStmt;
+class StructStmt;
 
 class LiteralExpr;
 class VariableExpr;
@@ -38,6 +39,7 @@ public:
     virtual RuntimeValue visitFunctionStmt(const FunctionStmt&) = 0;
     virtual RuntimeValue visitExpressionStmt(const ExpressionStmt&) = 0;
     virtual RuntimeValue visitImportStmt(const ImportStmt&) = 0;
+    virtual RuntimeValue visitStructStmt(const StructStmt&) = 0;
 
     virtual RuntimeValue visitLiteralExpr(const LiteralExpr&) = 0;
     virtual RuntimeValue visitVariableExpr(const VariableExpr&) = 0;

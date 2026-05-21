@@ -325,6 +325,19 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
     _currentEnvironment->defineVar(moduleName, mod);
     return Null{};
 }
+
+RuntimeValue Interpreter::visitStructStmt(const StructStmt& stmt) {
+    LOG_DEBUG << "Visiting StructStmt";
+    const auto& structName = stmt.getStructName().getValue<std::string>();
+    try {
+        _currentEnvironment->defineStruct(structName, StructDefinition{});
+    }
+    catch (const NativeError& e) {
+        LOG_ERROR << "Caught native error: " << e.what();
+        throw RuntimeError{e.type, _currentRange, e.what()};
+    }
+    return Null{};
+}
     
 RuntimeValue Interpreter::visitLiteralExpr(const LiteralExpr& expr) {
     LOG_DEBUG << "Visiting LiteralExpr";

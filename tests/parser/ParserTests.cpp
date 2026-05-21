@@ -1019,6 +1019,34 @@ TEST_F(ParserTests, Structural_FloatComparisonsInIfElseChain) {
     expectLiteral(thenRet.getValue()->get(), Token::Type::Null);
 }
 
+TEST_F(ParserTests, Snapshot_StructDefinitionWorks) {
+    parseOk("crew Test {}");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "StructStmt Ident (Test)",
+        "fields",
+        "methods",
+    });
+}
+
+TEST_F(ParserTests, Failure_StructMissingName) {
+    const auto result = parse("crew {}");
+    expectHasErrorContaining(result, "Bruh, missing name right after crew");
+}
+
+TEST_F(ParserTests, Failure_StructMissingLBrace) {
+    const auto result = parse("crew Test }");
+    expectHasErrorContaining(result, "Bruh, missing { right after crew name");
+}
+
+// TODO in the code, in many cases if the statement is incomplete, program throws InternalError,
+// but it shouldn't, fix it and improve failure cases test coverage, then uncomment below
+// TEST_F(ParserTests, Failure_StructMissingRBrace) {
+//     const auto result = parse("crew Test {");
+//     expectHasErrorContaining(result, "Bruh, missing } right after crew assembly");
+// }
+
 TEST_F(ParserTests, Failure_MysteryStatement_OnUnexpectedToken) {
     const auto result = parse(",");
     expectHasErrorContaining(result, "Witchcraft");

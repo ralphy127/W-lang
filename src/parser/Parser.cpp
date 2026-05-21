@@ -193,6 +193,10 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         LOG_DEBUG << "Detected import statement";
         return parseImport();
     }
+    if(matchAndAdvanceIfNeeded(Token::Type::Struct)) {
+        LOG_DEBUG << "Detected struct declaration statement";
+        return parseStructDeclaration();
+    }
     if (matchAndAdvanceIfNeeded(Token::Type::Break)) {
         LOG_DEBUG << "Detected break statement";
         const auto& breakToken = getPreviousToken();
@@ -439,6 +443,18 @@ std::unique_ptr<Stmt> Parser::parseImport() {
         "Successfully parsed 'summon' statement for module '{}'",
         moduleToken.getValue<std::string>());
     return std::make_unique<ImportStmt>(moduleToken, makeRange(importToken, semiToken));
+}
+
+std::unique_ptr<Stmt> Parser::parseStructDeclaration() {
+    LOG_DEBUG << "Parsing 'crew' statement";
+    const auto& structToken = getPreviousToken();
+    const auto& nameToken = consume(
+        Token::Type::Ident, ErrorMsgBuilder::expected("name").after("crew"));
+    consume(Token::Type::LBrace, ErrorMsgBuilder::expected("{").after("crew name"));
+
+    const auto& rBraceToken = consume(
+        Token::Type::RBrace, ErrorMsgBuilder::expected("}").after("crew assembly"));
+    return std::make_unique<StructStmt>(nameToken, makeRange(structToken, rBraceToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseReassign(std::unique_ptr<Expr> target, const Token& startToken) {

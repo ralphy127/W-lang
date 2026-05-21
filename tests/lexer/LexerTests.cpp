@@ -407,3 +407,9 @@ TEST_F(LexerTests, ExplicitNullDoesNotTokenizeAndResultsInNoErrors) {
     expectNoTokens(result);
     expectNoErrors(result);
 }
+
+TEST_F(LexerTests, StructDefinitionWorks) {
+    expectTypes(
+        "crew Test {}",
+        {Token::Type::Struct, Token::Type::Ident, Token::Type::LBrace, Token::Type::RBrace});
+}

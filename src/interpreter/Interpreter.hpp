@@ -37,6 +37,7 @@ public:
     RuntimeValue visitFunctionStmt(const FunctionStmt&) override;
     RuntimeValue visitExpressionStmt(const ExpressionStmt&) override;
     RuntimeValue visitImportStmt(const ImportStmt&) override;
+    RuntimeValue visitStructStmt(const StructStmt&) override;
     
     RuntimeValue visitLiteralExpr(const LiteralExpr&) override;
     RuntimeValue visitVariableExpr(const VariableExpr&) override;

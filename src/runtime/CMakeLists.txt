@@ -5,6 +5,7 @@ add_library(runtime
     Environment.cpp
     RuntimeErrors.hpp
     RuntimeValueType.hpp
+    StructDefinition.hpp
 )
 
 target_include_directories(runtime PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

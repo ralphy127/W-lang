@@ -189,6 +189,19 @@ RuntimeValue AstPrinter::visitImportStmt(const ImportStmt& stmt) {
     return Null{};
 }
 
+RuntimeValue AstPrinter::visitStructStmt(const StructStmt& stmt) {
+    printLine("StructStmt " + tokenToString(stmt.getStructName()));
+    printKey("fields");
+    ++_indent;
+    // TODO
+    --_indent;
+    printKey("methods");
+    ++_indent;
+    // TODO
+    --_indent;
+    return Null{};
+}
+
 RuntimeValue AstPrinter::visitLiteralExpr(const LiteralExpr& expr) {
     printLine("LiteralExpr " + tokenToString(expr.getLiteral()));
     return Null{};

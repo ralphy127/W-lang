@@ -239,3 +239,11 @@ TEST_F(AstPrinterTests, VisitReturnStmt_ImplicitNull) {
         "LiteralExpr Null",
     });
 }
+
+TEST_F(AstPrinterTests, VisitStructStmt_EmptyStructDefinition) {
+    expectInOrder(printSource("crew Test {}"), {
+        "StructStmt Ident (Test)",
+        "fields",
+        "methods",
+    });
+}
