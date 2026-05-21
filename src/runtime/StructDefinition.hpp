@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 struct StructDefinition {
-    std::string name;
+    std::vector<std::string> fields;
 };

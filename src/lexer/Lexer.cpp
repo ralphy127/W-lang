@@ -265,6 +265,11 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'crew' to Token::Type::Struct";
         return true;
     }
+    if (matchAndAdvanceIfNeeded("packing")) {
+        token.setType(Token::Type::Field);
+        LOG_DEBUG << "Tokenized 'packing' to Token::Type::Field";
+        return true;
+    }
     return false;
 }
 

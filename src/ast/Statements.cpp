@@ -76,6 +76,7 @@ ImportStmt::ImportStmt(Token moduleName, SourceRange srcRange)
     : Stmt{srcRange}
     , _moduleName{std::move(moduleName)} {}
 
-StructStmt::StructStmt(Token structName, SourceRange srcRange)
+StructStmt::StructStmt(Token structName, std::vector<Token> fields, SourceRange srcRange)
     : Stmt{srcRange}
-    , _structName{std::move(structName)} {}
+    , _structName{std::move(structName)}
+    , _fields{std::move(fields)} {}

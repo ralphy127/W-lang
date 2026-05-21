@@ -247,3 +247,23 @@ TEST_F(AstPrinterTests, VisitStructStmt_EmptyStructDefinition) {
         "methods",
     });
 }
+
+TEST_F(AstPrinterTests, VisitStructStmt_StructDefinitionWithField) {
+    expectInOrder(printSource("crew Test { packing id... }"), {
+        "StructStmt Ident (Test)",
+        "fields",
+        "id",
+        "methods",
+    });
+}
+
+TEST_F(AstPrinterTests, VisitStructStmt_StructDefinitionWithTwoFields) {
+    expectInOrder(printSource("crew Test { packing id, name... }"), {
+        "StructStmt Ident (Test)",
+        "fields",
+        "id",
+        "name",
+        "methods",
+    });
+}
+

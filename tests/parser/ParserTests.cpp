@@ -1030,6 +1030,31 @@ TEST_F(ParserTests, Snapshot_StructDefinitionWorks) {
     });
 }
 
+TEST_F(ParserTests, Snapshot_StructDefinitionWithField) {
+    parseOk("crew Test { packing id... }");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "StructStmt Ident (Test)",
+        "fields",
+        "id",
+        "methods",
+    });
+}
+
+TEST_F(ParserTests, Snapshot_StructDefinitionWithTwoFields) {
+    parseOk("crew Test { packing id, name... }");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "StructStmt Ident (Test)",
+        "fields",
+        "id",
+        "name",
+        "methods",
+    });
+}
+
 TEST_F(ParserTests, Failure_StructMissingName) {
     const auto result = parse("crew {}");
     expectHasErrorContaining(result, "Bruh, missing name right after crew");
@@ -1046,6 +1071,11 @@ TEST_F(ParserTests, Failure_StructMissingLBrace) {
 //     const auto result = parse("crew Test {");
 //     expectHasErrorContaining(result, "Bruh, missing } right after crew assembly");
 // }
+
+TEST_F(ParserTests, Failure_StructMissingFieldName) {
+    const auto result = parse("crew Test { packing... }");
+    expectHasErrorContaining(result, "Bruh, missing crew member name right after ,");
+}
 
 TEST_F(ParserTests, Failure_MysteryStatement_OnUnexpectedToken) {
     const auto result = parse(",");

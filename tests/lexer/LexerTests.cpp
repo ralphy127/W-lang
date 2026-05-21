@@ -413,3 +413,26 @@ TEST_F(LexerTests, StructDefinitionWorks) {
         "crew Test {}",
         {Token::Type::Struct, Token::Type::Ident, Token::Type::LBrace, Token::Type::RBrace});
 }
+
+TEST_F(LexerTests, StructDefinitionWithFieldWorks) {
+    expectTypes(
+        "crew Test {\n"
+            "packing id...\n"
+        "}",
+        {
+            Token::Type::Struct, Token::Type::Ident, Token::Type::LBrace, Token::Type::Field,
+            Token::Type::Ident, Token::Type::Semi, Token::Type::RBrace
+        });
+}
+
+TEST_F(LexerTests, StructDefinitionWithTwoFieldsWorks) {
+    expectTypes(
+        "crew Test {\n"
+            "packing id, name...\n"
+        "}",
+        {
+            Token::Type::Struct, Token::Type::Ident, Token::Type::LBrace, Token::Type::Field,
+            Token::Type::Ident, Token::Type::Comma, Token::Type::Ident, Token::Type::Semi,
+            Token::Type::RBrace
+        });
+}

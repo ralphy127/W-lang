@@ -65,7 +65,7 @@ public:
         Reassign,
 
         Struct,
-        // TODO Field,
+        Field,
         // TODO Method,
         // TODO Instance,
 

@@ -5,6 +5,7 @@
 #include <string_view>
 
 class Stmt;
+class Token;
 
 class AstPrinter : public AstVisitor {
 public:
@@ -39,6 +40,7 @@ private:
     void printIndent();
     void printLine(std::string_view text);
     void printKey(std::string_view key);
+    void printTokens(const std::vector<Token>&);
 
     std::ostream& _out;
     std::uint32_t _indent{0u};

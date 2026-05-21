@@ -448,13 +448,24 @@ std::unique_ptr<Stmt> Parser::parseImport() {
 std::unique_ptr<Stmt> Parser::parseStructDeclaration() {
     LOG_DEBUG << "Parsing 'crew' statement";
     const auto& structToken = getPreviousToken();
-    const auto& nameToken = consume(
-        Token::Type::Ident, ErrorMsgBuilder::expected("name").after("crew"));
+    const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("name").after("crew"));
     consume(Token::Type::LBrace, ErrorMsgBuilder::expected("{").after("crew name"));
+
+    std::vector<Token> fields{};
+    if (matchAndAdvanceIfNeeded(Token::Type::Field)) {
+        do {
+            fields.push_back(consumeIdent(ErrorMsgBuilder::expected("crew member name").after(",")));
+        } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
+        consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("crew members"));
+    }
 
     const auto& rBraceToken = consume(
         Token::Type::RBrace, ErrorMsgBuilder::expected("}").after("crew assembly"));
-    return std::make_unique<StructStmt>(nameToken, makeRange(structToken, rBraceToken));
+
+    return std::make_unique<StructStmt>(
+        nameToken,
+        std::move(fields),
+        makeRange(structToken, rBraceToken));
 }
 
 std::unique_ptr<Stmt> Parser::parseReassign(std::unique_ptr<Expr> target, const Token& startToken) {

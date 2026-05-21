@@ -159,15 +159,7 @@ RuntimeValue AstPrinter::visitFunctionStmt(const FunctionStmt& stmt) {
 
     printIndent();
     _out << "params: ";
-    const auto& params = stmt.getParameters();
-    for (std::uint32_t i{0u}; i < params.size(); ++i) {
-        if (i > 0) {
-            _out << ", ";
-        }
-        _out << tokenToString(params[i]);
-    }
-    _out << "\n";
-
+    printTokens(stmt.getParameters());
     printKey("body");
     ++_indent;
     stmt.getBody().accept(*this);
@@ -191,14 +183,10 @@ RuntimeValue AstPrinter::visitImportStmt(const ImportStmt& stmt) {
 
 RuntimeValue AstPrinter::visitStructStmt(const StructStmt& stmt) {
     printLine("StructStmt " + tokenToString(stmt.getStructName()));
-    printKey("fields");
-    ++_indent;
+    printKey("fields: ");
+    printTokens(stmt.getFields());
+    printKey("methods: ");
     // TODO
-    --_indent;
-    printKey("methods");
-    ++_indent;
-    // TODO
-    --_indent;
     return Null{};
 }
 
@@ -307,4 +295,14 @@ void AstPrinter::printLine(std::string_view text) {
 void AstPrinter::printKey(std::string_view key) {
     printIndent();
     _out << key << ":\n";
+}
+
+void AstPrinter::printTokens(const std::vector<Token>& tokens) {
+    for (std::uint32_t i{0u}; i < tokens.size(); ++i) {
+        if (i > 0) {
+            _out << ", ";
+        }
+        _out << tokenToString(tokens[i]);
+    }
+    _out << "\n";
 }

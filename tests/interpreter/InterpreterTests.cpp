@@ -1213,7 +1213,7 @@ TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
     EXPECT_EQ(buffer.str(), "OK\n");
 }
 
-TEST_F(InterpreterTests, EmptyStructDeclarationWorks) {
+TEST_F(InterpreterTests, EmptyStructDefinition) {
     auto source = R"(
         crew Test {}
 
@@ -1223,7 +1223,17 @@ TEST_F(InterpreterTests, EmptyStructDeclarationWorks) {
     expectOutput(source, "");
 }
 
-TEST_F(InterpreterTests, Failure_DuplicateStructDeclaration) {
+TEST_F(InterpreterTests, StructDefinitionWithField) {
+    auto source = R"(
+        crew Test { packing id... }
+
+        gig macho() {}
+    )";
+    
+    expectOutput(source, "");
+}
+
+TEST_F(InterpreterTests, Failure_DuplicateStructDefinition) {
     auto source = R"(
         crew Test {}
         crew Test {}

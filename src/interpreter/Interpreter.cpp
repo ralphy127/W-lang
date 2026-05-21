@@ -329,8 +329,13 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
 RuntimeValue Interpreter::visitStructStmt(const StructStmt& stmt) {
     LOG_DEBUG << "Visiting StructStmt";
     const auto& structName = stmt.getStructName().getValue<std::string>();
+    // TODO consider different approach from just getting every string
+    std::vector<std::string> fieldNames{};
+    for (const auto& fieldToken : stmt.getFields()) {
+        fieldNames.emplace_back(fieldToken.getValue<std::string>());
+    }
     try {
-        _currentEnvironment->defineStruct(structName, StructDefinition{});
+        _currentEnvironment->defineStruct(structName, StructDefinition{std::move(fieldNames)});
     }
     catch (const NativeError& e) {
         LOG_ERROR << "Caught native error: " << e.what();
