@@ -1289,3 +1289,23 @@ TEST_F(InterpreterTests, StructInstanceWithTwoFieldsAndRetrievingValues) {
     
     expectOutput(source, "42 test\n");
 }
+
+TEST_F(InterpreterTests, StructInstanceWithTwoFieldsAndReassigning) {
+    auto source = R"(
+        summon gossip...
+
+        crew Test {
+            packing id, name...
+        }
+
+        gig macho() {
+            stash test about recruit Test packing 42, "test"...
+            gossip.spill_tea(test.id, " ", test.name)...
+            test.id might_be 43...
+            test.name might_be "test2"...
+            gossip.spill_tea(test.id, " ", test.name)...
+        }
+    )";
+    
+    expectOutput(source, "42 test\n43 test2\n");
+}

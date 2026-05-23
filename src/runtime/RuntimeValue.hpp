@@ -26,11 +26,13 @@ struct Function {
     std::shared_ptr<Environment> closure;
 };
 
-struct StructInstance {
+struct StructInstanceImpl {
     std::string typeName;
     // TODO! make a comprehensive plan regarding memory management in wlang
     std::unordered_map<std::string, std::shared_ptr<RuntimeValue>> fields;
 };
+
+using StructInstance = std::shared_ptr<StructInstanceImpl>;
 
 struct Module {
     std::shared_ptr<Environment> env;

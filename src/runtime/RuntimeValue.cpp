@@ -1,4 +1,5 @@
 #include "RuntimeValue.hpp"
+#include "errors/InternalError.hpp"
 #include "RuntimeValueType.hpp"
 
 namespace {
@@ -38,7 +39,7 @@ std::string stringify(const RuntimeValue& value) {
         [](Float f) { return stringifyFloat(f); },
         [](const Vector& vector) { return stringifyVector(vector); },
         [](const Function&) { return std::string{"gig"}; },
-        [](const StructInstance& s) { return s.typeName; },
+        [](const StructInstance& s) { return unwrap(s)->typeName; },
         [](const Module&) { return std::string{"hub"}; }
     }, value);
 }

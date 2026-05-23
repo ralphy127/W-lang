@@ -28,3 +28,13 @@ std::unique_ptr<T> unwrap(
     ensure(ptr != nullptr, errorMsg, loc);
     return ptr; 
 }
+
+template <typename T>
+std::shared_ptr<T> unwrap(
+    std::shared_ptr<T> ptr, 
+    const std::string& errorMsg = "Expected non-null",
+    const std::source_location& loc = std::source_location::current()) {
+
+    ensure(ptr != nullptr, errorMsg, loc);
+    return ptr; 
+}

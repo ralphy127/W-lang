@@ -1,5 +1,6 @@
 #include "Interpreter.hpp"
 #include <iostream>
+#include "runtime/RuntimeValue.hpp"
 #include "utils/Logging.hpp"
 #include "modules/Gossip.hpp"
 #include "runtime/RuntimeErrors.hpp"
@@ -141,10 +142,26 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
                 var.name, stringify(newValue), _scopeDepth);
         },
         [&](const LValue::Property& prop) {
-            auto mod = evaluate(prop.object.get()).as<Module>();
-            mod.env->reassignVar(prop.name, newValue);
-            LOG_DEBUG << std::format("Reassigning module property {} to {}",
-                prop.name, stringify(newValue));
+            RuntimeValue target = evaluate(prop.object.get());
+            if (is<Module>(target)) {
+                auto mod = as<Module>(target);
+                LOG_DEBUG << std::format("Reassigning module property {} to {}",
+                    prop.name, stringify(newValue));
+                mod.env->reassignVar(prop.name, newValue);
+            }
+            else if (is<StructInstance>(target)) {
+                // TODO make a proper reference getter
+                auto instance = unwrap(as<StructInstance>(target));
+                LOG_DEBUG << std::format("Reassigning struct instance field {} to {}",
+                    prop.name, stringify(newValue));
+                instance->fields[prop.name] = std::make_shared<RuntimeValue>(std::move(newValue));
+            }
+            else {
+                throw RuntimeError{
+                    RuntimeError::Type::TypeMismatch,
+                    _currentRange,
+                    "Are you sure what you've tried to change?"};
+            }
         }
     }, lValue.location);
 
@@ -532,14 +549,14 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
         }
         if (is<StructInstance>(leftValue)) {
             // TODO refactor while working on methods
-            const auto& structInstance = as<StructInstance>(leftValue);
-            auto it = structInstance.fields.find(rightName);
-            if (it != structInstance.fields.end()) {
+            const auto& structInstance = unwrap(as<StructInstance>(leftValue));
+            auto it = structInstance->fields.find(rightName);
+            if (it != structInstance->fields.end()) {
                 return *it->second;
             }
             throw NativeError{
                 RuntimeError::Type::TypeMismatch,
-                std::format("Crew '{}' ain't packing '{}'", structInstance.typeName, rightName)
+                std::format("Crew '{}' ain't packing '{}'", structInstance->typeName, rightName)
             };
         }
     }
@@ -666,5 +683,5 @@ RuntimeValue Interpreter::visitStructInstanceExpr(const StructInstanceExpr& expr
     LOG_DEBUG << std::format(
         "Initialized {} fields with default value (Null)", unitializedFieldsCount);
 
-    return StructInstance{structName, std::move(fields)};
+    return std::make_shared<StructInstance::element_type>(structName, std::move(fields));
 }
