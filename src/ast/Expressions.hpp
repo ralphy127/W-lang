@@ -126,3 +126,18 @@ private:
     std::unique_ptr<Expr> _left;
     std::unique_ptr<Expr> _right;
 };
+
+class StructInstanceExpr : public Expr {
+public:
+    explicit StructInstanceExpr(
+        Token structName,
+        std::vector<std::unique_ptr<Expr>> args,
+        SourceRange);
+    
+    const Token& getStructName() const { return _structName; }
+    const std::vector<std::unique_ptr<Expr>>& getArgs() const { return _args; }
+    RuntimeValue accept(AstVisitor& v) const override { return v.visitStructInstanceExpr(*this); }
+private:
+    Token _structName;
+    std::vector<std::unique_ptr<Expr>> _args;
+};

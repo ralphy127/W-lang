@@ -50,7 +50,7 @@ void Environment::defineStruct(const std::string& name, StructDefinition structD
     _structDefinitions.emplace(name, structDefinition);
 }
 
-StructDefinition Environment::getStructDefinition(const std::string& name) {
+const StructDefinition& Environment::getStructDefinition(const std::string& name) const {
     if (_structDefinitions.contains(name)) {
         return _structDefinitions.at(name);
     }

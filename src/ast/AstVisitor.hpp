@@ -23,6 +23,7 @@ class CallExpr;
 class DotExpr;
 class VectorExpr;
 class LogicalExpr;
+class StructInstanceExpr;
 
 class AstVisitor {
 public:
@@ -49,4 +50,5 @@ public:
     virtual RuntimeValue visitDotExpr(const DotExpr&) = 0;
     virtual RuntimeValue visitVectorExpr(const VectorExpr&) = 0;
     virtual RuntimeValue visitLogicalExpr(const LogicalExpr&) = 0;
+    virtual RuntimeValue visitStructInstanceExpr(const StructInstanceExpr&) = 0;
 };

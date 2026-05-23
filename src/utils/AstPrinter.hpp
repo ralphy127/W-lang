@@ -35,6 +35,7 @@ public:
     RuntimeValue visitDotExpr(const DotExpr&) override;
     RuntimeValue visitVectorExpr(const VectorExpr&) override;
     RuntimeValue visitLogicalExpr(const LogicalExpr&) override;
+    RuntimeValue visitStructInstanceExpr(const StructInstanceExpr&) override;
 
 private:
     void printIndent();

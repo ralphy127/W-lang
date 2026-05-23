@@ -281,6 +281,19 @@ RuntimeValue AstPrinter::visitLogicalExpr(const LogicalExpr& expr) {
     return Null{};
 }
 
+RuntimeValue AstPrinter::visitStructInstanceExpr(const StructInstanceExpr& expr)  {
+    printLine("StructInstanceExpr " + tokenToString(expr.getStructName()));
+
+    printKey("args");
+    ++_indent;
+    for (const auto& arg : expr.getArgs()) {
+        arg->accept(*this);
+    }
+    --_indent;
+
+    return Null{};
+}
+
 void AstPrinter::printIndent() {
     for (std::uint32_t i{0u}; i < _indent; ++i) {
         _out << "  ";

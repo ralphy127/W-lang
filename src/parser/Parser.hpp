@@ -68,6 +68,7 @@ private:
     std::unique_ptr<Expr> parseAnd();
     std::unique_ptr<Expr> parseEquality();
     std::unique_ptr<Expr> parseComparison();
+    std::unique_ptr<Expr> parseInstance();
     std::unique_ptr<Expr> parsePrimary();
     std::unique_ptr<Expr> parseTerm();
     std::unique_ptr<Expr> parseFactor();

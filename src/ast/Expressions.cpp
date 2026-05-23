@@ -60,3 +60,11 @@ LogicalExpr::LogicalExpr(
     , _operator{std::move(token)}
     , _left{std::move(left)}
     , _right{std::move(right)} {}
+
+StructInstanceExpr::StructInstanceExpr(
+    Token structName,
+    std::vector<std::unique_ptr<Expr>> args,
+    SourceRange srcRange)
+    : Expr{srcRange}
+    , _structName{std::move(structName)}
+    , _args{std::move(args)} {}

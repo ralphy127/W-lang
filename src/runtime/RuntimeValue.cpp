@@ -38,6 +38,7 @@ std::string stringify(const RuntimeValue& value) {
         [](Float f) { return stringifyFloat(f); },
         [](const Vector& vector) { return stringifyVector(vector); },
         [](const Function&) { return std::string{"gig"}; },
+        [](const StructInstance& s) { return s.typeName; },
         [](const Module&) { return std::string{"hub"}; }
     }, value);
 }
@@ -52,6 +53,7 @@ RuntimeValueType getType(const RuntimeValue& value) {
         else if constexpr (std::is_same_v<T, Float>) return RuntimeValueType::Float;
         else if constexpr (std::is_same_v<T, Vector>) return RuntimeValueType::Vector;
         else if constexpr (std::is_same_v<T, Function>) return RuntimeValueType::Function;
+        else if constexpr (std::is_same_v<T, StructInstance>) return RuntimeValueType::StructInstance;
         else if constexpr (std::is_same_v<T, Module>) return RuntimeValueType::Module;
         else return RuntimeValueType::Unset;
     }, static_cast<const RuntimeValueBase&>(value));

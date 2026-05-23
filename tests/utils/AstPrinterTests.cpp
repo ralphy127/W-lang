@@ -267,3 +267,20 @@ TEST_F(AstPrinterTests, VisitStructStmt_StructDefinitionWithTwoFields) {
     });
 }
 
+TEST_F(AstPrinterTests, VisitStructStmt_EmptyStructInstance) {
+    expectInOrder(printSource("stash test about recruit Test..."), {
+        "VarDefinitionStmt Ident (test)",
+        "StructInstanceExpr Ident (Test)",
+        "args"
+    });
+}
+
+TEST_F(AstPrinterTests, VisitStructStmt_StructInstanceWithTwoFields) {
+    expectInOrder(printSource("stash test about recruit Test packing id, name..."), {
+        "VarDefinitionStmt Ident (test)",
+        "StructInstanceExpr Ident (Test)",
+        "args",
+        "id",
+        "name"
+    });
+}

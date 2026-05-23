@@ -16,7 +16,7 @@ public:
     RuntimeValue getVar(const std::string& name) const;
 
     void defineStruct(const std::string& name, StructDefinition);
-    StructDefinition getStructDefinition(const std::string& name);
+    const StructDefinition& getStructDefinition(const std::string& name) const;
 
 private:
     std::unordered_map<std::string, RuntimeValue> _variables{};

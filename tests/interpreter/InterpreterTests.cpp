@@ -1246,3 +1246,46 @@ TEST_F(InterpreterTests, Failure_DuplicateStructDefinition) {
         RuntimeError::Type::Logic,
         "Crew Test is not happy you wanted to copy their name");
 }
+
+TEST_F(InterpreterTests, EmptyStructInstance) {
+    auto source = R"(
+        crew Test {}
+
+        gig macho() {
+            stash test about recruit Test...
+        }
+    )";
+    
+    expectOutput(source, "");
+}
+
+TEST_F(InterpreterTests, StructInstanceWithTwoFields) {
+    auto source = R"(
+        crew Test {
+            packing id, name...
+        }
+
+        gig macho() {
+            stash test about recruit Test packing 42, "test"...
+        }
+    )";
+    
+    expectOutput(source, "");
+}
+
+TEST_F(InterpreterTests, StructInstanceWithTwoFieldsAndRetrievingValues) {
+    auto source = R"(
+        summon gossip...
+
+        crew Test {
+            packing id, name...
+        }
+
+        gig macho() {
+            stash test about recruit Test packing 42, "test"...
+            gossip.spill_tea(test.id, " ", test.name)...
+        }
+    )";
+    
+    expectOutput(source, "42 test\n");
+}

@@ -26,6 +26,12 @@ struct Function {
     std::shared_ptr<Environment> closure;
 };
 
+struct StructInstance {
+    std::string typeName;
+    // TODO! make a comprehensive plan regarding memory management in wlang
+    std::unordered_map<std::string, std::shared_ptr<RuntimeValue>> fields;
+};
+
 struct Module {
     std::shared_ptr<Environment> env;
 };
@@ -38,6 +44,7 @@ using RuntimeValueBase = std::variant<
     Float,
     Vector,
     Function,
+    StructInstance,
     Module>;
 
 struct RuntimeValue : RuntimeValueBase {
@@ -60,6 +67,7 @@ constexpr std::string_view typeName() {
     else if constexpr (std::is_same_v<DecayedT, Float>) return "change";
     else if constexpr (std::is_same_v<DecayedT, Vector>) return "lineup";
     else if constexpr (std::is_same_v<DecayedT, Function>) return "gig";
+    else if constexpr (std::is_same_v<DecayedT, StructInstance>) return "crew";
     else if constexpr (std::is_same_v<DecayedT, Module>) return "hub";
     else return "unknown";
 }
@@ -91,10 +99,10 @@ inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
-            if constexpr (std::is_same_v<T, Function>) {
+            if constexpr (std::is_same_v<T, Function> || std::is_same_v<T, StructInstance> || std::is_same_v<T, Module>) {
                 throw NativeError{
                     RuntimeError::Type::TypeMismatch,
-                    "Cannot compare gigs"};
+                    "Cannot compare " + std::string(typeName<T>()) + "s"};
             }
             else {
                 return l == r;
@@ -112,10 +120,10 @@ inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
-            if constexpr (std::is_same_v<T, Function>) {
+            if constexpr (std::is_same_v<T, Function> || std::is_same_v<T, StructInstance> || std::is_same_v<T, Module>) {
                 throw NativeError{
                     RuntimeError::Type::TypeMismatch,
-                    "Cannot compare gigs"};
+                    "Cannot compare " + std::string(typeName<T>()) + "s"};
             }
             else {
                 return l < r;

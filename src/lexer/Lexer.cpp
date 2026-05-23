@@ -270,6 +270,11 @@ bool Lexer::tryTokenizeKeyword(Token& token) {
         LOG_DEBUG << "Tokenized 'packing' to Token::Type::Field";
         return true;
     }
+    if (matchAndAdvanceIfNeeded("recruit")) {
+        token.setType(Token::Type::Instance);
+        LOG_DEBUG << "Tokenized 'recruit' to Token::Type::Instance";
+        return true;
+    }
     return false;
 }
 

@@ -67,7 +67,7 @@ public:
         Struct,
         Field,
         // TODO Method,
-        // TODO Instance,
+        Instance,
 
         Incr,
         Plus,

@@ -286,6 +286,10 @@ std::unique_ptr<Stmt> Parser::parseVarDefinition() {
         LOG_DEBUG << "Parsing initializer for variable " << name;
         initializer = unwrap(parseExpression());
     }
+    else if (matchAndAdvanceIfNeeded(Token::Type::Field)) {
+        LOG_DEBUG << "Parsing initializer as a struct instance for variable" << name;
+        initializer = parseInstance();
+    }
     else {
         LOG_DEBUG << "Creating default initializer for variable " << name;
         initializer = std::make_unique<LiteralExpr>(
@@ -556,6 +560,37 @@ std::unique_ptr<Expr> Parser::parseAnd() {
     return left;
 }
 
+std::unique_ptr<Expr> Parser::parseInstance() {
+    LOG_DEBUG << "parseInstance() called at token: " << getTokenStr();
+    if (not matchAndAdvanceIfNeeded(Token::Type::Instance)) {
+        return parsePrimary();
+    }
+
+    const auto& instanceToken = getPreviousToken();
+    const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("crew name").after("recruit"));
+    LOG_DEBUG << "Parsing struct instance for: " << nameToken.getValue<std::string>();
+    std::vector<std::unique_ptr<Expr>> arguments{};
+    if (not match(Token::Type::Semi)) {
+        consume(
+            Token::Type::Field,
+            ErrorMsgBuilder::expected("packing or ...").after("recruiting crew name"));
+        do {
+            arguments.push_back(unwrap(parseExpression()));
+        } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
+    }
+
+    const auto srcRange =
+        arguments.empty() ?
+        makeRange(instanceToken, nameToken) :
+        makeRange(instanceToken, *(arguments.back()));
+    
+    LOG_DEBUG << std::format("Parsed {} struct instance arguments", arguments.size());
+    return std::make_unique<StructInstanceExpr>(
+        nameToken,
+        std::move(arguments),
+        srcRange);
+}
+
 std::unique_ptr<Expr> Parser::parsePrimary() {
     LOG_DEBUG << "parsePrimary() called at token: " << getTokenStr();
     const auto& token = getToken();
@@ -604,7 +639,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
     if (matchAndAdvanceIfNeeded(Token::Type::LParen)) {
         LOG_DEBUG << "Parsing grouped expression";
-        auto expr = parseExpression();
+        auto expr = unwrap(parseExpression());
         consume(Token::Type::RParen, ErrorMsgBuilder::unclosed("(").need(")"));
         return expr;
     }
@@ -615,7 +650,7 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
         std::vector<std::unique_ptr<Expr>> elements{};
         if (not match(Token::Type::RBracket)) {
             do {
-                elements.push_back(parseExpression());
+                elements.push_back(unwrap(parseExpression()));
             } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
         }
         const auto& rbracketToken = consume(
@@ -745,11 +780,12 @@ std::unique_ptr<Expr> Parser::parseFactor() {
 std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
     LOG_DEBUG << "Parsing function call arguments...";
     const auto& lParenToken = getPreviousToken();
-    std::vector<std::unique_ptr<Expr>> arguments;
+    std::vector<std::unique_ptr<Expr>> arguments{};
                 
+    // TODO what about wrong number of arguments?
     if (not match(Token::Type::RParen)) {
         do {
-            arguments.push_back(parseExpression());
+            arguments.push_back(unwrap(parseExpression()));
         } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
     }
     const auto& rParenToken = consume(
@@ -780,5 +816,5 @@ std::unique_ptr<Expr> Parser::parseUnary() {
         }
     }
 
-    return parsePrimary();
+    return parseInstance();
 }

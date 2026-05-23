@@ -436,3 +436,23 @@ TEST_F(LexerTests, StructDefinitionWithTwoFieldsWorks) {
             Token::Type::RBrace
         });
 }
+
+
+TEST_F(LexerTests, EmptyStructInstance) {
+    expectTypes(
+        "stash test about recruit Test...",
+        {
+            Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Instance,
+            Token::Type::Ident, Token::Type::Semi
+        });
+}
+
+TEST_F(LexerTests, StructInstanceWithTwoFields) {
+    expectTypes(
+        "stash test about recruit Test packing id, name...",
+        {
+            Token::Type::Var, Token::Type::Ident, Token::Type::Assign, Token::Type::Instance,
+            Token::Type::Ident, Token::Type::Field, Token::Type::Ident, Token::Type::Comma,
+            Token::Type::Ident, Token::Type::Semi
+        });
+}

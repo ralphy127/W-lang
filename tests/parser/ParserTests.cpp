@@ -1042,6 +1042,30 @@ TEST_F(ParserTests, Snapshot_StructDefinitionWithField) {
     });
 }
 
+TEST_F(ParserTests, Snapshot_EmptyStructInstance) {
+    parseOk("stash test about recruit Test...");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (test)",
+        "StructInstanceExpr Ident (Test)",
+        "args"
+    });
+}
+
+TEST_F(ParserTests, Snapshot_StructInstanceWithTwoFields) {
+    parseOk("stash test about recruit Test packing id, name...");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "VarDefinitionStmt Ident (test)",
+        "StructInstanceExpr Ident (Test)",
+        "args",
+        "id",
+        "name"
+    });
+}
+
 TEST_F(ParserTests, Snapshot_StructDefinitionWithTwoFields) {
     parseOk("crew Test { packing id, name... }");
     expectNumberOfStatements(1ull);

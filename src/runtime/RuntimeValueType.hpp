@@ -11,5 +11,6 @@ enum class RuntimeValueType : std::uint8_t {
     Float,
     Vector,
     Function,
+    StructInstance,
     Module,
 };

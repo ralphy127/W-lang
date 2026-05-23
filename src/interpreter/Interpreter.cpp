@@ -530,6 +530,18 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
         if (is<String>(leftValue)) {
             return callStringMethod(as<String>(leftValue), resolveStringMethod(rightName));
         }
+        if (is<StructInstance>(leftValue)) {
+            // TODO refactor while working on methods
+            const auto& structInstance = as<StructInstance>(leftValue);
+            auto it = structInstance.fields.find(rightName);
+            if (it != structInstance.fields.end()) {
+                return *it->second;
+            }
+            throw NativeError{
+                RuntimeError::Type::TypeMismatch,
+                std::format("Crew '{}' ain't packing '{}'", structInstance.typeName, rightName)
+            };
+        }
     }
     catch (const NativeError& e) {
         throw RuntimeError{e.type, rightRange, e.what()};
@@ -620,4 +632,39 @@ RuntimeValue Interpreter::visitLogicalExpr(const LogicalExpr& expr) {
 
     throwDevError(expr.getSrcRange(), "unknown logical operator");
     return Null{};
+}
+
+RuntimeValue Interpreter::visitStructInstanceExpr(const StructInstanceExpr& expr) {
+    LOG_DEBUG << "Visiting LogicalExpr";
+    const auto& structName = expr.getStructName().getValue<std::string>();
+    LOG_DEBUG << "Creating struct instance of " + structName;
+
+    const auto& structDef = _currentEnvironment->getStructDefinition(structName);
+    const auto& args = expr.getArgs();
+
+    const auto fieldsCount = structDef.fields.size();
+    const auto argsCount = args.size();
+    std::unordered_map<std::string, std::shared_ptr<RuntimeValue>> fields{};
+    if (argsCount > fieldsCount) {
+        throw RuntimeError{
+            RuntimeError::Type::Logic,
+            expr.getSrcRange(),
+            std::format(
+                "Crew {} has only {} places, you tried to push {} in", structName, fieldsCount, argsCount)};
+    }
+
+    for (size_t i{0ull}; i < argsCount; ++i) {
+        RuntimeValue val = evaluate(*args[i]);
+        fields.emplace(structDef.fields[i], std::make_shared<RuntimeValue>(std::move(val)));
+    }
+    LOG_DEBUG << std::format("Evaluated {} fields", argsCount);
+
+    const auto unitializedFieldsCount = fieldsCount - argsCount;
+    for (size_t i{0ull}; i < unitializedFieldsCount; ++i) {
+        fields.emplace(structDef.fields[i], std::make_shared<RuntimeValue>(Null{}));
+    }
+    LOG_DEBUG << std::format(
+        "Initialized {} fields with default value (Null)", unitializedFieldsCount);
+
+    return StructInstance{structName, std::move(fields)};
 }

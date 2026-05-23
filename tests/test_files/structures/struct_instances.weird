@@ -1,0 +1,7 @@
+crew A {}
+crew B { packing id... }
+
+gig macho () {
+    stash a about recruit A...
+    stash b about recruit B packing 42...runti
+}
