@@ -1079,6 +1079,23 @@ TEST_F(ParserTests, Snapshot_StructDefinitionWithTwoFields) {
     });
 }
 
+TEST_F(ParserTests, Snapshot_StructDefinitionWithMethod) {
+    parseOk("crew Test { hustle foo(x) { yeet x... } }");
+    expectNumberOfStatements(1ull);
+
+    expectPrintedInOrder({
+        "StructStmt Ident (Test)",
+        "fields",
+        "methods",
+        "FunctionStmt Ident (foo)",
+        "params: Ident (x)",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "VariableExpr Ident (x)"
+    });
+}
+
 TEST_F(ParserTests, Failure_StructMissingName) {
     const auto result = parse("crew {}");
     expectHasErrorContaining(result, "Bruh, missing name right after crew");

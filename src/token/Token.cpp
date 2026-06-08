@@ -53,6 +53,7 @@ std::string toString(Token::Type type) {
         case Token::Type::Reassign: return "Reassign";
         case Token::Type::Struct: return "Struct";
         case Token::Type::Field: return "Field";
+        case Token::Type::Method: return "Method";
         case Token::Type::Instance: return "Instance";
         case Token::Type::Incr: return "Incr";
         case Token::Type::Plus: return "Plus";
@@ -102,6 +103,7 @@ std::string toSourceString(Token::Type type) {
         case Token::Type::Reassign: return "might_be";
         case Token::Type::Struct: return "crew";
         case Token::Type::Field: return "packing";
+        case Token::Type::Method: return "hustle";
         case Token::Type::Instance: return "recruit";
         case Token::Type::Incr: return "pump_it;";
         case Token::Type::Plus: return "with";

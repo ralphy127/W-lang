@@ -76,7 +76,18 @@ ImportStmt::ImportStmt(Token moduleName, SourceRange srcRange)
     : Stmt{srcRange}
     , _moduleName{std::move(moduleName)} {}
 
-StructStmt::StructStmt(Token structName, std::vector<Token> fields, SourceRange srcRange)
+StructStmt::StructStmt(
+    Token structName,
+    std::vector<Token> fields,
+    std::unordered_map<std::string, std::unique_ptr<Stmt>> methods,
+    SourceRange srcRange)
     : Stmt{srcRange}
     , _structName{std::move(structName)}
-    , _fields{std::move(fields)} {}
+    , _fields{std::move(fields)}
+    , _methods{std::move(methods)} {}
+
+
+auto StructStmt::getMethods() const
+-> const std::unordered_map<std::string, std::unique_ptr<Stmt>>& {
+    return _methods;
+}

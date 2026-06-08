@@ -8,7 +8,7 @@ Environment::Environment(std::shared_ptr<Environment> outerScope)
 // TODO better variable error msg
 
 void Environment::defineVar(const std::string& name, RuntimeValue value) {
-    if (_variables.contains(name)) {
+    if (hasVar(name)) {
         throw NativeError{
             RuntimeError::Type::Logic,
             std::format("Variable {} already exists", name)};
@@ -17,7 +17,7 @@ void Environment::defineVar(const std::string& name, RuntimeValue value) {
 }
 
 void Environment::reassignVar(const std::string& name, RuntimeValue newValue) {
-    if (_variables.contains(name)) {
+    if (hasVar(name)) {
         _variables[name] = std::move(newValue);
         return;
     }
@@ -31,7 +31,7 @@ void Environment::reassignVar(const std::string& name, RuntimeValue newValue) {
 }
 
 RuntimeValue Environment::getVar(const std::string& name) const {
-    if (_variables.contains(name)) {
+    if (hasVar(name)) {
         return _variables.at(name);
     }
     if (_outerScope) {
@@ -41,8 +41,12 @@ RuntimeValue Environment::getVar(const std::string& name) const {
         RuntimeError::Type::Logic,std::format("Variable {} does not exist", name)};
 }
 
+bool Environment::hasStructDefinition(const std::string& name) const {
+    return _structDefinitions.contains(name);
+}
+
 void Environment::defineStruct(const std::string& name, StructDefinition structDefinition) {
-    if (_structDefinitions.contains(name)) {
+    if (hasStructDefinition(name)) {
         throw NativeError{
             RuntimeError::Type::Logic,
             std::format("Crew {} is not happy you wanted to copy their name", name)};
@@ -51,7 +55,7 @@ void Environment::defineStruct(const std::string& name, StructDefinition structD
 }
 
 const StructDefinition& Environment::getStructDefinition(const std::string& name) const {
-    if (_structDefinitions.contains(name)) {
+    if (hasStructDefinition(name)) {
         return _structDefinitions.at(name);
     }
     if (_outerScope) {

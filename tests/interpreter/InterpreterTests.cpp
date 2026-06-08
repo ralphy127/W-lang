@@ -1309,3 +1309,22 @@ TEST_F(InterpreterTests, StructInstanceWithTwoFieldsAndReassigning) {
     
     expectOutput(source, "42 test\n43 test2\n");
 }
+
+TEST_F(InterpreterTests, EmptyStructInstanceWithMethod) {
+    auto source = R"(
+        summon gossip...
+
+        crew Test {
+            hustle foo(x) {
+                yeet x with 1...
+            }
+        }
+
+        gig macho() {
+            stash test about recruit Test...
+            gossip.spill_tea(test.foo(42.42))...
+        }
+    )";
+    
+    expectOutput(source, "43.42\n");
+}

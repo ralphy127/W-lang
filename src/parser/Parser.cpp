@@ -1,9 +1,14 @@
 #include "Parser.hpp"
+#include "ast/Statements.hpp"
+#include "parser/ErrorMsgBuilder.hpp"
+#include "token/Token.hpp"
 #include "utils/Logging.hpp"
 #include "ast/LValue.hpp"
 #include "errors/InternalError.hpp"
 #include <format>
 #include <algorithm>
+#include <memory>
+#include <string_view>
 
 Parser::Parser(std::vector<Token> tokens)
     : _tokens{std::move(tokens)} {}
@@ -229,7 +234,7 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
 std::unique_ptr<Stmt> Parser::parseDefinition() {
     LOG_DEBUG << "parseDefinition() called at token: " << getTokenStr();
     if (matchAndAdvanceIfNeeded(Token::Type::Func)) {
-        return parseFunctionDefinition();
+        return parseFunctionDefinition("gig");
     }
     if (matchAndAdvanceIfNeeded(Token::Type::Var)) {
         return parseVarDefinition();
@@ -243,14 +248,16 @@ std::unique_ptr<Stmt> Parser::parseDefinition() {
     return statement;
 }
 
-std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
+std::unique_ptr<Stmt> Parser::parseFunctionDefinition(std::string_view funcIdent) {
     LOG_DEBUG << "Parsing function definition starting at token: " << getTokenStr();
-    const auto& gigToken = getPreviousToken();
-    const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("name").after("gig"));
+    const auto& funcIdentToken = getPreviousToken();
+    const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("name").after(funcIdent));
     const auto& name = nameToken.getValue<std::string>();
     LOG_DEBUG << "Function name: " << name;
 
-    consume(Token::Type::LParen, ErrorMsgBuilder::expected("(").after("gig name"));
+    consume(
+        Token::Type::LParen,
+        ErrorMsgBuilder::expected("(").after(std::format("{} name", funcIdent)));
 
     std::vector<Token> parameters{};
     if (not match(Token::Type::RParen)) {
@@ -258,17 +265,19 @@ std::unique_ptr<Stmt> Parser::parseFunctionDefinition() {
         do {
             parameters.push_back(consume(
                 Token::Type::Ident,
-                ErrorMsgBuilder::expected("gig unit name").after(",")));
+                ErrorMsgBuilder::expected(std::format("{} unit name", funcIdent)).after(",")));
             LOG_DEBUG << "Added function parameter: " << parameters.back().getValue<std::string>();
         }
         while (matchAndAdvanceIfNeeded(Token::Type::Comma));
     }
     LOG_DEBUG << "Function has " << parameters.size() << " parameter(s)";
 
-    consume(Token::Type::RParen, ErrorMsgBuilder::expected(")").after("gig units"));
+    consume(
+        Token::Type::RParen,
+        ErrorMsgBuilder::expected(")").after(std::format("{} units", funcIdent)));
 
-    auto body = unwrap(parseBlock("gig"));
-    auto srcRange = makeRange(gigToken, *body);
+    auto body = unwrap(parseBlock(funcIdent));
+    auto srcRange = makeRange(funcIdentToken, *body);
 
     LOG_DEBUG << "Successfully parsed function definition for '" << name << "'";
     return std::make_unique<FunctionStmt>(
@@ -453,22 +462,39 @@ std::unique_ptr<Stmt> Parser::parseStructDeclaration() {
     LOG_DEBUG << "Parsing 'crew' statement";
     const auto& structToken = getPreviousToken();
     const auto& nameToken = consumeIdent(ErrorMsgBuilder::expected("name").after("crew"));
+    LOG_DEBUG << "Struct name: " + nameToken.getValue<std::string>();
     consume(Token::Type::LBrace, ErrorMsgBuilder::expected("{").after("crew name"));
 
     std::vector<Token> fields{};
     if (matchAndAdvanceIfNeeded(Token::Type::Field)) {
         do {
-            fields.push_back(consumeIdent(ErrorMsgBuilder::expected("crew member name").after(",")));
+            fields.push_back(
+                consumeIdent(ErrorMsgBuilder::expected("crew member name").after(",")));
         } while (matchAndAdvanceIfNeeded(Token::Type::Comma));
         consume(Token::Type::Semi, ErrorMsgBuilder::expected("...").after("crew members"));
     }
+    LOG_DEBUG << std::format("Parsed {} fields", fields.size());
+
+    std::unordered_map<std::string, std::unique_ptr<Stmt>> methods{};
+    while (matchAndAdvanceIfNeeded(Token::Type::Method)) {
+        const auto& methodNameToken = getToken();
+        if (methodNameToken.getType() != Token::Type::Ident or not 
+            methodNameToken.valueIs<std::string>()) {
+
+            throwParserError(ErrorMsgBuilder::expected("name").after("hustle"));
+        }
+        methods.emplace(methodNameToken.getValue<std::string>(), parseFunctionDefinition("hustle"));
+    }
+    LOG_DEBUG << std::format("Parsed {} methods", methods.size());
 
     const auto& rBraceToken = consume(
         Token::Type::RBrace, ErrorMsgBuilder::expected("}").after("crew assembly"));
 
+    LOG_DEBUG << "Succesfully parsed struct definition for: " + nameToken.getValue<std::string>();
     return std::make_unique<StructStmt>(
         nameToken,
         std::move(fields),
+        std::move(methods),
         makeRange(structToken, rBraceToken));
 }
 

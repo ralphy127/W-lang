@@ -456,3 +456,16 @@ TEST_F(LexerTests, StructInstanceWithTwoFields) {
             Token::Type::Ident, Token::Type::Semi
         });
 }
+
+TEST_F(LexerTests, StructDefinitionWithMethod) {
+    expectTypes(
+        "crew Test {\n"
+            "hustle test(id) { yeet id...} \n"
+        "}",
+        {
+            Token::Type::Struct, Token::Type::Ident, Token::Type::LBrace, Token::Type::Method,
+            Token::Type::Ident, Token::Type::LParen, Token::Type::Ident, Token::Type::RParen,
+            Token::Type::LBrace, Token::Type::Return, Token::Type::Ident, Token::Type::Semi,
+            Token::Type::RBrace, Token::Type::RBrace
+        });
+}

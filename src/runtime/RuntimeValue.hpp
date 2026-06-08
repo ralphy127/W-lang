@@ -26,13 +26,10 @@ struct Function {
     std::shared_ptr<Environment> closure;
 };
 
-struct StructInstanceImpl {
+struct StructInstance {
     std::string typeName;
-    // TODO! make a comprehensive plan regarding memory management in wlang
-    std::unordered_map<std::string, std::shared_ptr<RuntimeValue>> fields;
+    std::shared_ptr<Environment> env;
 };
-
-using StructInstance = std::shared_ptr<StructInstanceImpl>;
 
 struct Module {
     std::shared_ptr<Environment> env;
@@ -101,7 +98,9 @@ inline bool operator==(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
-            if constexpr (std::is_same_v<T, Function> || std::is_same_v<T, StructInstance> || std::is_same_v<T, Module>) {
+            if constexpr (std::is_same_v<T, Function> or
+                          std::is_same_v<T, StructInstance> or
+                          std::is_same_v<T, Module>) {
                 throw NativeError{
                     RuntimeError::Type::TypeMismatch,
                     "Cannot compare " + std::string(typeName<T>()) + "s"};
@@ -122,7 +121,9 @@ inline bool operator<(const RuntimeValue& lhs, const RuntimeValue& rhs) {
         using U = std::decay_t<decltype(r)>;
         
         if constexpr (std::is_same_v<T, U>) {
-            if constexpr (std::is_same_v<T, Function> || std::is_same_v<T, StructInstance> || std::is_same_v<T, Module>) {
+            if constexpr (std::is_same_v<T, Function> or
+                          std::is_same_v<T, StructInstance> or 
+                          std::is_same_v<T, Module>) {
                 throw NativeError{
                     RuntimeError::Type::TypeMismatch,
                     "Cannot compare " + std::string(typeName<T>()) + "s"};

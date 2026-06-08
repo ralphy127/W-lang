@@ -150,11 +150,10 @@ RuntimeValue Interpreter::visitReassignStmt(const ReassignStmt& stmt) {
                 mod.env->reassignVar(prop.name, newValue);
             }
             else if (is<StructInstance>(target)) {
-                // TODO make a proper reference getter
-                auto instance = unwrap(as<StructInstance>(target));
+                const auto& instance = as<StructInstance>(target);
                 LOG_DEBUG << std::format("Reassigning struct instance field {} to {}",
                     prop.name, stringify(newValue));
-                instance->fields[prop.name] = std::make_shared<RuntimeValue>(std::move(newValue));
+                instance.env->reassignVar(prop.name, std::move(newValue));
             }
             else {
                 throw RuntimeError{
@@ -346,13 +345,31 @@ RuntimeValue Interpreter::visitImportStmt(const ImportStmt& stmt) {
 RuntimeValue Interpreter::visitStructStmt(const StructStmt& stmt) {
     LOG_DEBUG << "Visiting StructStmt";
     const auto& structName = stmt.getStructName().getValue<std::string>();
+    LOG_DEBUG << "Defining struct: " << structName;
     // TODO consider different approach from just getting every string
     std::vector<std::string> fieldNames{};
     for (const auto& fieldToken : stmt.getFields()) {
-        fieldNames.emplace_back(fieldToken.getValue<std::string>());
+        fieldNames.push_back(fieldToken.getValue<std::string>());
     }
+    LOG_DEBUG << std::format("{} has {} fields", structName, fieldNames.size());
+
+    std::unordered_map<std::string, Function> methods{};
+
+    // TODO is tempEnv avoidable?
+    {
+        auto tempEnv = std::make_shared<Environment>(_currentEnvironment);
+        EnvironmentGuard guard{*this, tempEnv};
+        for (const auto& [name, method] : stmt.getMethods()) {
+            evaluate(*method);
+            methods.emplace(name, as<Function>(tempEnv->getVar(name)));
+        }
+    }
+    LOG_DEBUG << std::format("{} has {} methods", structName, methods.size());
+
     try {
-        _currentEnvironment->defineStruct(structName, StructDefinition{std::move(fieldNames)});
+        _currentEnvironment->defineStruct(
+            structName,
+            StructDefinition{std::move(fieldNames), std::move(methods)});
     }
     catch (const NativeError& e) {
         LOG_ERROR << "Caught native error: " << e.what();
@@ -548,15 +565,28 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
             return callStringMethod(as<String>(leftValue), resolveStringMethod(rightName));
         }
         if (is<StructInstance>(leftValue)) {
-            // TODO refactor while working on methods
-            const auto& structInstance = unwrap(as<StructInstance>(leftValue));
-            auto it = structInstance->fields.find(rightName);
-            if (it != structInstance->fields.end()) {
-                return *it->second;
+            // TODO extract logic
+            const auto& instance = as<StructInstance>(leftValue);
+            const auto& instanceEnv = instance.env;
+            if (instanceEnv->hasVar(rightName)) {
+                LOG_DEBUG << std::format(
+                    "Retrieving {} from struct instance of {}", rightName, instance.typeName);
+                return instanceEnv->getVar(rightName);
             }
+
+            if(_currentEnvironment->hasStructDefinition(instance.typeName)) {
+                const auto& structDefinition =
+                    _currentEnvironment->getStructDefinition(instance.typeName);
+                if (structDefinition.methods.contains((rightName))) {
+                    return structDefinition.methods.at(rightName);
+                }
+            }
+
             throw NativeError{
                 RuntimeError::Type::TypeMismatch,
-                std::format("Crew '{}' ain't packing '{}'", structInstance->typeName, rightName)
+                std::format(
+                    "Crew '{}' ain't packing nor hustles '{}'",
+                    instance.typeName, rightName)
             };
         }
     }
@@ -661,27 +691,33 @@ RuntimeValue Interpreter::visitStructInstanceExpr(const StructInstanceExpr& expr
 
     const auto fieldsCount = structDef.fields.size();
     const auto argsCount = args.size();
-    std::unordered_map<std::string, std::shared_ptr<RuntimeValue>> fields{};
     if (argsCount > fieldsCount) {
         throw RuntimeError{
             RuntimeError::Type::Logic,
             expr.getSrcRange(),
             std::format(
-                "Crew {} has only {} places, you tried to push {} in", structName, fieldsCount, argsCount)};
+                "Crew {} has only {} places, you tried to push {} in",
+                structName, fieldsCount, argsCount)};
     }
 
+    StructInstance instance{structName, std::make_shared<Environment>(_currentEnvironment)};
+    EnvironmentGuard guard{*this, instance.env};
     for (size_t i{0ull}; i < argsCount; ++i) {
         RuntimeValue val = evaluate(*args[i]);
-        fields.emplace(structDef.fields[i], std::make_shared<RuntimeValue>(std::move(val)));
+        _currentEnvironment->defineVar(structDef.fields[i], std::move(val));
     }
     LOG_DEBUG << std::format("Evaluated {} fields", argsCount);
 
     const auto unitializedFieldsCount = fieldsCount - argsCount;
     for (size_t i{0ull}; i < unitializedFieldsCount; ++i) {
-        fields.emplace(structDef.fields[i], std::make_shared<RuntimeValue>(Null{}));
+        _currentEnvironment->defineVar(structDef.fields[i], Null{});
     }
     LOG_DEBUG << std::format(
         "Initialized {} fields with default value (Null)", unitializedFieldsCount);
 
-    return std::make_shared<StructInstance::element_type>(structName, std::move(fields));
+    for (const auto& [name, method] : structDef.methods) {
+        _currentEnvironment->defineVar(name, method);
+    }
+
+    return instance;
 }

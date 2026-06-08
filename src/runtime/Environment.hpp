@@ -15,6 +15,7 @@ public:
     bool hasVar(const std::string& name) const { return _variables.contains(name); }
     RuntimeValue getVar(const std::string& name) const;
 
+    bool hasStructDefinition(const std::string& name) const;
     void defineStruct(const std::string& name, StructDefinition);
     const StructDefinition& getStructDefinition(const std::string& name) const;
 

@@ -183,10 +183,14 @@ RuntimeValue AstPrinter::visitImportStmt(const ImportStmt& stmt) {
 
 RuntimeValue AstPrinter::visitStructStmt(const StructStmt& stmt) {
     printLine("StructStmt " + tokenToString(stmt.getStructName()));
-    printKey("fields: ");
+    printKey("fields");
     printTokens(stmt.getFields());
-    printKey("methods: ");
-    // TODO
+    printKey("methods");
+    ++_indent;
+    for (const auto& [_, method] : stmt.getMethods()) {
+        method->accept(*this);
+    }
+    --_indent;
     return Null{};
 }
 

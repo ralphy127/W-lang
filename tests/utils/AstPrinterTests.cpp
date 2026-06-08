@@ -284,3 +284,17 @@ TEST_F(AstPrinterTests, VisitStructStmt_StructInstanceWithTwoFields) {
         "name"
     });
 }
+
+TEST_F(AstPrinterTests, VisitStructStmt_StructInstanceWithMethod) {
+    expectInOrder(printSource("crew Test { hustle foo(x) { yeet x... } }"), {
+        "StructStmt Ident (Test)",
+        "fields",
+        "methods",
+        "FunctionStmt Ident (foo)",
+        "params: Ident (x)",
+        "body:",
+        "BlockStmt",
+        "ReturnStmt",
+        "VariableExpr Ident (x)"
+    });
+}

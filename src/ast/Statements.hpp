@@ -166,14 +166,20 @@ private:
 
 class StructStmt : public Stmt {
 public:
-    explicit StructStmt(Token structName, std::vector<Token> fields, SourceRange);
+    explicit StructStmt(
+        Token structName,
+        std::vector<Token> fields,
+        std::unordered_map<std::string, std::unique_ptr<Stmt>> methods,
+        SourceRange);
 
     const Token& getStructName() const { return _structName; }
     const std::vector<Token>& getFields() const { return _fields; }
+    const std::unordered_map<std::string, std::unique_ptr<Stmt>>& getMethods() const;
 
     RuntimeValue accept(AstVisitor& v) const override { return v.visitStructStmt(*this); }
 
 private:
     Token _structName;
     std::vector<Token> _fields;
+    std::unordered_map<std::string, std::unique_ptr<Stmt>> _methods;
 };
