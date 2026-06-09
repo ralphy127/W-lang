@@ -5,7 +5,7 @@
 namespace modules {
 namespace gossip {
 
-RuntimeValue spill_tea(const std::vector<RuntimeValue>& args) {
+RuntimeValue spill_tea(const std::vector<RuntimeValue>& args, std::shared_ptr<Environment>) {
     if (not args.empty()) {
         for (const auto& arg : args) {
             std::cout << stringify(arg);
@@ -16,7 +16,7 @@ RuntimeValue spill_tea(const std::vector<RuntimeValue>& args) {
     return Null{};
 }
 
-RuntimeValue eavesdrop(const std::vector<RuntimeValue>& args) {
+RuntimeValue eavesdrop(const std::vector<RuntimeValue>& args, std::shared_ptr<Environment>) {
     if (not args.empty()) {
         for (const auto& arg : args) {
             std::cout << stringify(arg);

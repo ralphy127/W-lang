@@ -1328,3 +1328,47 @@ TEST_F(InterpreterTests, EmptyStructInstanceWithMethod) {
     
     expectOutput(source, "43.42\n");
 }
+
+TEST_F(InterpreterTests, StructInstanceWithMethodWhichUsesFields) {
+    auto source = R"(
+        summon gossip...
+
+        crew Test {
+            packing a, b...
+
+            hustle foo(x) {
+                yeet x with a with b...
+            }
+        }
+
+        gig macho() {
+            stash test about recruit Test packing 10, 42...
+            gossip.spill_tea(test.foo(1))...
+        }
+    )";
+    
+    expectOutput(source, "53\n");
+}
+
+TEST_F(InterpreterTests, StructInstanceWithMethodWhichReassignsField) {
+    auto source = R"(
+        summon gossip...
+
+        crew Test {
+            packing a...
+
+            hustle foo(x) {
+                pump_it a...
+                yeet x with a...
+            }
+        }
+
+        gig macho() {
+            stash test about recruit Test packing 42...
+            gossip.spill_tea(test.foo(1))...
+            gossip.spill_tea(test.foo(2))...
+        }
+    )";
+    
+    expectOutput(source, "44\n46\n");
+}

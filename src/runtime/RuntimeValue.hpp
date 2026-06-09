@@ -22,7 +22,9 @@ using Bool = bool;
 using Float = double;
 
 struct Function {
-    std::function<RuntimeValue(const std::vector<RuntimeValue>&)> exec;
+    std::function<RuntimeValue(
+        const std::vector<RuntimeValue>&,
+        std::shared_ptr<Environment>)> exec;
     std::shared_ptr<Environment> closure;
 };
 

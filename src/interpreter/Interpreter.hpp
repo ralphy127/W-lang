@@ -53,6 +53,7 @@ private:
     EvalProxy evaluate(const AstNode&);
     RuntimeValue evaluateImpl(const AstNode&);
     RuntimeValue handleModuleCall(const Module&, const std::string& rightName, const DotExpr& expr);
+    RuntimeValue handleMethodOrFieldCall(const StructInstance&, const std::string& rightName);
     VectorMethod resolveVectorMethod(std::string_view name) const;
     StringMethod resolveStringMethod(std::string_view name) const;
 

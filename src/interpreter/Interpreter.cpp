@@ -79,7 +79,8 @@ int Interpreter::interpret() {
         }
 
         LOG_DEBUG << "Executing 'macho' function";
-        const auto ret = as<Function>(mainFunc).exec(std::vector<RuntimeValue>{});
+        const auto ret = as<Function>(mainFunc).exec(
+            std::vector<RuntimeValue>{}, _currentEnvironment);
         if (is<Int>(ret)) {
             const auto val = as<Int>(ret);
             LOG_DEBUG << "Returning an int from macho: " << val;
@@ -256,13 +257,14 @@ RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
 
     LOG_DEBUG << "Registering function: " << funcName;
     auto exec =
-        [this, stmt = &stmt, closureEnvironment = _currentEnvironment]
-        (const std::vector<RuntimeValue>& args) -> RuntimeValue {
+        [this, stmt = &stmt]
+        (const std::vector<RuntimeValue>& args, std::shared_ptr<Environment> closure)
+        -> RuntimeValue {
 
         if (not stmt) {
             throwDevError(_currentRange, "gig statement has died");
         }
-        auto localEnvironment = std::make_shared<Environment>(closureEnvironment);
+        auto localEnvironment = std::make_shared<Environment>(closure);
         const auto& argNames = stmt->getParameters();
         const auto namesCount = argNames.size();
 
@@ -520,7 +522,7 @@ RuntimeValue Interpreter::visitCallExpr(const CallExpr& expr) {
     }
     LOG_DEBUG << std::format("Successfully valuated {} parameters", evaluatedArgs.size());
 
-    return function.exec(evaluatedArgs);
+    return function.exec(evaluatedArgs, function.closure);
 }
 
 RuntimeValue Interpreter::handleModuleCall(
@@ -536,6 +538,20 @@ RuntimeValue Interpreter::handleModuleCall(
     }
 
     return mod.env->getVar(rightName);
+}
+
+RuntimeValue Interpreter::handleMethodOrFieldCall(
+    const StructInstance& instance,
+    const std::string& rightName)
+try {
+    return instance.env->getVar(rightName);
+}
+catch (...) {
+    throw NativeError{
+        RuntimeError::Type::Logic,
+        std::format(
+            "Crew '{}' ain't packing nor hustles '{}'",
+            instance.typeName, rightName)};
 }
 
 RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
@@ -565,29 +581,7 @@ RuntimeValue Interpreter::visitDotExpr(const DotExpr& expr) {
             return callStringMethod(as<String>(leftValue), resolveStringMethod(rightName));
         }
         if (is<StructInstance>(leftValue)) {
-            // TODO extract logic
-            const auto& instance = as<StructInstance>(leftValue);
-            const auto& instanceEnv = instance.env;
-            if (instanceEnv->hasVar(rightName)) {
-                LOG_DEBUG << std::format(
-                    "Retrieving {} from struct instance of {}", rightName, instance.typeName);
-                return instanceEnv->getVar(rightName);
-            }
-
-            if(_currentEnvironment->hasStructDefinition(instance.typeName)) {
-                const auto& structDefinition =
-                    _currentEnvironment->getStructDefinition(instance.typeName);
-                if (structDefinition.methods.contains((rightName))) {
-                    return structDefinition.methods.at(rightName);
-                }
-            }
-
-            throw NativeError{
-                RuntimeError::Type::TypeMismatch,
-                std::format(
-                    "Crew '{}' ain't packing nor hustles '{}'",
-                    instance.typeName, rightName)
-            };
+            return handleMethodOrFieldCall(as<StructInstance>(leftValue), rightName);
         }
     }
     catch (const NativeError& e) {
@@ -708,15 +702,16 @@ RuntimeValue Interpreter::visitStructInstanceExpr(const StructInstanceExpr& expr
     }
     LOG_DEBUG << std::format("Evaluated {} fields", argsCount);
 
-    const auto unitializedFieldsCount = fieldsCount - argsCount;
-    for (size_t i{0ull}; i < unitializedFieldsCount; ++i) {
+    for (auto i{argsCount}; i < fieldsCount; ++i) {
         _currentEnvironment->defineVar(structDef.fields[i], Null{});
     }
     LOG_DEBUG << std::format(
-        "Initialized {} fields with default value (Null)", unitializedFieldsCount);
+        "Initialized {} fields with default value (Null)", fieldsCount - argsCount);
 
     for (const auto& [name, method] : structDef.methods) {
-        _currentEnvironment->defineVar(name, method);
+        auto methodCopy = method;
+        methodCopy.closure = instance.env;
+        _currentEnvironment->defineVar(name, methodCopy);
     }
 
     return instance;
