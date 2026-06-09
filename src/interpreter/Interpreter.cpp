@@ -252,50 +252,8 @@ RuntimeValue Interpreter::visitBreakStmt(const BreakStmt& stmt) {
 RuntimeValue Interpreter::visitFunctionStmt(const FunctionStmt& stmt) {
     LOG_DEBUG << "Visiting FunctionStmt";
     auto funcName = stmt.getName().getValue<std::string>();
-
-    auto closureEnvironment = _currentEnvironment;
-
     LOG_DEBUG << "Registering function: " << funcName;
-    auto exec =
-        [this, stmt = &stmt]
-        (const std::vector<RuntimeValue>& args, std::shared_ptr<Environment> closure)
-        -> RuntimeValue {
-
-        if (not stmt) {
-            throwDevError(_currentRange, "gig statement has died");
-        }
-        auto localEnvironment = std::make_shared<Environment>(closure);
-        const auto& argNames = stmt->getParameters();
-        const auto namesCount = argNames.size();
-
-        const auto argsSize = args.size();
-        if (namesCount != argsSize) {
-            throw RuntimeError{
-                RuntimeError::Type::OutOfBounds,
-                stmt->getSrcRange(),
-                std::format("Argument count don't vibe ({} is not {})", argsSize, namesCount)};
-        }
-
-        for (size_t i{0ull}; i < argsSize; ++i) {
-            localEnvironment->defineVar(argNames[i].getValue<std::string>(), args[i]);
-        }
-
-        LOG_DEBUG << "Jumping into local function environment";
-        EnvironmentGuard guard{*this, localEnvironment};
-
-        try {
-            evaluate(stmt->getBody());
-        }
-        catch (const ReturnStatementException& ret) {
-            LOG_DEBUG << "Caught return value";
-            return ret.value;
-        }
-
-        return Null{};
-    };
-
-    _currentEnvironment->defineVar(funcName, Function{std::move(exec), closureEnvironment});
-        
+    _currentEnvironment->defineVar(funcName, createFunction(stmt, _currentEnvironment));
     return Null{};
 }
 
@@ -357,14 +315,9 @@ RuntimeValue Interpreter::visitStructStmt(const StructStmt& stmt) {
 
     std::unordered_map<std::string, Function> methods{};
 
-    // TODO is tempEnv avoidable?
-    {
-        auto tempEnv = std::make_shared<Environment>(_currentEnvironment);
-        EnvironmentGuard guard{*this, tempEnv};
-        for (const auto& [name, method] : stmt.getMethods()) {
-            evaluate(*method);
-            methods.emplace(name, as<Function>(tempEnv->getVar(name)));
-        }
+    for (const auto& [name, method] : stmt.getMethods()) {
+        const auto& funcionStmt = static_cast<const FunctionStmt&>(*method);
+        methods.emplace(name, createFunction(funcionStmt, _currentEnvironment));
     }
     LOG_DEBUG << std::format("{} has {} methods", structName, methods.size());
 
@@ -621,6 +574,52 @@ StringMethod Interpreter::resolveStringMethod(std::string_view name) const {
     throw NativeError{
         RuntimeError::Type::Logic,
         std::format("This yap cannot do '{}'. Tell it to shut up.", name)};
+}
+
+Function Interpreter::createFunction(
+    const FunctionStmt& stmt,
+    std::shared_ptr<Environment> closure) {
+    
+    LOG_DEBUG << "Creating function executable";
+    auto exec =
+        [this, stmt = &stmt]
+        (const std::vector<RuntimeValue>& args, std::shared_ptr<Environment> closure)
+        -> RuntimeValue {
+
+        if (not stmt) {
+            throwDevError(_currentRange, "gig statement has died");
+        }
+        auto localEnvironment = std::make_shared<Environment>(closure);
+        const auto& argNames = stmt->getParameters();
+        const auto namesCount = argNames.size();
+
+        const auto argsSize = args.size();
+        if (namesCount != argsSize) {
+            throw RuntimeError{
+                RuntimeError::Type::OutOfBounds,
+                stmt->getSrcRange(),
+                std::format("Argument count don't vibe ({} is not {})", argsSize, namesCount)};
+        }
+
+        for (size_t i{0ull}; i < argsSize; ++i) {
+            localEnvironment->defineVar(argNames[i].getValue<std::string>(), args[i]);
+        }
+
+        LOG_DEBUG << "Jumping into local function environment";
+        EnvironmentGuard guard{*this, localEnvironment};
+
+        try {
+            evaluate(stmt->getBody());
+        }
+        catch (const ReturnStatementException& ret) {
+            LOG_DEBUG << "Caught return value";
+            return ret.value;
+        }
+
+        return Null{};
+    };
+
+    return Function{std::move(exec), closure};
 }
 
 RuntimeValue Interpreter::visitVectorExpr(const VectorExpr& expr) {

@@ -56,6 +56,7 @@ private:
     RuntimeValue handleMethodOrFieldCall(const StructInstance&, const std::string& rightName);
     VectorMethod resolveVectorMethod(std::string_view name) const;
     StringMethod resolveStringMethod(std::string_view name) const;
+    Function createFunction(const FunctionStmt&, std::shared_ptr<Environment> closure);
 
     const std::vector<std::unique_ptr<Stmt>> _statements;
     AstResolver _astResolver;
