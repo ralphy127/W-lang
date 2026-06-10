@@ -1113,6 +1113,31 @@ TEST_F(ParserTests, Failure_StructMissingLBrace) {
 //     expectHasErrorContaining(result, "Bruh, missing } right after crew assembly");
 // }
 
+TEST_F(ParserTests, Failure_StructTrailingCommaInPacking) {
+    const auto result = parse("crew Test { packing id, ... }");
+    expectHasErrorContaining(result, "Bruh, missing crew member name right after ,");
+}
+
+TEST_F(ParserTests, Failure_StructMissingPackingKeyword) {
+    const auto result = parse("crew Test { id, name... }");
+    expectHasErrorContaining(result, "Bruh, missing } right after crew assembly");
+}
+
+TEST_F(ParserTests, Failure_MethodMissingName) {
+    const auto result = parse("crew Test { hustle (x) { yeet x... } }");
+    expectHasErrorContaining(result, "Bruh, missing name right after hustle");
+}
+
+TEST_F(ParserTests, Failure_MethodMissingLParen) {
+    const auto result = parse("crew Test { hustle foo x) { yeet x... } }");
+    expectHasErrorContaining(result, "Bruh, missing ( right after hustle name");
+}
+
+TEST_F(ParserTests, Failure_InstanceMissingCrewName) {
+    const auto result = parse("stash x about recruit packing 1...");
+    expectHasErrorContaining(result, "Bruh, missing crew name right after recruit");
+}
+
 TEST_F(ParserTests, Failure_StructMissingFieldName) {
     const auto result = parse("crew Test { packing... }");
     expectHasErrorContaining(result, "Bruh, missing crew member name right after ,");

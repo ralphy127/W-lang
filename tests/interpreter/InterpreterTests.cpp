@@ -854,6 +854,176 @@ TEST_F(InterpreterTests, Failure_IfConditionMustBeBool) {
         "Anticipated vibe instead of solid");
 }
 
+TEST_F(InterpreterTests, StructInstanceLazyInitializationFillsWithNull) {
+    auto source = R"(
+        summon gossip...
+
+        crew Point { packing x, y, z... }
+
+        gig macho() {
+            stash p about recruit Point packing 10...
+            gossip.spill_tea(p.x, " ", p.y, " ", p.z)...
+        }
+    )";
+    
+    expectOutput(source, "10 ghosted ghosted\n");
+}
+
+TEST_F(InterpreterTests, StructInstanceMethodCallsAnotherMethod) {
+    auto source = R"(
+        summon gossip...
+
+        crew MathBro {
+            hustle add(a, b) { 
+                yeet a with b... 
+            }
+            
+            hustle doubleAndAdd(a, b) {
+                yeet add(a with a, b with b)... 
+            }
+        }
+
+        gig macho() {
+            stash bro about recruit MathBro...
+            gossip.spill_tea(bro.doubleAndAdd(2, 3))...
+        }
+    )";
+    
+    expectOutput(source, "10\n");
+}
+
+TEST_F(InterpreterTests, StructInstancePassedAsArgumentAndModified) {
+    auto source = R"(
+        summon gossip...
+
+        crew Data { packing value... }
+
+        gig modifyData(obj) {
+            obj.value might_be 99...
+        }
+
+        gig macho() {
+            stash d about recruit Data packing 1...
+            modifyData(d)...
+            gossip.spill_tea(d.value)...
+        }
+    )";
+    
+    expectOutput(source, "99\n");
+}
+
+TEST_F(InterpreterTests, StructInstanceNestedStructs) {
+    auto source = R"(
+        summon gossip...
+
+        crew Wheel { packing radius... }
+        crew Car { packing leftWheel, rightWheel... }
+
+        gig macho() {
+            stash w1 about recruit Wheel packing 15...
+            stash w2 about recruit Wheel packing 15...
+            stash ride about recruit Car packing w1, w2...
+            
+            gossip.spill_tea(ride.leftWheel.radius)...
+        }
+    )";
+    
+    expectOutput(source, "15\n");
+}
+
+TEST_F(InterpreterTests, Failure_RecruitUnknownCrew) {
+    auto source = R"(
+        gig macho() {
+            stash x about recruit Ghost...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::Logic, 
+        "Crew Ghost is not recruiting right now");
+}
+
+TEST_F(InterpreterTests, Failure_RecruitTooManyArgs) {
+    auto source = R"(
+        crew Wheel { packing radius... }
+
+        gig macho() {
+            stash x about recruit Wheel packing 1, 2...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::Logic, 
+        "Crew Wheel has only 1 places, you tried to push 2 in");
+}
+
+TEST_F(InterpreterTests, Failure_DotIntoGhostField) {
+    auto source = R"(
+        crew Wheel {}
+
+        gig macho() {
+            stash w about recruit Wheel...
+            w.ghost...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::Logic, 
+        "Crew 'Wheel' ain't packing nor hustles 'ghost'");
+}
+
+TEST_F(InterpreterTests, Failure_ReassignGhostField) {
+    auto source = R"(
+        crew Wheel {}
+
+        gig macho() {
+            stash w about recruit Wheel...
+            w.ghost might_be 5...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::Logic, 
+        "Variable ghost does not exist");
+}
+
+TEST_F(InterpreterTests, Failure_CompareTwoCrews) {
+    auto source = R"(
+        crew A {}
+
+        gig macho() {
+            stash a about recruit A...
+            stash b about recruit A...
+            yeet a looks_like b...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::TypeMismatch, 
+        "Cannot compare crews");
+}
+
+TEST_F(InterpreterTests, Failure_MathOnCrews) {
+    auto source = R"(
+        crew A {}
+
+        gig macho() {
+            stash a about recruit A...
+            yeet a with 5...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::Math, 
+        "Math is only mathing on numbers");
+}
+
 TEST_F(InterpreterTests, Failure_IncrementingOfModuleFunctionMismatches) {
     auto source = R"(
         summon gossip...

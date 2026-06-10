@@ -55,55 +55,54 @@ Interpreter::Interpreter(
     ensure(_astResolver != nullptr, "Interpreter received a null astResolver");
 }
 
-int Interpreter::interpret() {
+int Interpreter::interpret()
+try {
     LOG_DEBUG << std::format("Starting interpretation of {} statements", _statements.size());
     for (const auto& stmt : _statements) {
         evaluate(*stmt);
     }
 
     LOG_DEBUG << "Looking for entry point 'macho'";
-    try {
-        if (not _currentEnvironment->hasVar("macho")) {
-            throw RuntimeError{
-                RuntimeError::Type::Logic,
-                _currentRange,
-                "Macho gig does not exist"};
-        }
-
-        const auto mainFunc = _currentEnvironment->getVar("macho");
-        if (not is<Function>(mainFunc)) {
-            throw RuntimeError{
-                RuntimeError::Type::TypeMismatch,
-                _currentRange,
-                "Macho is not a gig"};
-        }
-
-        LOG_DEBUG << "Executing 'macho' function";
-        const auto ret = as<Function>(mainFunc).exec(
-            std::vector<RuntimeValue>{}, _currentEnvironment);
-        if (is<Int>(ret)) {
-            const auto val = as<Int>(ret);
-            LOG_DEBUG << "Returning an int from macho: " << val;
-            return val;
-        }
-        if (is<Null>(ret)) {
-            LOG_DEBUG << "Returning 0 (casted Null) from macho";
-            return 0;
-        }
-
+    if (not _currentEnvironment->hasVar("macho")) {
         throw RuntimeError{
             RuntimeError::Type::Logic,
             _currentRange,
-            "Casting is for the weak. Macho only yeets solids or ghosted"};
+            "Macho gig does not exist"};
     }
-    catch (const NativeError& e) {
-        LOG_ERROR << "Caught native error: " << e.what();
-        throw RuntimeError{e.type, _currentRange, e.what()};
+
+    const auto mainFunc = _currentEnvironment->getVar("macho");
+    if (not is<Function>(mainFunc)) {
+        throw RuntimeError{
+            RuntimeError::Type::TypeMismatch,
+            _currentRange,
+            "Macho is not a gig"};
     }
-    catch (const std::exception& e) {
-        LOG_ERROR << "Caught unexpected exception: " << e.what();
-        throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, e.what()};
+
+    LOG_DEBUG << "Executing 'macho' function";
+    const auto ret = as<Function>(mainFunc).exec(
+        std::vector<RuntimeValue>{}, _currentEnvironment);
+    if (is<Int>(ret)) {
+        const auto val = as<Int>(ret);
+        LOG_DEBUG << "Returning an int from macho: " << val;
+        return val;
     }
+    if (is<Null>(ret)) {
+        LOG_DEBUG << "Returning 0 (casted Null) from macho";
+        return 0;
+    }
+
+    throw RuntimeError{
+        RuntimeError::Type::Logic,
+        _currentRange,
+        "Casting is for the weak. Macho only yeets solids or ghosted"};
+    }
+catch (const NativeError& e) {
+    LOG_ERROR << "Caught native error: " << e.what();
+    throw RuntimeError{e.type, _currentRange, e.what()};
+}
+catch (const std::exception& e) {
+    LOG_ERROR << "Caught unexpected exception: " << e.what();
+    throw RuntimeError{RuntimeError::Type::Undefined, _currentRange, e.what()};
 }
 
 EvalProxy Interpreter::evaluate(const AstNode& node) {
@@ -321,15 +320,9 @@ RuntimeValue Interpreter::visitStructStmt(const StructStmt& stmt) {
     }
     LOG_DEBUG << std::format("{} has {} methods", structName, methods.size());
 
-    try {
-        _currentEnvironment->defineStruct(
-            structName,
-            StructDefinition{std::move(fieldNames), std::move(methods)});
-    }
-    catch (const NativeError& e) {
-        LOG_ERROR << "Caught native error: " << e.what();
-        throw RuntimeError{e.type, _currentRange, e.what()};
-    }
+    _currentEnvironment->defineStruct(
+        structName,
+        StructDefinition{std::move(fieldNames), std::move(methods)});
     return Null{};
 }
     
@@ -426,11 +419,6 @@ RuntimeValue Interpreter::visitBinaryExpr(const BinaryExpr& expr) {
         const auto& msg = e.what();
         LOG_ERROR << "Caught math exception: " << msg;
         throw RuntimeError{RuntimeError::Type::Math, expr.getSrcRange(), msg};
-    }
-    catch (const std::exception& e) {
-        const auto& msg = e.what();
-        LOG_ERROR << "Caught other exception: " << msg;
-        throw RuntimeError{RuntimeError::Type::Undefined, expr.getSrcRange(), msg};
     }
     return Null{};
 }
