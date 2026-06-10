@@ -21,6 +21,7 @@ Here is the rest of the documentation:
 - [Keywords](docs/reference/keywords.md)
 - [Native Types](docs/reference/native-types.md)
 - [Type System](docs/explanations/type-system.md)
+- [Creating Structures](docs/how-to-guides/creating-structs.md)
 - [Creating Modules](docs/how-to-guides/creating-modules.md)
 - [Logging](docs/explanations/logging.md)
 - [Interpreter](docs/explanations/interpreter.md)

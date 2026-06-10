@@ -34,6 +34,7 @@ Here is a list of all built-in types available in W-lang, along with their corre
 | `solid`     | `Int` (`std::int32_t`)                 | A 32-bit signed integer.                  |
 | `vibe`      | `Bool` (`bool`)                        | A boolean value (`true` or `false`).      |
 | `change`    | `Float` (`double`)                     | A double-precision floating-point number. |
+| `crew`      | `StructInstance` `(std::shared_ptr<Environment>)` | An instance of a user-defined structure. |
 | `lineup`    | `Vector` `(std::vector<RuntimeValue>)` | A dynamic array that can hold elements.   |
 | `gig`       | `Function` `(std::function<RuntimeValue(const std::vector<RuntimeValue>&)>)` | A user-defined or native function.        |
 | `hub`       | `Module` `(std::shared_ptr<Environment>)` | A collection of related functions and variables. |

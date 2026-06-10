@@ -11,8 +11,9 @@ This document provides a comprehensive reference for the syntax, keywords, and s
 5.  [Control Flow](#5-control-flow)
 6.  [Loops](#6-loops)
 7.  [Functions](#7-functions)
-8.  [Modules](#8-modules)
-9.  [Built-in Modules](#9-built-in-modules)
+8.  [Structures](#8-structures-crews)
+9.  [Modules](#8-modules)
+10.  [Built-in Modules](#9-built-in-modules)
 
 ---
 
@@ -78,6 +79,7 @@ W-lang has several built-in data types.
 | `solid`     | A 32-bit signed integer.                  | `123`, `-45`                          |
 | `vibe`      | A boolean value (`totally` or `nah`).     | `totally`, `nah`                      |
 | `change`    | A double-precision floating-point number. | `99.9`, `-0.5`                        |
+| `crew`      | An instance of a user-defined structure.  | `stash c about recruit Point...`      |
 | `lineup`    | A dynamic array of a single type.         | `[1, 2, 3]`                           |
 | `gig`       | A user-defined or native function.        | `gig my_func() {}`                    |
 | `hub`       | A collection of related code from another file. | `summon my_module...`                 |
@@ -226,7 +228,40 @@ gig get_ten() {
 
 ---
 
-## 8. Modules
+## 8. Structures
+
+### Defining a Structure
+Use the `crew` keyword to define the structure, `packing` for fields, and `hustle` for methods. 
+
+```wlang
+crew Player {
+    packing name, hp...
+
+    hustle heal(amount) {
+        hp might_be hp with amount...
+    }
+}
+```
+*Note: Methods can access the structure's fields directly without needing any prefix.*
+
+### Instantiation
+Use the `recruit` keyword to create an instance. You can pass initial values using `packing`.
+
+```wlang
+stash p1 about recruit Player packing "Bob", 10...
+```
+
+### Accessing Members
+Use the dot (`.`) notation to access fields and methods.
+
+```wlang
+p1.hp might_be 20...
+p1.heal(50)...
+```
+
+---
+
+## 9. Modules
 
 You can split your code into multiple files called modules.
 
@@ -256,7 +291,7 @@ gig macho() {
 
 ---
 
-## 9. Built-in Modules
+## 10. Built-in Modules
 
 W-lang comes with some standard modules.
 

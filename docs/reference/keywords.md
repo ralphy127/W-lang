@@ -85,11 +85,14 @@ This document lists all the reserved keywords natively available in W-lang and p
 | `...` | `;` | Standard statement terminator. |
 | `!!!` | `;` | Break statement terminator used specifically after `rage_quit`. |
 
-## Others
+## Structures
 
 | Keyword | Traditional Equivalent | Description |
 | :--- | :--- | :--- |
-| `hustle` | `method` | Represents a method on a complex type (like string or vector). |
+| `crew` | `struct` / `class` | Defines a new structure blueprint. |
+| `packing` | `field` / args | Used to declare fields inside a `crew` or pass arguments when instantiating. |
+| `hustle` | `method` | Declares a method inside a `crew`. |
+| `recruit` | `new` | Instantiates a `crew`. |
 
 ## Runtime Error Types
 
