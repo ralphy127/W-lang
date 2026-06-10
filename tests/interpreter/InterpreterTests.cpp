@@ -882,7 +882,7 @@ TEST_F(InterpreterTests, Failure_FunctionArgumentCountMismatch) {
 
     expectRuntimeErrorMsgContains(
         source,
-        RuntimeError::Type::OutOfBounds,
+        RuntimeError::Type::Logic,
         "Argument count don't vibe");
 }
 

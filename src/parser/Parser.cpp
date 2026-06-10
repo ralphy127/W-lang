@@ -807,8 +807,7 @@ std::unique_ptr<Expr> Parser::parseFunctionCall(std::unique_ptr<Expr> callee) {
     LOG_DEBUG << "Parsing function call arguments...";
     const auto& lParenToken = getPreviousToken();
     std::vector<std::unique_ptr<Expr>> arguments{};
-                
-    // TODO what about wrong number of arguments?
+
     if (not match(Token::Type::RParen)) {
         do {
             arguments.push_back(unwrap(parseExpression()));

@@ -306,7 +306,7 @@ RuntimeValue Interpreter::visitStructStmt(const StructStmt& stmt) {
     LOG_DEBUG << "Visiting StructStmt";
     const auto& structName = stmt.getStructName().getValue<std::string>();
     LOG_DEBUG << "Defining struct: " << structName;
-    // TODO consider different approach from just getting every string
+
     std::vector<std::string> fieldNames{};
     for (const auto& fieldToken : stmt.getFields()) {
         fieldNames.push_back(fieldToken.getValue<std::string>());
@@ -595,9 +595,8 @@ Function Interpreter::createFunction(
 
         const auto argsSize = args.size();
         if (namesCount != argsSize) {
-            throw RuntimeError{
-                RuntimeError::Type::OutOfBounds,
-                stmt->getSrcRange(),
+            throw NativeError{
+                RuntimeError::Type::Logic,
                 std::format("Argument count don't vibe ({} is not {})", argsSize, namesCount)};
         }
 

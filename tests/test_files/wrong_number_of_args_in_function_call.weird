@@ -1,0 +1,9 @@
+summon gossip...
+
+gig foo(x, y) {
+    yeet 0...
+}
+
+gig macho() {
+    gossip.spill_tea(foo(1))...
+}
