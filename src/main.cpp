@@ -8,9 +8,11 @@
 #include <filesystem>
 #include <string_view>
 #include <utility>
+#include "errors/InternalError.hpp"
 #include "lexer/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "interpreter/Interpreter.hpp"
+#include "runtime/RuntimeErrors.hpp"
 #include "utils/Logging.hpp"
 #include "errors/ErrorReporter.hpp"
 #include "core/SourceManager.hpp"
@@ -154,7 +156,10 @@ int main(int argc, const char* argv[]) {
     catch (const RuntimeError& error) {
         errorReporter.printRuntimeError(error, sourceManager);
     }
-    // TODO make sure every NativeError is caught inside Interpreter, just in case catch them here
+    catch (const NativeError& error) {
+        auto msg = std::format("Unexpected NativeError: {}", error.what());
+        errorReporter.printInternalError(InternalError{std::move(msg)});
+    }
     catch(const InternalError& error) {
         errorReporter.printInternalError(error);
     }
