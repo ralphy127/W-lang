@@ -142,7 +142,10 @@ bool Parser::matchAndAdvanceIfNeeded(const std::vector<Token::Type>& types) {
 }
 
 void Parser::throwParserError(const ErrorMsgBuilder& errorMessageBuilder) {
-    throw ParserError{getToken(), errorMessageBuilder.build()};
+    auto errorMsg = errorMessageBuilder.build();
+    LOG_ERROR << "Throwing parser error: " << errorMsg;
+    const auto& errorToken = parsedAll() ? getPreviousToken() : getToken();
+    throw ParserError{errorToken, std::move(errorMsg)};
 }
 
 const Token& Parser::consume(
@@ -152,7 +155,7 @@ const Token& Parser::consume(
     if (not match(type)) {
         throwParserError(errorMessageBuilder);
     }
-    LOG_DEBUG << std::format("Consuming token: {} at token: ", toString(type), getTokenStr());
+    LOG_DEBUG << std::format("Consuming token: {} at token: {}", toString(type), getTokenStr());
     return getTokenAndAdvance();
 }
 
@@ -487,8 +490,16 @@ std::unique_ptr<Stmt> Parser::parseStructDeclaration() {
     }
     LOG_DEBUG << std::format("Parsed {} methods", methods.size());
 
+    if (not parsedAll() and not match(Token::Type::RBrace)) {
+        throwParserError(
+            ErrorMsgBuilder::expected("'packing', 'hustle' or '}'")
+            .after("inside crew assembly")
+        );
+    }
+
     const auto& rBraceToken = consume(
-        Token::Type::RBrace, ErrorMsgBuilder::expected("}").after("crew assembly"));
+        Token::Type::RBrace,
+        ErrorMsgBuilder::unclosed("{").need("} to close the code snippet for crew assembly"));
 
     LOG_DEBUG << "Succesfully parsed struct definition for: " + nameToken.getValue<std::string>();
     return std::make_unique<StructStmt>(

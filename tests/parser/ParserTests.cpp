@@ -1106,12 +1106,20 @@ TEST_F(ParserTests, Failure_StructMissingLBrace) {
     expectHasErrorContaining(result, "Bruh, missing { right after crew name");
 }
 
-// TODO in the code, in many cases if the statement is incomplete, program throws InternalError,
-// but it shouldn't, fix it and improve failure cases test coverage, then uncomment below
-// TEST_F(ParserTests, Failure_StructMissingRBrace) {
-//     const auto result = parse("crew Test {");
-//     expectHasErrorContaining(result, "Bruh, missing } right after crew assembly");
-// }
+TEST_F(ParserTests, Failure_StructMissingRBraceAtTheEndWithoutEof) {
+    const auto result = parse("crew Test {");
+    expectHasErrorContaining(
+        result,
+        "Yo, you left { wide open, need } to close the code snippet for crew assembly");
+}
+
+TEST_F(ParserTests, Failure_FunctionDefinitionMissingRBraceAtTheEndWithoutEof) {
+    const auto result = parse("gig foo() {");
+    expectHasErrorContaining(
+        result,
+        "Yo, you left { wide open, need } to close the code snippet for gig");
+}
+
 
 TEST_F(ParserTests, Failure_StructTrailingCommaInPacking) {
     const auto result = parse("crew Test { packing id, ... }");
@@ -1120,7 +1128,9 @@ TEST_F(ParserTests, Failure_StructTrailingCommaInPacking) {
 
 TEST_F(ParserTests, Failure_StructMissingPackingKeyword) {
     const auto result = parse("crew Test { id, name... }");
-    expectHasErrorContaining(result, "Bruh, missing } right after crew assembly");
+    expectHasErrorContaining(
+        result,
+        "Bruh, missing 'packing', 'hustle' or '}' right after inside crew assembly");
 }
 
 TEST_F(ParserTests, Failure_MethodMissingName) {

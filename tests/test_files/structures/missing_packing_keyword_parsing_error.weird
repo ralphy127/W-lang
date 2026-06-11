@@ -1,0 +1,13 @@
+rant_stop
+TODO shows 2 parsing errors, synchronization does not count braces opened, so it goes to token
+     after "..." and does not know what it is, should also skip "}"
+
+../tests/test_files/structures/missing_packing_keyword_parsing_error.weird:1:13 - Bruh, missing 'packing', 'hustle' or '}' right after inside crew assembly
+     1 | crew Test { id, name... }
+       |             ^
+
+../tests/test_files/structures/missing_packing_keyword_parsing_error.weird:1:25 - Witchcraft
+     1 | crew Test { id, name... }
+       |                         ^
+rant_start
+crew Test { id, name... }

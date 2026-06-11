@@ -36,7 +36,7 @@ private:
     const Token& getTokenAndAdvance();
     std::string getTokenStr() const { return toString(getToken().getType()); }
     
-    bool match(Token::Type type) const { return getToken().getType() == type; }
+    bool match(Token::Type type) const { return not parsedAll() and getToken().getType() == type; }
     bool matchAndAdvanceIfNeeded(Token::Type);
     bool matchAndAdvanceIfNeeded(const std::vector<Token::Type>&);
     bool matchLookahead(Token::Type curr, Token::Type next);
