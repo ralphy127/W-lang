@@ -4,14 +4,11 @@
 Environment::Environment(std::shared_ptr<Environment> outerScope)
     : _outerScope{std::move(outerScope)} {}
 
-
-// TODO better variable error msg
-
 void Environment::defineVar(const std::string& name, RuntimeValue value) {
     if (hasVar(name)) {
         throw NativeError{
             RuntimeError::Type::Logic,
-            std::format("Variable {} already exists", name)};
+            std::format("{} is already stashed", name)};
     }
     _variables.emplace(name, std::move(value));
 }
@@ -27,7 +24,7 @@ void Environment::reassignVar(const std::string& name, RuntimeValue newValue) {
     }
     throw NativeError{
         RuntimeError::Type::Logic,
-        std::format("Variable {} does not exist", name)};
+        std::format("{} is not stashed", name)};
 }
 
 RuntimeValue Environment::getVar(const std::string& name) const {
@@ -38,7 +35,7 @@ RuntimeValue Environment::getVar(const std::string& name) const {
         return _outerScope->getVar(name);
     }
     throw NativeError{
-        RuntimeError::Type::Logic,std::format("Variable {} does not exist", name)};
+        RuntimeError::Type::Logic,std::format("{} is not stashed", name)};
 }
 
 bool Environment::hasStructDefinition(const std::string& name) const {

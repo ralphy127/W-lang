@@ -823,6 +823,21 @@ TEST_F(InterpreterTests, FunctionCallWithReturnValue) {
     expectOutput(source, "5\n");
 }
 
+
+TEST_F(InterpreterTests, Failure_TwoVarsWithTheSameName) {
+    auto source = R"(
+        gig macho() {
+            stash x about 1...
+            stash x about 2...
+        }
+    )";
+    
+    expectRuntimeErrorMsgContains(
+        source, 
+        RuntimeError::Type::Logic, 
+        "x is already stashed");
+}
+
 TEST_F(InterpreterTests, FunctionCallWithNullArgumentPrintsGhosted) {
     auto source = R"(
         summon gossip...
@@ -975,7 +990,7 @@ TEST_F(InterpreterTests, Failure_DotIntoGhostField) {
         "Crew 'Wheel' ain't packing nor hustles 'ghost'");
 }
 
-TEST_F(InterpreterTests, Failure_ReassignGhostField) {
+TEST_F(InterpreterTests, Failure_ReassignNonExistingField) {
     auto source = R"(
         crew Wheel {}
 
@@ -988,10 +1003,10 @@ TEST_F(InterpreterTests, Failure_ReassignGhostField) {
     expectRuntimeErrorMsgContains(
         source, 
         RuntimeError::Type::Logic, 
-        "Variable ghost does not exist");
+        "ghost is not stashed");
 }
 
-TEST_F(InterpreterTests, Failure_CompareTwoCrews) {
+TEST_F(InterpreterTests, Failure_CompareTwoStructs) {
     auto source = R"(
         crew A {}
 
@@ -1008,7 +1023,7 @@ TEST_F(InterpreterTests, Failure_CompareTwoCrews) {
         "Cannot compare crews");
 }
 
-TEST_F(InterpreterTests, Failure_MathOnCrews) {
+TEST_F(InterpreterTests, Failure_MathOnStructs) {
     auto source = R"(
         crew A {}
 
@@ -1284,7 +1299,7 @@ TEST_F(InterpreterTests, BreakInsideBlockDoesNotLeakBlockScope) {
     expectRuntimeErrorMsgContains(
         source,
         RuntimeError::Type::Logic,
-        "Variable x does not exist");
+        "x is not stashed");
 }
 
 TEST_F(InterpreterTests, VoidFunctionCall) {
@@ -1336,7 +1351,7 @@ TEST_F(InterpreterTests, ScopedImportModulesTest) {
     expectRuntimeErrorMsgContains(
         source,
         RuntimeError::Type::Logic,
-        "Variable gossip does not exist");
+        "gossip is not stashed");
 }
 
 TEST_F(InterpreterTests, ImportedModuleFunctionCallWorksAfterImport) {
