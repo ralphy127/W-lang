@@ -466,7 +466,7 @@ bool Lexer::skipWhitespaces() {
 bool Lexer::skipMultilineComment() {
     bool foundEnd{false};
     while (not tokenizedAll()) {
-        if (_col == 1 and matchAndAdvanceIfNeeded("rant_start")) {
+        if (matchAndAdvanceIfNeeded("rant_start")) {
             foundEnd = true;
             break;
         }

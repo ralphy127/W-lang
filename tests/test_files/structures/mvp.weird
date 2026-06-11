@@ -1,12 +1,11 @@
 summon gossip...
 
-rant_stop
 crew Goon {
     packing tag, muscle...
 
     hustle flex(how_much) {
         spin_around (how_much) {
-            pump_it muscle
+            pump_it muscle...
             gossip.spill_tea(tag, " is getting huge! Muscle is now: ", muscle)...
         }
     }
@@ -15,10 +14,7 @@ crew Goon {
         gossip.spill_tea(tag, " just dropped a heavy hand on ", target)...
     }
 }
-rant_start
 
-psst: TODO comments inside blocks seem not to work
-rant_stop
 gig macho() {
     stash bouncer about recruit Goon packing "The Wall", 60...
     stash thug about recruit Goon packing "Slippery Pete", 30...
@@ -28,6 +24,3 @@ gig macho() {
     pump_it bouncer.muscle...
     bouncer.flex(4)...
 }
-rant_start
-
-gig macho() {}

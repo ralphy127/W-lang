@@ -32,9 +32,9 @@ Comments are used to add explanatory notes to the code and are ignored by the in
     This is a
     multi-line comment.
     rant_start
-    ```
 
-    Note: `rant_start` is recognized only when it appears at the beginning of a line.
+    rant_stop You can write comments like this also rant_start
+    ```
 
 ---
 
